@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+.credentials.yaml
+credentials.yaml
+*.credentials*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Bitacoras locales
+bridge.log
+*.log
+
+# Binarios moviles precompilados
+*.apk
+*.aab
+
+# Locks y PIDs
+*.pid
+*.lock
+
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+
+# Editor / IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary directories and files
+tmp/
+temp/
+*.tmp

@@ -13,7 +13,7 @@
    ██║  ██║╚════██║██╔══██║    ██║╚██╔╝██║██║   ██║██╔══██╗██║██║     ██╔══╝  
    ██████╔╝███████║██║  ██║    ██║ ╚═╝ ██║╚██████╔╝██████╔╝██║███████╗███████╗
    ╚═════╝ ╚══════╝╚═╝  ╚═╝    ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═╝╚══════╝╚══════╝
-            [ ANÁLISIS DE CÓDIGO, FORENSE DE IA & ROADMAP DE EVOLUCIÓN ]
+            [ ANÁLISIS DE CÓDIGO, AUDITORÍA DE IA & ROADMAP DE EVOLUCIÓN ]
 ```
 
 ---
@@ -97,7 +97,7 @@ El uso riguroso de notación húngara de los 90 (`str...`) en VBScript es un ras
 
 ### 1.3. La "Reinvención de la Rueda": El Polyfill Anacrónico de Base64URL
 
-Esta es una de las pruebas forenses más contundentes en `bridge.mjs` (L171-185):
+Esta es una de las pruebas técnicas más contundentes en `bridge.mjs` (L171-185):
 ```javascript
 function decodeBase64Url(value) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
@@ -141,7 +141,7 @@ Sin embargo, al final del archivo:
 ```javascript
 log(`Ready! Access from mobile via: http://${accessIp}:${LISTEN_PORT}`);
 ```
-**Análisis forense:** Un humano que programa esta solución para proteger su máquina se asegura de que el socket de escucha haga `server.listen(PORT, vpnIp)`. La IA, al responder a un prompt del tipo *"crea un bridge que detecte la IP de ZeroTier y la muestre al usuario para conectarse"*, cumplió literalmente la instrucción: detectó la IP y la mostró, pero dejó el socket en `0.0.0.0`. Esto provocó la vulnerabilidad crítica (VULN-01) identificada en la auditoría.
+**Análisis técnico:** Un humano que programa esta solución para proteger su máquina se asegura de que el socket de escucha haga `server.listen(PORT, vpnIp)`. La IA, al responder a un prompt del tipo *"crea un bridge que detecte la IP de ZeroTier y la muestre al usuario para conectarse"*, cumplió literalmente la instrucción: detectó la IP y la mostró, pero dejó el socket en `0.0.0.0`. Esto provocó la vulnerabilidad crítica (VULN-01) identificada en la auditoría.
 
 ---
 

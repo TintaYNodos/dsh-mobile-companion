@@ -213,6 +213,9 @@ const server = http.createServer(async (clientReq, clientRes) => {
         status: "online",
         dshOnline: isDshActive,
         dshTargetPort: TARGET_PORT,
+        hostname: os.hostname(),
+        platform: os.platform(),
+        bunkerIp: FINAL_BIND_HOST,
         time: Date.now(),
       })
     );

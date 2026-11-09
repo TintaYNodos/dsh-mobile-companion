@@ -29,6 +29,10 @@ pnpm-debug.log*
 *.pid
 *.lock
 
+# Sincronizaciones dinamicas de chats
+synced_chats/*
+!synced_chats/.gitkeep
+
 # Documentos internos de auditoria y desarrollo privado
 AUDITORIA_*.md
 PERSPECTIVA_*.md

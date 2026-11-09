@@ -1,0 +1,19 @@
+{
+  "name": "DSH Mobile Companion",
+  "short_name": "DSH Companion",
+  "description": "Cliente satélite y sincronizador directo para DeepSeek Harness",
+  "start_url": "/m",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#08090d",
+  "theme_color": "#08090d",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

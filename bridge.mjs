@@ -1,5 +1,5 @@
 /**
- * DSH Mobile Companion Bridge - EDICIÓN BLINDADA
+ * DSH Mobile Companion Bridge - EDICIÓN BLINDADA CON MODO SATÉLITE HÍBRIDO
  * Elaborado por: Ismael Muñoz Reyes
  * Proyecto: DSH Mobile Companion / Tinta y Nodos
  */
@@ -10,6 +10,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SYNC_DIR = path.join(__dirname, "synced_chats");
 
 const TARGET_HOST = "127.0.0.1";
 const LISTEN_PORT = parseInt(process.env.DSH_LISTEN_PORT || "57420", 10);
@@ -43,7 +48,6 @@ async function detectTargetPort() {
     const envPort = parseInt(process.env.DSH_TARGET_PORT, 10);
     if (!isNaN(envPort) && envPort > 0) return envPort;
   }
-  // Se excluye 57420 para evitar colisiones con LISTEN_PORT
   const candidatePorts = [52710, 52711, 52712, 57421];
   for (const port of candidatePorts) {
     if (await probePort(port)) {
@@ -108,15 +112,27 @@ function loadSecret() {
   return match[1].trim();
 }
 
-const TARGET_PORT = await detectTargetPort();
+let TARGET_PORT = await detectTargetPort();
 const rawSecret = loadSecret();
 const secret = Buffer.from(rawSecret, "base64url");
-const authority = `${TARGET_HOST}:${TARGET_PORT}`;
-const cookieHash = crypto.createHash("sha256").update(authority).digest().toString("base64url");
-const cookieName = `dsh-auth-${cookieHash}`;
+let authority = `${TARGET_HOST}:${TARGET_PORT}`;
+let cookieHash = crypto.createHash("sha256").update(authority).digest().toString("base64url");
+let cookieName = `dsh-auth-${cookieHash}`;
 
 let cachedCookie = "";
 let cookieExpiresAt = 0;
+
+function updateTargetPort(newPort) {
+  if (newPort && newPort !== TARGET_PORT) {
+    TARGET_PORT = newPort;
+    authority = `${TARGET_HOST}:${TARGET_PORT}`;
+    cookieHash = crypto.createHash("sha256").update(authority).digest().toString("base64url");
+    cookieName = `dsh-auth-${cookieHash}`;
+    cachedCookie = "";
+    cookieExpiresAt = 0;
+    log(`Actualizado puerto objetivo de DSH: ${TARGET_PORT}`);
+  }
+}
 
 function getValidCookie() {
   const now = Date.now();
@@ -154,10 +170,258 @@ function injectAuthHeaders(headers) {
 }
 
 const { ip: BIND_IP, iface } = findVpnIp();
-// AMARRE ESTRICTO (Parche VULN-01): Solo escucha en la IP de la VPN. Si no hay VPN, se recluye en loopback.
+// AMARRE ESTRICTO: Solo escucha en la IP de la VPN. Si no hay VPN, se recluye en loopback.
 const FINAL_BIND_HOST = process.env.DSH_BIND_HOST || (BIND_IP !== "127.0.0.1" ? BIND_IP : "127.0.0.1");
 
-const server = http.createServer((clientReq, clientRes) => {
+const server = http.createServer(async (clientReq, clientRes) => {
+  const parsedUrl = new URL(clientReq.url, `http://${clientReq.headers.host || "127.0.0.1"}`);
+  const pathname = parsedUrl.pathname.replace(/\/+$/, "") || "/";
+
+  // Preflight CORS para rutas satélite
+  if (clientReq.method === "OPTIONS" && pathname.startsWith("/dsh-companion/")) {
+    clientRes.writeHead(204, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
+    });
+    clientRes.end();
+    return;
+  }
+
+  // 1. Estado de conectividad para el cliente móvil
+  if (pathname === "/dsh-companion/status" && clientReq.method === "GET") {
+    let isDshActive = await probePort(TARGET_PORT, TARGET_HOST, 400);
+    if (!isDshActive) {
+      const candidatePorts = [52710, 52711, 52712, 57421];
+      for (const p of candidatePorts) {
+        if (p !== TARGET_PORT && (await probePort(p, TARGET_HOST, 250))) {
+          updateTargetPort(p);
+          isDshActive = true;
+          break;
+        }
+      }
+    }
+
+    clientRes.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+    });
+    clientRes.end(
+      JSON.stringify({
+        status: "online",
+        dshOnline: isDshActive,
+        dshTargetPort: TARGET_PORT,
+        time: Date.now(),
+      })
+    );
+    return;
+  }
+
+  // 2. Sincronización directa de conversaciones desde el móvil
+  if (pathname === "/dsh-companion/sync" && clientReq.method === "POST") {
+    let body = "";
+    let bodySize = 0;
+    const MAX_SYNC_BODY = 10 * 1024 * 1024; // Límite defensivo de 10MB
+
+    clientReq.on("data", (chunk) => {
+      bodySize += chunk.length;
+      if (bodySize > MAX_SYNC_BODY) {
+        clientReq.destroy();
+        if (!clientRes.headersSent) {
+          clientRes.writeHead(413, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+          });
+          clientRes.end(JSON.stringify({ error: "Payload demasiado grande" }));
+        }
+      } else {
+        body += chunk;
+      }
+    });
+
+    clientReq.on("end", () => {
+      if (clientRes.headersSent) return;
+      try {
+        const data = JSON.parse(body);
+        const { sessionTitle, messages } = data;
+        if (!Array.isArray(messages) || messages.length === 0) {
+          clientRes.writeHead(400, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+          });
+          clientRes.end(JSON.stringify({ error: "messages array is required and must not be empty" }));
+          return;
+        }
+
+        if (!fs.existsSync(SYNC_DIR)) {
+          fs.mkdirSync(SYNC_DIR, { recursive: true });
+        }
+
+        const now = Date.now();
+        const dateObj = new Date(now);
+        const dateIso = dateObj.toISOString();
+        const dateFormatted = dateIso.replace(/[:.]/g, "-");
+        const safeTitle = (sessionTitle || "chat-movil")
+          .replace(/[^a-zA-Z0-9_\u00C0-\u017F-]/g, "_")
+          .slice(0, 40);
+
+        const fileBase = `sync_${dateFormatted}_${safeTitle}`;
+        const jsonFile = `${fileBase}.json`;
+        const mdFile = `${fileBase}.md`;
+
+        const jsonPayload = {
+          id: fileBase,
+          sessionTitle: sessionTitle || "Chat Satélite Móvil",
+          syncedAt: dateIso,
+          syncedTimestamp: now,
+          messageCount: messages.length,
+          messages: messages.map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: String(m.content || ""),
+            timestamp: m.timestamp || now,
+          })),
+        };
+
+        fs.writeFileSync(path.join(SYNC_DIR, jsonFile), JSON.stringify(jsonPayload, null, 2), "utf8");
+
+        const mdLines = [
+          `# Sesión Sincronizada: ${sessionTitle || "Chat Satélite Móvil"}`,
+          `- **Fecha de sincronización:** ${dateObj.toLocaleString("es-MX")}`,
+          `- **Total de mensajes:** ${messages.length}`,
+          `- **Identificador:** ${fileBase}`,
+          ``,
+          `---`,
+          ``,
+        ];
+
+        for (const msg of jsonPayload.messages) {
+          const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString("es-MX") : "";
+          const roleHeader = msg.role === "user" ? "### 👤 Usuario" : "### 🤖 Asistente";
+          mdLines.push(`${roleHeader} ${timeStr ? `(${timeStr})` : ""}\n`);
+          mdLines.push(`${msg.content}\n`);
+          mdLines.push(`---\n`);
+        }
+
+        fs.writeFileSync(path.join(SYNC_DIR, mdFile), mdLines.join("\n"), "utf8");
+
+        const indexLine = JSON.stringify({
+          id: fileBase,
+          savedAt: now,
+          title: sessionTitle || "Chat Satélite Móvil",
+          count: messages.length,
+          mdFile,
+          jsonFile,
+        }) + "\n";
+        fs.appendFileSync(path.join(SYNC_DIR, "index.jsonl"), indexLine, "utf8");
+
+        log(`Sincronización recibida: ${messages.length} mensajes guardados en ${mdFile}`);
+
+        clientRes.writeHead(200, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+        });
+        clientRes.end(JSON.stringify({
+          ok: true,
+          syncedCount: messages.length,
+          savedAt: now,
+          file: mdFile,
+        }));
+      } catch (err) {
+        log(`Error en /dsh-companion/sync: ${err.message}`);
+        if (!clientRes.headersSent) {
+          clientRes.writeHead(400, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Access-Control-Allow-Origin": "*",
+          });
+          clientRes.end(JSON.stringify({ error: "Formato de sincronización inválido" }));
+        }
+      }
+    });
+
+    clientReq.on("error", (err) => {
+      log(`Error en stream de sincronización: ${err.message}`);
+      if (!clientRes.headersSent) {
+        clientRes.writeHead(500, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+        });
+        clientRes.end(JSON.stringify({ error: "Fallo en transmisión de datos" }));
+      }
+    });
+    return;
+  }
+
+  // 3. Consulta de archivos sincronizados
+  if (pathname === "/dsh-companion/synced" && clientReq.method === "GET") {
+    let chats = [];
+    if (fs.existsSync(SYNC_DIR)) {
+      chats = fs.readdirSync(SYNC_DIR)
+        .filter((f) => f.endsWith(".md") && f.startsWith("sync_"))
+        .sort()
+        .reverse()
+        .slice(0, 30);
+    }
+    clientRes.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+    });
+    clientRes.end(JSON.stringify({ syncedFiles: chats }));
+    return;
+  }
+
+  // 4. Servicio de interfaz Satélite Móvil PWA (/m, /offline y recursos)
+  if (pathname === "/m" || pathname === "/offline") {
+    const mPath = path.join(__dirname, "m.html");
+    if (fs.existsSync(mPath)) {
+      clientRes.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+      });
+      fs.createReadStream(mPath).pipe(clientRes);
+      return;
+    }
+  }
+
+  if (pathname === "/sw.js") {
+    const swPath = path.join(__dirname, "sw.js");
+    if (fs.existsSync(swPath)) {
+      clientRes.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Service-Worker-Allowed": "/",
+        "Cache-Control": "no-cache",
+      });
+      fs.createReadStream(swPath).pipe(clientRes);
+      return;
+    }
+  }
+
+  if (pathname === "/manifest.webmanifest") {
+    const manifestPath = path.join(__dirname, "manifest.webmanifest");
+    if (fs.existsSync(manifestPath)) {
+      clientRes.writeHead(200, {
+        "Content-Type": "application/manifest+json; charset=utf-8",
+        "Cache-Control": "public, max-age=3600",
+      });
+      fs.createReadStream(manifestPath).pipe(clientRes);
+      return;
+    }
+  }
+
+  if (pathname === "/icon.svg") {
+    const iconPath = path.join(__dirname, "icon.svg");
+    if (fs.existsSync(iconPath)) {
+      clientRes.writeHead(200, {
+        "Content-Type": "image/svg+xml; charset=utf-8",
+        "Cache-Control": "public, max-age=86400",
+      });
+      fs.createReadStream(iconPath).pipe(clientRes);
+      return;
+    }
+  }
+
+  // 5. Proxy hacia el backend de DeepSeek Harness
   const targetHeaders = injectAuthHeaders(clientReq.headers);
 
   const proxyReq = http.request(
@@ -175,10 +439,38 @@ const server = http.createServer((clientReq, clientRes) => {
   );
 
   proxyReq.on("error", (err) => {
-    // Parche VULN-03: Solo escribe encabezados si no han sido enviados para evitar DoS por ERR_HTTP_HEADERS_SENT
+    // Parche VULN-03: Solo escribe encabezados si no han sido enviados
     if (!clientRes.headersSent) {
-      clientRes.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
-      clientRes.end(`[DSH Bridge] Error al conectar con el backend (${TARGET_HOST}:${TARGET_PORT}): ${err.message}`);
+      const acceptsHtml = (clientReq.headers["accept"] || "").includes("text/html");
+      if (acceptsHtml && (pathname === "/" || pathname === "")) {
+        clientRes.writeHead(502, { "Content-Type": "text/html; charset=utf-8" });
+        clientRes.end(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSH Búnker en Reposo</title>
+  <style>
+    body { background: #07080c; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { background: #0f121a; border: 1px solid #1e2538; border-radius: 14px; padding: 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    h2 { color: #00f0ff; margin-top: 0; font-size: 1.3rem; }
+    p { color: #8b9bb4; font-size: 0.92rem; line-height: 1.5; margin: 12px 0; }
+    .btn { display: inline-block; margin-top: 14px; padding: 11px 22px; background: linear-gradient(135deg, #00f0ff, #7928ca); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📡 Búnker DSH en Reposo</h2>
+    <p>La PC está encendida pero DeepSeek Harness no está respondiendo en el puerto ${TARGET_PORT}.</p>
+    <p>Puedes chatear en modo satélite desde tu celular con tu propia API Key:</p>
+    <a class="btn" href="/m">Abrir DSH Satélite Móvil</a>
+  </div>
+</body>
+</html>`);
+      } else {
+        clientRes.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
+        clientRes.end(`[DSH Bridge] Error al conectar con el backend (${TARGET_HOST}:${TARGET_PORT}): ${err.message}`);
+      }
     } else {
       clientRes.destroy();
     }
@@ -233,6 +525,7 @@ server.listen(LISTEN_PORT, FINAL_BIND_HOST, () => {
   log(`Interfaz detectada: ${iface} (${BIND_IP})`);
   log(`Escuchando estrictamente en: http://${FINAL_BIND_HOST}:${LISTEN_PORT}`);
   log(`Redirigiendo de forma segura hacia: http://${authority}`);
+  log(`Modo Satélite disponible en: http://${FINAL_BIND_HOST}:${LISTEN_PORT}/m`);
 });
 
 server.on("error", (err) => {

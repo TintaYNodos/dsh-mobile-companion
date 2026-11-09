@@ -1,5 +1,5 @@
 # DSH Mobile Companion
-> Acceso móvil remoto y seguro para la interfaz web de DeepSeek Harness mediante ZeroTier o Tailscale, con auto-arranque y soporte completo de WebSockets.
+> Acceso móvil remoto, modo satélite autónomo y sincronización directa para DeepSeek Harness mediante ZeroTier o Tailscale.
 > 
 > Edición Endurecida elaborada por Ismael Muñoz Reyes para Tinta y Nodos.
 
@@ -7,57 +7,69 @@
 
 ## Características Principales
 
-- **Interfaz móvil en pantalla completa (PWA o APK):** Permite usar la interfaz web integrada en DeepSeek Harness directamente desde el teléfono o tableta.
+- **Modo Híbrido Satélite:** Chatea en la calle directamente con tu propia API Key (Google Gemini o DeepSeek) cuando la PC esté apagada. Al encender la PC y conectar la VPN, sincroniza el historial en un clic.
+- **Sincronización Directa sin Nube:** Las conversaciones satélite se guardan localmente en tu computadora en la carpeta `synced_chats/` en formatos Markdown y JSON, sin requerir GitHub, cuentas externas ni servidores intermediarios.
+- **Acceso Remoto a la Web GUI de DSH:** Una vez conectado a tu PC, navega la interfaz completa de DeepSeek Harness en pantalla completa con soporte de WebSockets bidireccionales.
 - **Seguro y Privado:** No abre puertos públicos en el módem ni router. Escucha estrictamente en la IP privada de la VPN (ZeroTier o Tailscale) para evitar cualquier exposición en redes locales compartidas.
-- **Cero pérdida de caché (Prompt Caching intacto):** DeepSeek Harness mantiene el prefijo inmutable en el servidor local, ahorrando más del 90% en consumo de tokens en modelos con ventana larga como Gemini o DeepSeek.
-- **Auto-inicio con Windows:** Corre en segundo plano sin consolas visibles. Si la computadora se apaga o reinicia, el servicio se levanta automáticamente.
-- **Cero Dependencias Externas:** Programado en Node.js puro (`http`, `net`, `crypto`, `fs`). No requiere `npm install` ni paquetes de terceros, reduciendo a cero el riesgo de librerías comprometidas en la cadena de suministro.
+- **Cero Dependencias Externas:** Programado en Node.js puro (`http`, `net`, `crypto`, `fs`). No requiere `npm install` ni paquetes de terceros, reduciendo a cero el riesgo de dependencias comprometidas.
+- **Auto-inicio con Windows:** Corre en segundo plano sin consolas visibles mediante un script VBS silencioso.
+
+---
+
+## Modo Híbrido: Cómo Funciona
+
+El sistema opera en dos modalidades complementarias:
+
+### 1. En la calle o con la PC apagada (Modo Satélite)
+1. Abre en tu celular la app PWA o entra desde el navegador a `http://<TU_IP_VPN>:57420/m`.
+2. Ve al icono de engrane (⚙️) e ingresa tu API Key:
+   - **Google Gemini:** Modelos `gemini-2.5-flash` o `gemini-2.5-pro` (clave gratuita desde [Google AI Studio](https://aistudio.google.com/app/apikey)).
+   - **DeepSeek:** Modelos `deepseek-chat` o `deepseek-reasoner` (clave desde [DeepSeek Platform](https://platform.deepseek.com/api_keys)).
+3. La clave se almacena únicamente en el `localStorage` de tu propio teléfono móvil; nunca se transmite a la PC ni a servidores de terceros.
+4. Chatea con streaming fluido en tiempo real. La interfaz funciona como PWA instalable con Service Worker para arrancar sin demora.
+
+### 2. Al encender la PC o conectar la VPN (Sincronización)
+1. Tan pronto el celular detecta la PC encendida a través de ZeroTier o Tailscale, el indicador cambiará a **"⚡ Búnker Online"**.
+2. Aparecerá un banner y botón de sincronización.
+3. Pulsa **"Sincronizar"**: el puente guardará tu conversación en la PC dentro del directorio `synced_chats/` en formato `.md` y `.json`.
+4. Pulsa **"Ir a DSH"** para pasar directamente a la interfaz web completa de DeepSeek Harness (`/`) con la sesión autenticada.
 
 ---
 
 ## Instalación Rápida
 
 ### 1. Requisitos
-- Windows 10 u 11 con DeepSeek Harness instalado (el servicio detecta y utiliza de forma transparente el binario de Node.js integrado en DSH sin obligar a instalar Node en Windows).
-- ZeroTier o Tailscale conectado tanto en la PC como en el dispositivo móvil.
+- Windows 10 u 11 con DeepSeek Harness instalado (el servicio utiliza el ejecutable de Node.js empaquetado en DSH de forma transparente).
+- ZeroTier o Tailscale activo en la computadora y en el celular.
 
-### 2. Pasos en la Computadora:
-1. Clonar o descargar este repositorio:
+### 2. Configuración en la Computadora
+1. Clona o descarga este repositorio:
    ```bash
    git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
    ```
-2. Entrar a la carpeta y ejecutar `install-autostart.bat`.
-3. El script detectará la IP de la VPN y se registrará para arrancar automáticamente con Windows.
+2. Entra a la carpeta y ejecuta `install-autostart.bat`.
+3. El script detectará la IP privada de tu VPN y configurará el inicio automático en segundo plano al arrancar Windows.
 
-### 3. Pasos en el Dispositivo Móvil (2 Opciones):
-
-#### Opción A: Mediante la App APK Oficial
-1. Ir a la sección de Releases de este repositorio en GitHub y descargar `DSH-Companion.apk`.
-2. Instalarla en el dispositivo Android.
-3. Asegurar la conexión activa a la VPN y abrir la aplicación.
-
-#### Opción B: Mediante Navegador Web (Android / iOS / iPad)
-1. Con la VPN encendida, abrir Chrome o Safari y entrar a:
+### 3. Uso en el Celular (Android / iOS)
+1. Con la VPN conectada, entra desde el navegador a:
    ```text
-   http://<TU_IP_VPN>:57420
+   http://<TU_IP_VPN>:57420/m
    ```
-   *(Ejemplo: `http://10.x.x.x:57420` en ZeroTier o `http://100.x.x.x:57420` en Tailscale)*
-2. En el menú del navegador, seleccionar "Agregar a la pantalla principal" o "Instalar aplicación".
-3. Se abrirá como aplicación web en pantalla completa.
+   *(Ejemplo: `http://10.x.x.x:57420/m` en ZeroTier o `http://100.x.x.x:57420/m` en Tailscale)*
+2. En el menú del navegador, selecciona **"Agregar a la pantalla principal"** o **"Instalar aplicación"**.
+3. Ingresa tu API Key en la pantalla de bienvenida y el sistema queda listo para operar en cualquier momento.
 
 ---
 
-## Explicación Técnica de Seguridad
+## Rutas y Endpoints del Puente
 
-Por diseño de seguridad, DeepSeek Harness bloquea cualquier conexión que no provenga de `127.0.0.1` (`dsh web --host 0.0.0.0` no está soportado). Además, exige una cookie firmada con HMAC-SHA256 (`dsh-auth-*`) vinculada al secreto de sesión local (`$DSH_HOME/.credentials.yaml`).
+El servidor `bridge.mjs` expone las siguientes rutas internas antes del proxy inverso:
 
-Cualquier dispositivo que intente conectarse desde la red local o VPN recibe un error `401 / 403 Unauthorized`.
-
-### Funcionamiento del Puente:
-1. Escucha de forma exclusiva en la interfaz privada de la VPN (`10.x.x.x` o `100.x.x.x`), blindando la red contra accesos desde Wi-Fi compartidas o redes locales no confiables.
-2. Reescribe el encabezado `Host` hacia `127.0.0.1:52710` (o el puerto dinámico activo de DSH).
-3. Inyecta la cookie de autenticación HMAC generada con el secreto de la máquina local.
-4. Redirige tanto peticiones HTTP como el handshake de WebSockets (`ws://`) de forma bidireccional, transparente y sanitizada contra inyecciones CRLF.
+- `GET /m` o `/offline`: Interfaz satélite PWA en estética oscura Cyberpunk Tinta y Nodos con soporte de streaming y cliente de IA local.
+- `GET /dsh-companion/status`: Devuelve el estado de conectividad de la PC y del backend DSH (`{ status: "online", dshOnline: true, dshTargetPort: 52710 }`).
+- `POST /dsh-companion/sync`: Recibe el historial de mensajes del móvil y lo almacena en `synced_chats/` en Markdown y JSON.
+- `GET /dsh-companion/synced`: Lista las sesiones sincronizadas disponibles en el almacenamiento local.
+- `GET /`: Redirige al backend oficial de DSH Web GUI inyectando la cookie de autenticación HMAC generada a partir de `$DSH_HOME/.credentials.yaml`.
 
 ---
 
@@ -65,14 +77,19 @@ Cualquier dispositivo que intente conectarse desde la red local o VPN recibe un 
 
 ```text
 dsh-mobile-companion/
-├── bridge.mjs             # Servidor proxy inverso seguro en Node.js puro
-├── run-hidden.vbs         # Lanzador silencioso en segundo plano con registro de log
-├── install-autostart.bat  # Configura el inicio automático en Windows
-├── uninstall-autostart.bat# Desinstala el servicio y limpia accesos directos
-├── start.bat              # Inicio manual del servicio
-├── stop.bat               # Detención segura del proceso local
+├── bridge.mjs             # Servidor proxy inverso con rutas satélite y sync en Node.js puro
+├── m.html                 # Aplicación web satélite PWA Cyberpunk (Gemini + DeepSeek)
+├── sw.js                  # Service Worker para ejecución offline-ready
+├── manifest.webmanifest   # Manifiesto de aplicación PWA para Android e iOS
+├── icon.svg               # Icono vectorial de alta resolución para la PWA
+├── synced_chats/          # Almacenamiento local de conversaciones sincronizadas (.md y .json)
+├── run-hidden.vbs         # Lanzador silencioso en segundo plano
+├── install-autostart.bat  # Configuración del servicio en inicio de Windows
+├── uninstall-autostart.bat# Desinstalador limpio del servicio
+├── start.bat              # Inicio manual del puente
+├── stop.bat               # Detención segura del proceso
 ├── LICENSE                # Licencia de código abierto MIT
-└── README.md              # Documentación oficial del proyecto
+└── README.md              # Documentación oficial
 ```
 
 ---
@@ -80,4 +97,4 @@ dsh-mobile-companion/
 ## Licencia y Créditos
 - Autoría de Edición Endurecida: Ismael Muñoz Reyes
 - Proyecto: Tinta y Nodos
-- Licencia: MIT License - Código libre para la comunidad de desarrolladores de DeepSeek Harness.
+- Licencia: MIT License - Código libre para la comunidad de DeepSeek Harness.

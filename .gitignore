@@ -40,6 +40,13 @@ REGLAS_*.md
 docs_internos/
 *.internal.md
 
+# Build tools and SDKs temporales
+gradle_tool/
+android_sdk/
+android_project/
+.gradle/
+build/
+
 # Operating System files
 .DS_Store
 Thumbs.db

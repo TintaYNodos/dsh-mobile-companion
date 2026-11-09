@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,7 +15,6 @@ import android.view.WindowManager;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -29,9 +27,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,7 +63,8 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         swipeRefresh = findViewById(R.id.swipeRefresh);
 
-        // Swipe-to-Refresh inteligente
+        // Solo permitir recarga con swipe cuando el webview este en el tope
+        swipeRefresh.setOnChildScrollUpCallback((parent, child) -> webView.getScrollY() > 0);
         swipeRefresh.setOnRefreshListener(() -> {
             webView.reload();
             swipeRefresh.setRefreshing(false);
@@ -78,12 +74,13 @@ public class MainActivity extends AppCompatActivity {
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
-        webSettings.setAllowFileAccess(true);
+        // Hardening de seguridad contra fugas de archivos locales
+        webSettings.setAllowFileAccess(false);
         webSettings.setAllowContentAccess(true);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // Soporte de selector de archivos y permisos de audio (Micrófono)
+        // WebChromeClient blindado
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
@@ -120,21 +117,29 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
                 }
-                request.grant(request.getResources());
+                // Rechazo defensivo: deniega cualquier otro permiso no auditado
+                request.deny();
             }
         });
 
+        // WebViewClient con validacion de esquemas seguros
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String scheme = request.getUrl().getScheme();
+                if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+                    return false; // Permite navegacion web legitima
+                }
+                return true; // Bloquea esquemas peligrosos como javascript:, file:, data:
             }
         });
 
-        // Cargar Búnker Activo
-        loadActiveBunker();
+        if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+        } else {
+            loadActiveBunker();
+        }
 
-        // Gesto: Toque prolongado o triple para abrir Selector Multi-Búnker
         View btnSwitch = findViewById(R.id.btnSwitchBunker);
         if (btnSwitch != null) {
             btnSwitch.setOnClickListener(v -> showBunkerSelectorDialog());
@@ -150,16 +155,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void showBunkerSelectorDialog() {
-        String name1 = prefs.getString(KEY_BUNKER_NAME_1, "PC 1 - Búnker Principal");
+        String name1 = prefs.getString(KEY_BUNKER_NAME_1, "PC 1 - Bunker Principal");
         String url1 = prefs.getString(KEY_BUNKER_URL_1, "http://10.173.252.87:57420");
-        String name2 = prefs.getString(KEY_BUNKER_NAME_2, "PC 2 - Búnker Secundario");
+        String name2 = prefs.getString(KEY_BUNKER_NAME_2, "PC 2 - Bunker Secundario");
         String url2 = prefs.getString(KEY_BUNKER_URL_2, "http://10.173.252.92:57420");
         int activeSlot = prefs.getInt(KEY_ACTIVE_SLOT, 1);
 
         String[] options = new String[]{
                 (activeSlot == 1 ? "● " : "○ ") + name1 + " (" + url1 + ")",
                 (activeSlot == 2 ? "● " : "○ ") + name2 + " (" + url2 + ")",
-                "⚙️ Configurar nombres e IPs de las computadoras"
+                "Configurar nombres e IPs de las computadoras"
         };
 
         new AlertDialog.Builder(this)
@@ -189,9 +194,9 @@ public class MainActivity extends AppCompatActivity {
         EditText editName2 = view.findViewById(R.id.editName2);
         EditText editUrl2 = view.findViewById(R.id.editUrl2);
 
-        editName1.setText(prefs.getString(KEY_BUNKER_NAME_1, "PC 1 - Búnker Principal"));
+        editName1.setText(prefs.getString(KEY_BUNKER_NAME_1, "PC 1 - Bunker Principal"));
         editUrl1.setText(prefs.getString(KEY_BUNKER_URL_1, "http://10.173.252.87:57420"));
-        editName2.setText(prefs.getString(KEY_BUNKER_NAME_2, "PC 2 - Búnker Secundario"));
+        editName2.setText(prefs.getString(KEY_BUNKER_NAME_2, "PC 2 - Bunker Secundario"));
         editUrl2.setText(prefs.getString(KEY_BUNKER_URL_2, "http://10.173.252.92:57420"));
 
         new AlertDialog.Builder(this)
@@ -212,6 +217,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView != null) webView.saveState(outState);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (webView != null) webView.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView != null) webView.onPause();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == AUDIO_PERMISSION_REQUEST_CODE) {
@@ -223,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
                 if (audioPermissionRequest != null) {
                     audioPermissionRequest.deny();
                 }
-                Toast.makeText(this, "Permiso de micrófono denegado para dictado por voz", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permiso de microfono denegado para dictado por voz", Toast.LENGTH_SHORT).show();
             }
             audioPermissionRequest = null;
         }

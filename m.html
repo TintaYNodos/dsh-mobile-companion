@@ -871,14 +871,14 @@
   <div id="toast"></div>
 
   <script>
-    // Register Service Worker
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch((err) => console.log('[SW Error]', err));
     }
 
-    // State
+
     const STATE = {
-      provider: 'gemini', // 'gemini' | 'deepseek'
+      provider: 'gemini',
       apiKey: '',
       model: 'gemini-2.5-flash',
       systemPrompt: 'Eres un asistente técnico ágil, conciso y de alta precisión. Responde directo al grano sin introducciones de cortesía ni despedidas innecesarias.',
@@ -901,7 +901,7 @@
       ]
     };
 
-    // DOM Elements
+
     const chatContainer = document.getElementById('chatContainer');
     const userInput = document.getElementById('userInput');
     const btnSend = document.getElementById('btnSend');
@@ -927,14 +927,14 @@
     const btnToggleApiKeyEye = document.getElementById('btnToggleApiKeyEye');
     const toast = document.getElementById('toast');
 
-    // Utility: Show Toast
+
     function showToast(text, duration = 3000) {
       toast.textContent = text;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), duration);
     }
 
-    // Load Settings & Chat History
+
     function loadSavedState() {
       try {
         const savedSettings = JSON.parse(localStorage.getItem('dsh_companion_settings') || '{}');
@@ -965,7 +965,7 @@
       localStorage.setItem('dsh_last_synced_idx', STATE.lastSyncedIndex.toString());
     }
 
-    // Bunker Target URL
+
     function getBunkerBaseUrl() {
       if (STATE.bunkerHost && STATE.bunkerHost.trim()) {
         return STATE.bunkerHost.trim().replace(/\/+$/, '');
@@ -976,7 +976,7 @@
       return '';
     }
 
-    // Escape HTML & Basic Markdown Parser
+
     function escapeHtml(str) {
       return str
         .replace(/&/g, '&amp;')
@@ -990,7 +990,7 @@
       if (!md) return '';
       let text = escapeHtml(md);
 
-      // Code blocks: ```lang\ncode\n```
+
       text = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
         const langLabel = lang || 'code';
         return `<div class="code-block">
@@ -1002,29 +1002,29 @@
         </div>`;
       });
 
-      // Inline code `code`
+
       text = text.replace(/`([^`\n]+)`/g, '<code class="inline-code">$1</code>');
 
-      // Headings
+
       text = text.replace(/^### (.*$)/gim, '<h3>$1</h3>');
       text = text.replace(/^## (.*$)/gim, '<h2>$1</h2>');
       text = text.replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
-      // Bold & Italic
+
       text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
       text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
-      // Blockquote
+
       text = text.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
 
-      // Unordered lists
+
       text = text.replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>');
       text = text.replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>');
 
-      // Links [text](url)
+
       text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-      // Paragraphs & newlines
+
       const paragraphs = text.split(/\n\s*\n/);
       return paragraphs.map(p => {
         if (/^<(div|ul|ol|h1|h2|h3|blockquote)/.test(p.trim())) {
@@ -1043,7 +1043,7 @@
       });
     };
 
-    // Render Chat
+
     function renderChat() {
       if (STATE.messages.length === 0) {
         chatContainer.innerHTML = `
@@ -1071,19 +1071,18 @@
         return;
       }
 
-      let html = '';
-      STATE.messages.forEach((msg, idx) => {
+      const html = STATE.messages.map((msg, idx) => {
         const isUser = msg.role === 'user';
         const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         const contentHtml = isUser ? escapeHtml(msg.content).replace(/\n/g, '<br>') : renderMarkdown(msg.content);
 
-        html += `
+        return `
           <div class="msg-row ${isUser ? 'user' : 'assistant'}" data-index="${idx}">
             <div class="msg-bubble">${contentHtml}</div>
             <div class="msg-time">${timeStr}</div>
           </div>
         `;
-      });
+      }).join('');
 
       chatContainer.innerHTML = html;
       chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -1105,20 +1104,22 @@
     function updateLastMessage(content) {
       if (STATE.messages.length === 0) return;
       STATE.messages[STATE.messages.length - 1].content = content;
-      saveState();
 
-      // Quick DOM update for smooth streaming
-      const lastRow = chatContainer.querySelector('.msg-row:last-child');
+
+      const lastRow = chatContainer.lastElementChild;
       if (lastRow && lastRow.classList.contains('assistant')) {
         const bubble = lastRow.querySelector('.msg-bubble');
         if (bubble) {
           bubble.innerHTML = renderMarkdown(content) + '<span class="stream-cursor"></span>';
-          chatContainer.scrollTop = chatContainer.scrollHeight;
+
+          if (chatContainer.scrollHeight - chatContainer.scrollTop - chatContainer.clientHeight < 100) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+          }
         }
       }
     }
 
-    // Sync Banner Logic
+
     function updateSyncBanner() {
       const unsyncedCount = STATE.messages.length - (STATE.lastSyncedIndex + 1);
       if (STATE.isBunkerOnline && unsyncedCount > 0) {
@@ -1129,7 +1130,7 @@
       }
     }
 
-    // Bunker Status Check
+
     async function checkBunkerStatus() {
       const base = getBunkerBaseUrl();
       try {
@@ -1165,7 +1166,7 @@
       updateSyncBanner();
     }
 
-    // Sync with Bunker Endpoint
+
     async function syncWithBunker() {
       if (STATE.messages.length === 0) {
         showToast('No hay mensajes para sincronizar');
@@ -1186,7 +1187,7 @@
       try {
         const payload = {
           sessionTitle: `Satélite Móvil - ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-          messages: STATE.messages // enviamos la sesión completa para contexto
+          messages: STATE.messages
         };
 
         const res = await fetch(`${base}/dsh-companion/sync`, {
@@ -1214,7 +1215,7 @@
       }
     }
 
-    // AI Streaming Requests
+
     async function sendMessage() {
       const text = userInput.value.trim();
       if (!text || STATE.isStreaming) return;
@@ -1228,10 +1229,10 @@
       userInput.value = '';
       userInput.style.height = 'auto';
 
-      // Append user message
+
       appendMessage('user', text);
 
-      // Append empty assistant message placeholder
+
       appendMessage('assistant', '');
 
       setStreaming(true);
@@ -1250,8 +1251,9 @@
           updateLastMessage(`⚠️ Error de conexión con ${STATE.provider === 'deepseek' ? 'DeepSeek' : 'Gemini'}: ${err.message}`);
         }
       } finally {
+        saveState();
         setStreaming(false);
-        renderChat(); // Clean render without live cursor
+        renderChat();
       }
     }
 
@@ -1391,7 +1393,7 @@
       if (!isStreaming) userInput.focus();
     }
 
-    // Modal Settings Handlers
+
     function populateModelSelect(provider, selectedModel) {
       cfgModel.innerHTML = '';
       const list = MODELS[provider] || [];
@@ -1405,7 +1407,7 @@
     }
 
     function openSettingsModal() {
-      // Sync form with STATE
+
       document.querySelectorAll('.provider-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.provider === STATE.provider);
       });
@@ -1429,7 +1431,7 @@
       modalSettings.classList.remove('open');
     }
 
-    // Event Listeners
+
     btnOpenConfig.addEventListener('click', openSettingsModal);
     btnCloseConfig.addEventListener('click', closeSettingsModal);
     btnCancelConfig.addEventListener('click', closeSettingsModal);
@@ -1505,7 +1507,7 @@
     btnHeaderSync.addEventListener('click', syncWithBunker);
     btnBannerSync.addEventListener('click', syncWithBunker);
 
-    // Initial boot
+
     loadSavedState();
     renderChat();
     checkBunkerStatus();

@@ -70,7 +70,27 @@ companion/
 
 ## Instalación
 
-### Computadora
+### Método 1: Automatizado con tu Asistente de IA (Recomendado)
+
+Si cuentas con un asistente o agente de IA en tu computadora (DeepSeek Harness, Cursor, Claude Code, Copilot, etc.), copia y pega el siguiente prompt en el chat. La IA se encargará de clonar, activar en segundo plano, verificar el estado y darte las instrucciones directas para tu celular:
+
+> Guía detallada: [INSTALACION_CON_IA.md](INSTALACION_CON_IA.md)
+
+```text
+Actúa como especialista de configuración técnica en este equipo.
+Tu misión es instalar, activar, verificar y dejar completamente configurado el sistema "DSH Mobile Companion" (puente seguro de acceso móvil para DeepSeek Harness a través de red privada ZeroTier o Tailscale), y entregarme al final las instrucciones sencillas para conectar mi teléfono móvil.
+
+Sigue estos pasos de forma ordenada y autónoma:
+1. Revisa "%USERPROFILE%\.dsh" y ubica el motor de Node.js (en PATH o en "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
+2. Si no estás en la carpeta del proyecto, clona: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
+3. Configura el arranque automático con "install-autostart.bat" e inicia el servicio en segundo plano con "run-hidden.vbs".
+4. Consulta http://127.0.0.1:57420/dsh-companion/status para verificar que el servicio responda 200 y reportar el estado de DSH.
+5. Entrégame un resumen claro sin tecnicismos con: la URL para mi teléfono (http://<IP_VPN>:57420), el enlace de descarga del APK en GitHub Releases y cómo autorizar mi dispositivo en http://127.0.0.1:57420/pair.
+```
+
+### Método 2: Instalación Manual
+
+#### Computadora
 
 ```bash
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git

@@ -1,136 +1,170 @@
+﻿/*
+ * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
+ * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * See LICENSE file in repository root for full terms.
+ */
 /**
- * DSH Mobile Companion Bridge
- * Arquitectura Segura, Asincrona y Optimizada (ESM Node.js 20+)
+ * Copyright (c) 2026 Tinta y Nodos / Ismael MuÃ±oz Reyes. All rights reserved.
+ * Licensed under the Business Source License 1.1 (BSL 1.1) / PolyForm Noncommercial 1.0.0.
+ * See companion/LICENSE or LICENSE for license terms.
  */
 
 import http from "node:http";
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { log, probePort, findVpnIp, isClientAuthorized, scanActiveDshPort } from "./src/network.mjs";
-import { handleSync } from "./src/sync.mjs";
-import { handleHttpProxy, handleWsProxy } from "./src/proxy.mjs";
-import { getAuthority, verifyCompanionToken } from "./src/crypto.mjs";
+import { spawn } from "node:child_process";
+import { config } from "./src/config.mjs";
+import { log, warn } from "./src/log.mjs";
+import { findVpnAddress, isClientAuthorized, resolveTargetPort } from "./src/network.mjs";
+import { accessKeyEnabled, hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mjs";
+import { deviceSummary, findPairedDevice } from "./src/devices.mjs";
+import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPanel } from "./src/panel.mjs";
+import { isSameOriginRequest, sendText } from "./src/http.mjs";
+import { handleWsProxy } from "./src/proxy.mjs";
+import { dispatchRequest } from "./src/routes.mjs";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TARGET_HOST = "127.0.0.1";
-let TARGET_PORT = parseInt(process.env.DSH_TARGET_PORT || "52710", 10);
-const LISTEN_PORT = parseInt(process.env.DSH_LISTEN_PORT || "57420", 10);
+const binding = findVpnAddress();
+const bindHost = binding.address;
 
-const { ip: BIND_IP, iface } = findVpnIp();
-const FINAL_BIND_HOST = process.env.DSH_BIND_HOST || BIND_IP;
-
-if (FINAL_BIND_HOST === "0.0.0.0") {
-  console.error("[Ciberseguridad] Escucha en 0.0.0.0 prohibida por diseno.");
+if (bindHost === "0.0.0.0") {
+  console.error("Enlace en 0.0.0.0 rechazado por politica de seguridad.");
   process.exit(1);
 }
 
-const STATIC_FILES = {
-  "/m": "m.html",
-  "/offline": "m.html",
-  "/sw.js": "sw.js",
-  "/manifest.webmanifest": "manifest.webmanifest",
-  "/icon.svg": "icon.svg",
-};
+const bindPrefix = binding.prefix ?? 24;
+const allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
+const allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
 
-const CONTENT_TYPES = {
-  "m.html": "text/html; charset=utf-8",
-  "sw.js": "application/javascript; charset=utf-8",
-  "manifest.webmanifest": "application/manifest+json; charset=utf-8",
-  "icon.svg": "image/svg+xml",
-};
-
-async function ensureActiveDshPort() {
-  const resolved = await scanActiveDshPort(TARGET_PORT);
-  if (resolved && resolved !== TARGET_PORT) {
-    TARGET_PORT = resolved;
+if (bindHost.startsWith("127.")) {
+  for (const alias of ["127.0.0.1", "localhost", "[::1]"]) {
+    allowedOrigins.add(`http://${alias}:${config.listenPort}`);
+    allowedHosts.add(`${alias}:${config.listenPort}`);
   }
-  return TARGET_PORT;
 }
 
-const server = http.createServer(async (clientReq, clientRes) => {
-  if (!isClientAuthorized(clientReq.socket.remoteAddress, FINAL_BIND_HOST)) {
-    clientRes.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
-    clientRes.end("Acceso denegado: IP de cliente no autorizada.");
+const REALM = 'Basic realm="DSH Companion", charset="UTF-8"';
+
+let lastPanelOpen = 0;
+const openPanelWindow = ({ force = false } = {}) => {
+  const now = Date.now();
+
+  // Si ya hay una pestaÃ±a del panel abierta en el navegador:
+  // NO abrir pestaÃ±as adicionales. Actualizar la existente y enfocarla en Windows.
+  if (isPanelTabOpen()) {
+    notifyPanelClients();
+    focusPanelWindow();
+    return true;
+  }
+
+  if (!force && now - lastPanelOpen < 30_000) return false;
+  lastPanelOpen = now;
+  if (process.platform !== "win32") return false;
+  try {
+    spawn("cmd", ["/c", "start", "", panelUrl()], { detached: true, stdio: "ignore" }).unref();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const routeContext = {
+  bindHost,
+  bindPrefix,
+  allowedOrigins,
+  allowedHosts,
+  openPanelWindow,
+};
+
+const server = http.createServer((req, res) => {
+  dispatchRequest(req, res, routeContext).catch((error) => {
+    warn("bridge", `Peticion fallida: ${error.message}`);
+    if (!res.headersSent) sendText(res, 500, "Fallo interno del puente");
+    else if (!res.destroyed) res.destroy();
+  });
+});
+
+server.headersTimeout = config.headersTimeoutMs;
+server.requestTimeout = config.requestTimeoutMs;
+server.keepAliveTimeout = config.keepAliveTimeoutMs;
+server.maxConnections = config.maxConnections;
+
+server.on("upgrade", (req, socket, head) => {
+  if (!isClientAuthorized(socket.remoteAddress, bindHost, bindPrefix)) {
+    socket.destroy();
     return;
   }
 
-  await ensureActiveDshPort();
-
-  const reqUrl = new URL(clientReq.url, `http://${FINAL_BIND_HOST}:${LISTEN_PORT}`);
-  const pathname = reqUrl.pathname;
-
-  // Healthcheck y estado de enlace multi-bunker
-  if (pathname === "/dsh-companion/status" && clientReq.method === "GET") {
-    const isOnline = await probePort(TARGET_PORT, TARGET_HOST, 400);
-    clientRes.writeHead(200, {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-    });
-    clientRes.end(JSON.stringify({
-      status: "online",
-      dshOnline: isOnline,
-      dshTargetPort: TARGET_PORT,
-      hostname: os.hostname(),
-      platform: os.platform(),
-      bunkerIp: FINAL_BIND_HOST,
-      time: Date.now(),
-    }));
+  if (accessKeyEnabled() && !hasValidAccessKey(req) && !findPairedDevice(req)) {
+    socket.end("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: " + REALM + "\r\nConnection: close\r\n\r\n");
     return;
   }
 
-  // Sincronizacion de chats satelite
-  if (pathname === "/dsh-companion/sync" && clientReq.method === "POST") {
-    if (!verifyCompanionToken(clientReq)) {
-      clientRes.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
-      clientRes.end(JSON.stringify({ error: "Token de autorizacion invalido o ausente" }));
-      return;
-    }
-    return handleSync(clientReq, clientRes);
-  }
-
-  // Despacho de activos estaticos PWA satelite (/m, /offline, sw.js, etc.)
-  if (STATIC_FILES[pathname]) {
-    const filename = STATIC_FILES[pathname];
-    const filepath = path.join(__dirname, filename);
-    if (fs.existsSync(filepath)) {
-      const headers = {
-        "Content-Type": CONTENT_TYPES[filename],
-        "X-Content-Type-Options": "nosniff",
-      };
-      if (filename === "m.html") headers["Cache-Control"] = "no-cache";
-      if (filename === "sw.js") headers["Service-Worker-Allowed"] = "/";
-
-      clientRes.writeHead(200, headers);
-      fs.createReadStream(filepath).pipe(clientRes);
-      return;
-    }
-  }
-
-  // Por defecto: proxy directo e integro a la Web GUI oficial de DeepSeek Harness (con inyeccion HMAC transparente)
-  handleHttpProxy(clientReq, clientRes, TARGET_HOST, TARGET_PORT);
-});
-
-server.on("upgrade", async (clientReq, clientSocket, clientHead) => {
-  if (!isClientAuthorized(clientSocket.remoteAddress, FINAL_BIND_HOST)) {
-    clientSocket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
-    clientSocket.destroy();
+  let url;
+  try {
+    url = new URL(req.url, `http://${bindHost}:${config.listenPort}`);
+  } catch {
+    socket.destroy();
     return;
   }
-  await ensureActiveDshPort();
-  handleWsProxy(clientReq, clientSocket, clientHead, TARGET_HOST, TARGET_PORT);
+
+  const trustedOrigin = isSameOriginRequest(req, allowedOrigins, allowedHosts);
+
+  resolveTargetPort()
+    .then((targetPort) => {
+      handleWsProxy(req, socket, head, { targetPort, originAllowed: trustedOrigin });
+    })
+    .catch(() => socket.destroy());
 });
 
-server.listen(LISTEN_PORT, FINAL_BIND_HOST, () => {
-  log(`DSH Mobile Companion ACTIVO (Edicion Endurecida y Modular)`);
-  log(`Interfaz VPN detectada: ${iface} (${BIND_IP})`);
-  log(`Socket enlazado estrictamente: http://${FINAL_BIND_HOST}:${LISTEN_PORT}`);
-  log(`Destino DSH backend: http://${getAuthority(TARGET_HOST, TARGET_PORT)}`);
+server.on("clientError", (error, socket) => {
+  if (!socket.writable) {
+    socket.destroy();
+    return;
+  }
+  try {
+    socket.end("HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+  } catch {
+    socket.destroy();
+  }
 });
 
-server.on("error", (err) => {
-  console.error(`[Error Fatal] No se pudo enlazar socket en ${FINAL_BIND_HOST}:${LISTEN_PORT}:`, err.message);
+server.on("error", (error) => {
+  console.error(`No se pudo enlazar ${bindHost}:${config.listenPort}: ${error.message}`);
   process.exit(1);
 });
+
+try {
+  loadSecret();
+} catch (error) {
+  console.error(`No se pudo cargar el secreto de sesion: ${error.message}`);
+  process.exit(1);
+}
+
+startPanel();
+void resolveTargetPort(true);
+
+server.listen(config.listenPort, bindHost, () => {
+  log("bridge", `DSH Companion ${config.version} activo`);
+  log("bridge", `Interfaz ${binding.iface} -> http://${bindHost}:${config.listenPort}`);
+  log("bridge", `Backend DeepSeek Harness en ${config.targetHost}:${config.targetPort}`);
+
+  if (accessKeyEnabled()) {
+    log("bridge", `Dispositivos autorizados: ${deviceSummary().length}`);
+    log("bridge", `Clave manual de respaldo: ${resolveAccessKey()}`);
+  } else {
+    warn("bridge", "Clave de acceso desactivada por DSH_ACCESS_DISABLE=1");
+    warn("bridge", "Cualquier dispositivo de la red privada puede abrir esta sesion");
+  }
+
+  if (!config.companionToken) {
+    warn("bridge", "Sin DSH_COMPANION_TOKEN: /dsh-companion/sync queda protegido solo por la clave de acceso");
+  }
+});
+
+const shutdown = (signal) => {
+  log("bridge", `Cerrando por ${signal}`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+};
+
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("unhandledRejection", (reason) => warn("bridge", `Promesa rechazada: ${reason}`));

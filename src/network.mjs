@@ -1,142 +1,267 @@
+﻿/*
+ * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
+ * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * See LICENSE file in repository root for full terms.
+ */
 import http from "node:http";
-import os from "node:os";
 import net from "node:net";
+import os from "node:os";
 import { execSync } from "node:child_process";
+import { config } from "./config.mjs";
+import { log, warn } from "./log.mjs";
 
-export function log(msg) {
-  const ts = new Date().toISOString().replace("T", " ").substring(0, 19);
-  console.log(`[DSH-Bridge ${ts}] ${msg}`);
-}
+const VPN_INTERFACE = /zerotier|tailscale|wireguard|openvpn|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]|^tun[0-9]|^tap[0-9]/i;
 
-export function probePort(port, host = "127.0.0.1", timeout = 800) {
+export const normalizeAddress = (address) => String(address || "").replace(/^::ffff:/, "");
+
+const ipv4Octets = (address) => {
+  if (!net.isIPv4(address)) return null;
+  return address.split(".").map((part) => Number.parseInt(part, 10));
+};
+
+const ipv4ToInt = (address) => {
+  const octets = ipv4Octets(address);
+  if (!octets || octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return null;
+  return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+};
+
+export const maskToPrefix = (mask) => {
+  const value = ipv4ToInt(mask);
+  if (value === null) return 32;
+  let prefix = 0;
+  for (let bit = 31; bit >= 0; bit -= 1) {
+    if ((value >>> bit) & 1) prefix += 1;
+    else break;
+  }
+  return prefix;
+};
+
+/** ComparaciÃ³n real por mÃ¡scara, no por octetos ni prefijos fijos. */
+export const inCidr = (address, network, prefixLength) => {
+  const target = ipv4ToInt(address);
+  const base = ipv4ToInt(network);
+  if (target === null || base === null) return false;
+  if (!Number.isInteger(prefixLength) || prefixLength < 1 || prefixLength > 32) return false;
+  const mask = prefixLength === 32 ? 0xffffffff : (0xffffffff << (32 - prefixLength)) >>> 0;
+  return (target & mask) === (base & mask);
+};
+
+const isPrivateVpnAddress = (address) => {
+  const octets = ipv4Octets(address);
+  if (!octets) return false;
+  if (octets[0] === 10) return true;
+  if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
+  if (octets[0] === 192 && octets[1] === 168) return true;
+  if (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) return true;
+  return false;
+};
+
+const isSafeBindAddress = (address) => {
+  if (!net.isIPv4(address)) return false;
+  if (address === "0.0.0.0" || address === "255.255.255.255") return false;
+  return address.startsWith("127.") || isPrivateVpnAddress(address);
+};
+
+export function probePort(port, host = config.targetHost, timeoutMs = 500) {
   return new Promise((resolve) => {
-    if (!net.isIP(host) || !port || isNaN(port)) return resolve(false);
-    const req = http.request(
-      { hostname: host, port, method: "GET", path: "/", timeout },
-      (res) => {
-        resolve([200, 301, 302, 401, 403].includes(res.statusCode));
-        res.resume();
+    if (!net.isIP(host)) {
+      resolve(false);
+      return;
+    }
+
+    const request = http.request(
+      { hostname: host, port, method: "GET", path: "/", timeout: timeoutMs, agent: false },
+      (response) => {
+        response.resume();
+        resolve([200, 301, 302, 307, 308, 401, 403].includes(response.statusCode));
       }
     );
-    req.on("timeout", () => { req.destroy(); resolve(false); });
-    req.on("error", () => resolve(false));
-    req.end();
+
+    request.on("timeout", () => {
+      request.destroy();
+      resolve(false);
+    });
+    request.on("error", () => resolve(false));
+    request.end();
   });
 }
 
 /**
- * Escanea dinamicamente los puertos activos de DeepSeek Harness en Windows
- * mediante netstat para resolver el puerto efimero de la Web GUI al vuelo.
+ * Localiza la interfaz de red privada. Prioriza el override explicito, luego los
+ * adaptadores de VPN reconocidos y finalmente el rango CGNAT de Tailscale.
+ * Nunca devuelve una direccion enrutable publicamente.
  */
-export async function scanActiveDshPort(currentPort = 52710) {
-  // 1. Probar el puerto actual
-  if (await probePort(currentPort)) return currentPort;
+export function findVpnAddress() {
+  const override = config.bindHost || process.env.DSH_VPN_IP;
 
-  // 2. Escanear puertos escuchando en 127.0.0.1 con netstat
-  try {
-    const stdout = execSync("netstat -ano", { encoding: "utf8", timeout: 2500 });
-    const lines = stdout.split("\n");
-    const candidatePorts = [];
+  if (override) {
+    if (isSafeBindAddress(override)) {
+      return {
+        address: override,
+        iface: override === config.bindHost ? "DSH_BIND_HOST" : "DSH_VPN_IP",
+        prefix: 24,
+      };
+    }
+    warn("network", `Direccion de enlace rechazada por politica: ${override}`);
+  }
 
-    for (const line of lines) {
-      if (line.includes("LISTENING") && line.includes("127.0.0.1:")) {
-        const match = line.match(/127\.0\.0\.1:(\d+)\s+/);
-        if (match && match[1]) {
-          const p = parseInt(match[1], 10);
-          // Filtrar puertos tipicos efimeros de DSH Web (50000 - 65500)
-          if (p >= 50000 && p <= 65500 && p !== 57420) {
-            candidatePorts.push(p);
+  const interfaces = os.networkInterfaces();
+  const candidates = [];
+
+  for (const [name, addresses] of Object.entries(interfaces)) {
+    if (!addresses) continue;
+    for (const entry of addresses) {
+      const isIpv4 = entry.family === "IPv4" || entry.family === 4;
+      if (!isIpv4 || entry.internal || entry.address === "0.0.0.0") continue;
+      if (entry.address.startsWith("169.254.")) continue;
+      candidates.push({
+        name,
+        address: entry.address,
+        prefix: maskToPrefix(entry.netmask),
+        preferred: VPN_INTERFACE.test(name),
+      });
+    }
+  }
+
+  const preferred = candidates.find((candidate) => candidate.preferred);
+  if (preferred) return { address: preferred.address, iface: preferred.name, prefix: preferred.prefix };
+
+  const cgnat = candidates.find((candidate) => {
+    const octets = ipv4Octets(candidate.address);
+    return octets && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127;
+  });
+  if (cgnat) return { address: cgnat.address, iface: cgnat.name, prefix: cgnat.prefix };
+
+  return { address: "127.0.0.1", iface: "loopback", prefix: 8 };
+}
+
+/**
+ * Autorizacion de cliente con criterio cerrado: loopback, la subred real de la
+ * interfaz de enlace con su mascara efectiva, o los CIDR declarados.
+ *
+ * La propia IP de enlace no se autoriza por si misma: cualquier proceso local
+ * puede conectarse a esa direccion y heredaria la sesion. El acceso local ya
+ * esta cubierto por loopback.
+ */
+export function isClientAuthorized(remoteAddress, bindHost, bindPrefix = 24) {
+  const client = normalizeAddress(remoteAddress);
+  if (!client || !net.isIPv4(client)) return false;
+
+  if (client.startsWith("127.")) return true;
+
+  for (const cidr of config.allowCidrs) {
+    const [network, bits] = cidr.split("/");
+    if (!network) continue;
+    const parsedBits = Number.parseInt(bits ?? "32", 10);
+    if (inCidr(client, network, parsedBits)) return true;
+  }
+
+  if (bindHost.startsWith("127.")) return false;
+  if (!isPrivateVpnAddress(bindHost)) return false;
+
+  return inCidr(client, bindHost, bindPrefix);
+}
+
+
+export function probeDshPort(port, host = config.targetHost, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    if (!net.isIP(host)) return resolve(false);
+
+    const request = http.request(
+      { hostname: host, port, method: "GET", path: "/", timeout: timeoutMs, agent: false },
+      (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+          if (body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__")) {
+            request.destroy();
+            resolve(true);
           }
-        }
+        });
+        response.on("end", () => {
+          resolve(body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__"));
+        });
       }
-    }
+    );
 
-    for (const port of candidatePorts) {
-      if (await probePort(port)) {
-        log(`Detectado Web GUI de DSH dinamicamente en puerto: ${port}`);
-        return port;
-      }
-    }
-  } catch (err) {
-    // Si netstat falla, fallback a sondeo de rango comun
-  }
-
-  // 3. Fallback a lista estatica de candidatos
-  const commonCandidates = [52710, 59189, 58324, 51455, 52049, 52449, 57421];
-  for (const p of commonCandidates) {
-    if (await probePort(p)) {
-      log(`Detectado Web GUI de DSH en puerto de respaldo: ${p}`);
-      return p;
-    }
-  }
-
-  return currentPort;
+    request.on("timeout", () => {
+      request.destroy();
+      resolve(false);
+    });
+    request.on("error", () => resolve(false));
+    request.end();
+  });
 }
 
-export function findVpnIp() {
-  const envIp = process.env.DSH_VPN_IP;
-  if (envIp) {
-    if (net.isIPv4(envIp) && envIp !== "0.0.0.0") {
-      return { ip: envIp, iface: "env" };
-    }
-  }
-
-  const ifaces = os.networkInterfaces();
-  const isIpv4 = (a) =>
-    (a.family === "IPv4" || a.family === 4) &&
-    !a.internal &&
-    !a.address.startsWith("169.254.") &&
-    a.address !== "0.0.0.0";
-
-  // 1. Interfaces con nombre de VPN
-  for (const [name, addrs] of Object.entries(ifaces)) {
-    if (/zerotier|tailscale|^zt|^ts|wireguard|^wg|openvpn/i.test(name) && addrs) {
-      for (const a of addrs) {
-        if (isIpv4(a)) return { ip: a.address, iface: name };
-      }
-    }
-  }
-
-  // 2. CGNAT Tailscale
-  for (const [name, addrs] of Object.entries(ifaces)) {
-    if (addrs) {
-      for (const a of addrs) {
-        if (isIpv4(a) && a.address.startsWith("100.")) {
-          const second = Number(a.address.split(".")[1]);
-          if (second >= 64 && second <= 127) return { ip: a.address, iface: name };
+function discoverListeningPorts() {
+  const ports = [];
+  try {
+    const output = execSync("netstat -ano -p tcp", { encoding: "utf8", timeout: 1500 });
+    for (const line of output.split("\n")) {
+      const match = line.match(/^\s*TCP\s+127\.0\.0\.1:(\d+)\s+0\.0\.0\.0:0\s+LISTENING/i);
+      if (match) {
+        const p = Number.parseInt(match[1], 10);
+        if (p > 1024 && p !== config.panelPort && p !== config.listenPort) {
+          ports.push(p);
         }
       }
     }
+  } catch {
   }
-
-  // 3. Subred ZeroTier tipica (10.x.x.x)
-  for (const [name, addrs] of Object.entries(ifaces)) {
-    if (addrs) {
-      for (const a of addrs) {
-        if (isIpv4(a) && a.address.startsWith("10.")) {
-          return { ip: a.address, iface: name };
-        }
-      }
-    }
-  }
-
-  return { ip: "127.0.0.1", iface: "loopback" };
+  return Array.from(new Set(ports));
 }
 
-export function isClientAuthorized(remoteAddress, bindIp) {
-  if (!remoteAddress) return false;
-  const cleanIp = remoteAddress.replace(/^.*:/, "");
+let resolvedPort = config.targetPort;
+let resolvedAt = 0;
+let inFlight = null;
 
-  if (cleanIp === "127.0.0.1" || cleanIp === bindIp) return true;
+/**
+ * Resuelve el puerto real de DeepSeek Harness con cache corto y una sola
+ * sondas concurrente. Evita que N peticiones simultaneas disparen N barridos.
+ */
+export function resolveTargetPort(force = false) {
+  const now = Date.now();
+  if (!force && now - resolvedAt < 20_000) return Promise.resolve(resolvedPort);
+  if (inFlight) return inFlight;
 
-  if (cleanIp.startsWith("100.")) {
-    const second = Number(cleanIp.split(".")[1]);
-    if (second >= 64 && second <= 127) return true;
+  inFlight = resolveOnce(now).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
+async function resolveOnce(now) {
+  if (await probeDshPort(resolvedPort, config.targetHost, 300)) {
+    resolvedAt = now;
+    return resolvedPort;
   }
 
-  if (cleanIp.startsWith("10.")) return true;
+  for (const candidate of config.targetCandidates) {
+    if (candidate === resolvedPort) continue;
+    if (await probeDshPort(candidate, config.targetHost, 200)) {
+      log("network", `Puerto de DeepSeek Harness reasignado a ${candidate}`);
+      resolvedPort = candidate;
+      resolvedAt = now;
+      return resolvedPort;
+    }
+  }
 
-  if (bindIp === "127.0.0.1") return cleanIp === "127.0.0.1";
+  const discovered = discoverListeningPorts();
+  for (const candidate of discovered) {
+    if (candidate === resolvedPort || config.targetCandidates.includes(candidate)) continue;
+    if (await probeDshPort(candidate, config.targetHost, 250)) {
+      log("network", `Puerto de DeepSeek Harness descubierto dinamicamente en ${candidate}`);
+      resolvedPort = candidate;
+      resolvedAt = now;
+      return resolvedPort;
+    }
+  }
 
-  return true;
+  resolvedAt = now;
+  return resolvedPort;
+}
+
+export function invalidateTargetPort() {
+  resolvedAt = 0;
 }

@@ -37,6 +37,7 @@ synced_chats/*
 AUDITORIA_*.md
 PERSPECTIVA_*.md
 REGLAS_*.md
+MEJORAS_*.md
 docs_internos/
 *.internal.md
 
@@ -46,6 +47,7 @@ android_sdk/
 android_project/
 .gradle/
 build/
+*.idsig
 
 # Operating System files
 .DS_Store

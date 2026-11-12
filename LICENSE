@@ -1,21 +1,104 @@
-MIT License
+Business Source License 1.1 (BSL 1.1) / PolyForm Noncommercial License 1.0.0 Dual Framework
 
-Copyright (c) 2026 Tinta y Nodos
+Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Parameters:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Licensor:              Tinta y Nodos / Ismael Muñoz Reyes
+Licensed Work:         DSH Mobile Companion, DeepSeek Harness Companion suite, and associated components
+Change Date:           2030-01-01
+Change License:        Apache License, Version 2.0 or MIT License (at licensee's choice)
+Additional Use Grant:  Personal, Individual, Non-Commercial, Educational, and Security Audit Use
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+==============================================================================
+TERMS AND CONDITIONS
+==============================================================================
+
+1. GRANT OF LICENSE
+Subject to the terms and limitations herein, the Licensor grants you a non-exclusive, 
+worldwide, royalty-free copyright license under the Licensor's copyrights to 
+reproduce, prepare derivative works of, publicly display, publicly perform, and 
+distribute the Licensed Work solely for:
+  (a) Personal and Individual Use: Use by an individual human user solely for their 
+      own private, non-commercial writing, reading, and personal productivity;
+  (b) Educational and Academic Use: Non-commercial use in educational institutions, 
+      study, classroom instruction, and scientific research;
+  (c) Security and Privacy Audit Use: Non-commercial reverse engineering, inspection, 
+      and security verification strictly limited to evaluating security posture, 
+      local data isolation, and cryptographic integrity.
+
+2. EXPRESS PROHIBITIONS (COMMERCIAL & CORPORATE EXCLUSIONS)
+Any use of the Licensed Work not explicitly permitted under Section 1 is strictly 
+prohibited without a separate, valid commercial license agreement executed in 
+advance by the Licensor. Prohibited uses include, without limitation:
+  (a) Commercial Advantage & Revenue: Any use primarily intended for or directed 
+      towards commercial advantage, business operations, monetary compensation, 
+      consulting fees, paid subscriptions, or advertising revenue;
+  (b) Corporate Redistribution & Bundling: Redistribution, deployment, internal 
+      enterprise tooling, bundling, or repackaging on behalf of any corporation, 
+      partnership, commercial organization, or enterprise;
+  (c) SaaS, API & Hosted Infrastructure: Providing the Licensed Work, or any 
+      substantially similar derivative work, as a hosted service, Software-as-a-Service 
+      (SaaS), cloud service, proxy gateway, managed infrastructure, or remote API, 
+      whether open or embedded within proprietary platforms;
+  (d) Commercial App Store Distribution: Publishing, submitting, distributing, 
+      or monetizing compiled binaries, installable packages (including APK, AAB, 
+      IPA, MSIX), or derivatives of the Licensed Work across official or commercial 
+      application marketplaces (including, but not limited to, Google Play Store, 
+      Apple App Store, Amazon Appstore, and Microsoft Store) without an explicit, 
+      signed distribution agreement from the Licensor.
+
+3. CHANGE DATE & PERMISSIVE TRANSITION
+Effective on the Change Date specified above (2030-01-01, four calendar years 
+from initial publication), the Licensor hereby irrevocably grants you the right 
+to use, modify, and distribute the versions of the Licensed Work released prior 
+to the Change Date under the terms of the Change License (Apache License, Version 2.0 
+or MIT License). From that date onward, the commercial restrictions in Section 2 
+shall cease to apply to those released versions.
+
+4. DERIVATIVE WORKS, NOTICES & ATTRIBUTION
+In all copies and substantial portions of the Licensed Work or its derivatives:
+  (a) You must retain and prominently display this License text and the canonical 
+      copyright notice:
+      "Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved."
+  (b) You must not remove, disguise, or alter any authorship, copyright, trademark, 
+      or licensing headers present in the source files.
+
+5. DISCLAIMER OF WARRANTIES & LIMITATION OF LIABILITY
+THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS 
+FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. IN NO EVENT SHALL THE 
+LICENSOR, COPYRIGHT HOLDERS, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, 
+OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING 
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE, ITS USE, OR OTHER DEALINGS 
+IN THE SOFTWARE.
+
+6. THIRD-PARTY NETWORKS & AUTONOMOUS EXECUTION DISCLAIMER
+The Licensed Work acts as a local network bridge and companion interface for 
+independent software tools (including DeepSeek Harness, ZeroTier, and Tailscale). 
+The Licensor explicitly disclaims all liability for:
+  (a) Network Transport & Outages: Any connectivity drops, latency, packet inspection, 
+      routing failures, or security breaches arising from or attributable to third-party 
+      VPN, mesh, or overlay network providers (including ZeroTier Inc. and Tailscale Inc.) 
+      or user firewall misconfigurations;
+  (b) Autonomous Agent & Shell Execution: Any loss of data, system modifications, command 
+      executions, or security permissions (including sandbox escalations such as 
+      danger-full-access) approved by the user through the interface or dispatched by 
+      local autonomous agents on the host operating system. The end user retains sole 
+      and exclusive responsibility for all authorizations granted on their equipment.
+
+7. INBOUND CONTRIBUTOR TERMS
+By submitting any pull request, patch, translation, code contribution, or documentation 
+to the DSH Mobile Companion project repository, you irrevocably agree that your 
+contributions are licensed under the exact terms of this BSL 1.1 / PolyForm Noncommercial 
+1.0.0 framework, and you grant the Licensor (Tinta y Nodos / Ismael Muñoz Reyes) a perpetual, 
+worldwide, non-exclusive, royalty-free, transferable right and license to use, modify, 
+compile, and distribute your contribution as part of the project.
+
+8. GOOD FAITH SECURITY RESEARCH SAFE HARBOR
+The Licensor considers good-faith, non-destructive security research, vulnerability 
+auditing, and reverse engineering conducted in accordance with Section 1(c) to be 
+authorized activities. The Licensor will not initiate legal action or invoke anti-circumvention 
+statutes (such as DMCA 1201) against individuals who conduct security testing in good faith, 
+provided that such research does not violate privacy, disrupt user systems, or exfiltrate 
+unauthorized data.

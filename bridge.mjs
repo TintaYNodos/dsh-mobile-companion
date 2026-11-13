@@ -4,7 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 /**
- * Copyright (c) 2026 Tinta y Nodos / Ismael MuÃ±oz Reyes. All rights reserved.
+ * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * Licensed under the Business Source License 1.1 (BSL 1.1) / PolyForm Noncommercial 1.0.0.
  * See companion/LICENSE or LICENSE for license terms.
  */
@@ -44,8 +44,8 @@ let lastPanelOpen = 0;
 const openPanelWindow = ({ force = false } = {}) => {
   const now = Date.now();
 
-  // Si ya hay una pestaÃ±a del panel abierta en el navegador:
-  // NO abrir pestaÃ±as adicionales. Actualizar la existente y enfocarla en Windows.
+  // Si ya hay una pestaña del panel abierta en el navegador:
+  // NO abrir pestañas adicionales. Actualizar la existente y enfocarla en Windows.
   if (isPanelTabOpen()) {
     notifyPanelClients();
     focusPanelWindow();

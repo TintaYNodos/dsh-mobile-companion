@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -219,7 +219,7 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
         log("proxy", `Fallo hacia ${authority}: ${error.code || error.message}`);
         if (wantsHtml) {
           res.writeHead(502, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-          res.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="3"><title>Conectando al bÃºnker...</title><style>body{background:#151517;color:#FCD34D;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:20px;box-sizing:border-box}p{font-size:16px;line-height:1.5}</style></head><body><p>Reconectando con DeepSeek Harness...<br><small style="color:#9CA3AF">Reintentando automÃ¡ticamente</small></p></body></html>');
+          res.end('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="3"><title>Conectando al búnker...</title><style>body{background:#151517;color:#FCD34D;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:20px;box-sizing:border-box}p{font-size:16px;line-height:1.5}</style></head><body><p>Reconectando con DeepSeek Harness...<br><small style="color:#9CA3AF">Reintentando automáticamente</small></p></body></html>');
         } else {
           res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
           res.end("El bunker no responde. Reintentando en segundo plano.");

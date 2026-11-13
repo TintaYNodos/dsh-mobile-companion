@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -115,14 +115,14 @@ const EVENT_LABEL = new Map([
 
 const FLASH = new Map([
   ["approve", ["Listo: autorizaste este dispositivo.", ""]],
-  ["reject", ["Solicitud rechazada. El telÃ©fono puede volver a pedir acceso.", ""]],
+  ["reject", ["Solicitud rechazada. El teléfono puede volver a pedir acceso.", ""]],
   ["revoke", ["Dispositivo revocado.", ""]],
   ["revoke-all", ["Se revocaron todos los dispositivos.", ""]],
   ["rename", ["Nombre actualizado.", ""]],
   ["cleared", ["Historial limpiado.", ""]],
   ["expired", ["No se pudo completar: esa solicitud ya no estaba vigente.", "bad"]],
   ["missing", ["No se pudo completar: el dispositivo o la solicitud ya no existe.", "bad"]],
-  ["failed", ["No se pudo guardar el cambio. Revisa que el disco estÃ© disponible.", "bad"]],
+  ["failed", ["No se pudo guardar el cambio. Revisa que el disco esté disponible.", "bad"]],
 ]);
 
 export const stateStamp = ({ pending = [], devices = [], events = [] } = {}) =>
@@ -141,8 +141,8 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
     <div style="flex:1 1 220px;min-width:0">
       <div class="who">${escapeHtml(describeAgent(entry.agent))}
         ${entry.code ? `<span class="code">${escapeHtml(entry.code)}</span>` : ""}</div>
-      <div class="meta">${escapeHtml(entry.address)} Â· pidiÃ³ acceso ${escapeHtml(ago(entry.requestedAt))}</div>
-      <div class="meta">Si es tu telÃ©fono, el cÃ³digo debe coincidir con el de su pantalla.</div>
+      <div class="meta">${escapeHtml(entry.address)} · pidió acceso ${escapeHtml(ago(entry.requestedAt))}</div>
+      <div class="meta">Si es tu teléfono, el código debe coincidir con el de su pantalla.</div>
     </div>
     <div class="actions">
       <form method="post" action="/pair/approve">
@@ -165,9 +165,9 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
       <div class="who"><span class="live ${device.online ? "on" : ""}" aria-hidden="true"></span>
         ${escapeHtml(label)}
         <span class="state ${device.online ? "on" : ""}">${device.online ? "conectado" : "sin actividad"}</span></div>
-      <div class="meta">${escapeHtml(device.address)} Â· ${escapeHtml(describeAgent(device.agent))}<br>
+      <div class="meta">${escapeHtml(device.address)} · ${escapeHtml(describeAgent(device.agent))}<br>
         autorizado ${escapeHtml(when(device.approvedAt))}${
-          device.lastSeen ? ` Â· Ãºltimo uso ${escapeHtml(ago(device.lastSeen))}` : " Â· sin uso registrado"
+          device.lastSeen ? ` · último uso ${escapeHtml(ago(device.lastSeen))}` : " · sin uso registrado"
         }</div>
     </div>
     <div class="actions">
@@ -201,25 +201,25 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
 
   const pendingBlock = pending.length
     ? pending.map(pendingCard).join("")
-    : `<div class="card empty">No hay solicitudes pendientes.<br>Abre la app en el telÃ©fono y aparecerÃ¡ aquÃ­.</div>`;
+    : `<div class="card empty">No hay solicitudes pendientes.<br>Abre la app en el teléfono y aparecerá aquí.</div>`;
 
   const devicesBlock = devices.length
     ? devices.map(deviceCard).join("") +
       `<form method="post" action="/pair/revoke" style="margin-top:4px"
-             onsubmit="return confirm('Â¿Revocar los ${devices.length} dispositivo${devices.length === 1 ? "" : "s"}? El acceso se corta de inmediato.');">
+             onsubmit="return confirm('¿Revocar los ${devices.length} dispositivo${devices.length === 1 ? "" : "s"}? El acceso se corta de inmediato.');">
          <button class="no" type="submit">Revocar todos</button></form>`
-    : `<div class="card empty">TodavÃ­a no hay dispositivos autorizados.<br>Cuando autorices uno, aparecerÃ¡ aquÃ­.</div>`;
+    : `<div class="card empty">Todavía no hay dispositivos autorizados.<br>Cuando autorices uno, aparecerá aquí.</div>`;
 
   const [flashText, flashTone] = FLASH.get(flash) || ["", ""];
 
   return page(
     "Autorizar dispositivos",
-    `${brand("DSH Companion", "Autorizar dispositivos Â· solo esta computadora")}
+    `${brand("DSH Companion", "Autorizar dispositivos · solo esta computadora")}
      ${flashText ? `<div class="flash ${flashTone}" role="status">${escapeHtml(flashText)}</div>` : ""}
      <div class="stats">
        <span class="chip"><b>${pending.length}</b> solicitud${pending.length === 1 ? "" : "es"}</span>
        <span class="chip"><b>${devices.length}</b> dispositivo${devices.length === 1 ? "" : "s"}</span>
-       <span class="chip">SesiÃ³n de ${config.deviceTtlDays} dÃ­as, se renueva al usarla</span>
+       <span class="chip">Sesión de ${config.deviceTtlDays} días, se renueva al usarla</span>
      </div>
      <h2>Solicitudes</h2>
      ${pendingBlock}
@@ -243,7 +243,7 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
          location.replace('/pair');
        }
 
-       // DetecciÃ³n y prevenciÃ³n de pestaÃ±as duplicadas
+       // Detección y prevención de pestañas duplicadas
        try {
          if (typeof BroadcastChannel !== 'undefined') {
            var bc = new BroadcastChannel('dsh-companion-pair-panel');
@@ -258,18 +258,18 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
                try {
                  window.close();
                } catch(e) {}
-               document.title = "DSH Companion (PestaÃ±a abierta)";
+               document.title = "DSH Companion (Pestaña abierta)";
                document.body.innerHTML = '<div style="max-width:480px;margin:80px auto;font-family:sans-serif;padding:32px;text-align:center;border-radius:12px;background:#f6f8fa;border:1px solid #d0d7de;color:#1f2328;">'
-                 + '<h2 style="color:#0969da;margin-bottom:12px;font-size:18px;">DSH Companion ya estÃ¡ abierto</h2>'
-                 + '<p style="font-size:14px;color:#656d76;line-height:1.5;">Esta ventana ya se encuentra abierta en otra pestaÃ±a de tu navegador y se actualiza automÃ¡ticamente.</p>'
-                 + '<p style="margin-top:20px;"><button onclick="window.close()" style="padding:10px 20px;font-size:14px;font-weight:600;border-radius:8px;background:#0969da;color:#fff;border:none;cursor:pointer;">Cerrar esta pestaÃ±a</button></p>'
+                 + '<h2 style="color:#0969da;margin-bottom:12px;font-size:18px;">DSH Companion ya está abierto</h2>'
+                 + '<p style="font-size:14px;color:#656d76;line-height:1.5;">Esta ventana ya se encuentra abierta en otra pestaña de tu navegador y se actualiza automáticamente.</p>'
+                 + '<p style="margin-top:20px;"><button onclick="window.close()" style="padding:10px 20px;font-size:14px;font-weight:600;border-radius:8px;background:#0969da;color:#fff;border:none;cursor:pointer;">Cerrar esta pestaña</button></p>'
                  + '</div>';
              }
            };
          }
        } catch(e) {}
 
-       // ActualizaciÃ³n instantÃ¡nea en vivo mediante Server-Sent Events (SSE)
+       // Actualización instantánea en vivo mediante Server-Sent Events (SSE)
        try {
          if (typeof EventSource !== 'undefined') {
            var es = new EventSource('/pair/events');

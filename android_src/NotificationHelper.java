@@ -18,9 +18,9 @@ import android.os.Build;
  * Gestor de notificaciones de DSH Companion.
  *
  * Canales dedicados:
- * 1. Aprobaciones y peticiones de herramientas (Prioridad alta con botones de acciÃ³n).
+ * 1. Aprobaciones y peticiones de herramientas (Prioridad alta con botones de acción).
  * 2. Tareas y respuestas completadas (Prioridad normal).
- * 3. Alertas de desconexiÃ³n prolongada (>10 minutos).
+ * 3. Alertas de desconexión prolongada (>10 minutos).
  */
 public final class NotificationHelper {
 
@@ -81,7 +81,7 @@ public final class NotificationHelper {
         // Canal 3: Desconexion prolongada (>10 min)
         NotificationChannel chConn = new NotificationChannel(
                 CHANNEL_CONNECTION,
-                "Estado de ConexiÃ³n",
+                "Estado de Conexión",
                 NotificationManager.IMPORTANCE_HIGH
         );
         chConn.setDescription("Avisos si se pierde la conexion con la computadora por mas de 10 minutos");
@@ -138,12 +138,12 @@ public final class NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 
-        String title = "DSH: AprobaciÃ³n requerida";
+        String title = "DSH: Aprobación requerida";
         if (toolName != null && !toolName.trim().isEmpty() && !toolName.equalsIgnoreCase("Harness")) {
-            title = "AprobaciÃ³n: " + toolName;
+            title = "Aprobación: " + toolName;
         }
 
-        String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmaciÃ³n";
+        String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmación";
         String fullText = body;
         if (detail != null && !detail.trim().isEmpty()) {
             fullText = body + "\n" + detail;
@@ -214,8 +214,8 @@ public final class NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 
-        String title = "Dispositivo pide acceso (CÃ³digo " + code + ")";
-        String summary = address + " Â· " + (agent != null ? agent : "Dispositivo");
+        String title = "Dispositivo pide acceso (Código " + code + ")";
+        String summary = address + " · " + (agent != null ? agent : "Dispositivo");
 
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -228,7 +228,7 @@ public final class NotificationHelper {
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(summary)
-                .setStyle(new Notification.BigTextStyle().bigText("CÃ³digo en pantalla: " + code + "\n" + summary))
+                .setStyle(new Notification.BigTextStyle().bigText("Código en pantalla: " + code + "\n" + summary))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
@@ -256,10 +256,10 @@ public final class NotificationHelper {
 
         String notifTitle = "DSH: Respuesta lista";
         if (title != null && !title.trim().isEmpty() && !title.equalsIgnoreCase("DeepSeek Harness")) {
-            notifTitle = "Respuesta lista Â· " + title;
+            notifTitle = "Respuesta lista · " + title;
         }
 
-        String body = (preview != null && !preview.trim().isEmpty()) ? preview : "El trabajo de generaciÃ³n ha finalizado.";
+        String body = (preview != null && !preview.trim().isEmpty()) ? preview : "El trabajo de generación ha finalizado.";
 
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -336,8 +336,8 @@ public final class NotificationHelper {
         );
 
         String target = (bunkerLabel != null && !bunkerLabel.trim().isEmpty()) ? bunkerLabel : "la computadora";
-        String title = "ConexiÃ³n perdida con " + target;
-        String body = "Sin conexiÃ³n con DeepSeek Harness desde hace mÃ¡s de " + disconnectedMinutes + " minutos. Verifica que la PC y la red VPN sigan encendidas.";
+        String title = "Conexión perdida con " + target;
+        String body = "Sin conexión con DeepSeek Harness desde hace más de " + disconnectedMinutes + " minutos. Verifica que la PC y la red VPN sigan encendidas.";
 
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -381,8 +381,8 @@ public final class NotificationHelper {
         }
 
         builder.setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("ActualizaciÃ³n disponible (v" + newVersion + ")")
-                .setContentText("Toca para descargar e instalar la nueva versiÃ³n.")
+                .setContentTitle("Actualización disponible (v" + newVersion + ")")
+                .setContentText("Toca para descargar e instalar la nueva versión.")
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
                 .setColor(Color.parseColor("#1F6FEB"));

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -36,7 +36,7 @@ export const maskToPrefix = (mask) => {
   return prefix;
 };
 
-/** ComparaciÃ³n real por mÃ¡scara, no por octetos ni prefijos fijos. */
+/** Comparación real por máscara, no por octetos ni prefijos fijos. */
 export const inCidr = (address, network, prefixLength) => {
   const target = ipv4ToInt(address);
   const base = ipv4ToInt(network);

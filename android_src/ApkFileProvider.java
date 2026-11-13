@@ -36,7 +36,7 @@ public class ApkFileProvider extends ContentProvider {
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
         String filename = uri.getLastPathSegment();
-        if (filename == null) throw new FileNotFoundException("Nombre de archivo invÃ¡lido");
+        if (filename == null) throw new FileNotFoundException("Nombre de archivo inválido");
 
         File file = resolveFile(filename);
         if (!file.exists()) {

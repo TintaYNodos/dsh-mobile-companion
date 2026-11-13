@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -148,12 +148,12 @@ export function isCompanionRequestTrusted(req) {
 /**
  * Clave de acceso efectiva.
  *
- * Orden: variable de entorno, archivo persistido, generaciÃ³n automÃ¡tica.
+ * Orden: variable de entorno, archivo persistido, generación automática.
  * Una red privada solo controla la pertenencia, no la identidad: sin clave,
- * cualquier miembro de la VPN hereda esta sesiÃ³n. Por eso la clave se genera
+ * cualquier miembro de la VPN hereda esta sesión. Por eso la clave se genera
  * sola la primera vez y se guarda con permisos de propietario.
  *
- * `DSH_ACCESS_DISABLE=1` la desactiva de forma explÃ­cita y consciente.
+ * `DSH_ACCESS_DISABLE=1` la desactiva de forma explícita y consciente.
  */
 export function resolveAccessKey() {
   if (accessKeyCache !== null) return accessKeyCache;
@@ -176,7 +176,7 @@ export function resolveAccessKey() {
       return accessKeyCache;
     }
   } catch {
-    // Archivo ausente: se genera a continuaciÃ³n.
+    // Archivo ausente: se genera a continuación.
   }
 
   const generated = crypto.randomBytes(18).toString("base64url");
@@ -184,7 +184,7 @@ export function resolveAccessKey() {
     fs.mkdirSync(config.dshHome, { recursive: true });
     fs.writeFileSync(keyFile, `${generated}\n`, { encoding: "utf8", mode: 0o600 });
   } catch {
-    // Si no se puede persistir, se usa igual para esta ejecuciÃ³n.
+    // Si no se puede persistir, se usa igual para esta ejecución.
   }
 
   accessKeyCache = generated;
@@ -197,7 +197,7 @@ const BASIC_HEADER = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i;
 
 /**
  * Verifica la clave de acceso compartida enviada por HTTP Basic.
- * El usuario es irrelevante; solo se compara la contraseÃ±a en tiempo constante.
+ * El usuario es irrelevante; solo se compara la contraseña en tiempo constante.
  */
 export function hasValidAccessKey(req) {
   const key = resolveAccessKey();

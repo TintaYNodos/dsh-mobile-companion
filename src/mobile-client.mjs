@@ -47,7 +47,7 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
       if (key !== lastApprovalKey) {
         lastApprovalKey = key;
         var headlineEl = card.querySelector('.Zf6DNq_headline');
-        var headline = headlineEl ? headlineEl.textContent.trim() : 'AprobaciÃ³n requerida';
+        var headline = headlineEl ? headlineEl.textContent.trim() : 'Aprobación requerida';
         var detailEl = card.querySelector('.Zf6DNq_command') || card.querySelector('.Zf6DNq_description');
         var detail = detailEl ? detailEl.textContent.trim() : '';
 
@@ -81,10 +81,10 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
           var lastMsg = messages[messages.length - 1];
           var text = (lastMsg.textContent || '').trim();
           if (text) {
-            snippet = text.length > 150 ? text.substring(0, 150) + 'â€¦' : text;
+            snippet = text.length > 150 ? text.substring(0, 150) + '…' : text;
           }
         }
-        var docTitle = (document.title || '').replace(/^DeepSeek Harness\\s*[-Â·]?\\s*/i, '').trim();
+        var docTitle = (document.title || '').replace(/^DeepSeek Harness\\s*[-·]?\\s*/i, '').trim();
         if (window.AndroidCompanion && window.AndroidCompanion.onGenerationFinished) {
           window.AndroidCompanion.onGenerationFinished(docTitle || 'Respuesta lista', snippet);
         }
@@ -181,7 +181,7 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
     var btn = ev.target && ev.target.closest ? ev.target.closest('button') : null;
     if (btn) {
       var txt = (btn.textContent || '').trim();
-      var isPlus = txt === '+' || btn.getAttribute('aria-label') === 'AÃ±adir' || btn.getAttribute('aria-label') === 'Add';
+      var isPlus = txt === '+' || btn.getAttribute('aria-label') === 'Añadir' || btn.getAttribute('aria-label') === 'Add';
       if (isPlus) {
         var active = document.activeElement;
         if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
@@ -349,7 +349,7 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
     }
   };
 
-  // Control de comportamiento de tecla Enter (â†µ): Salto de lÃ­nea vs Enviar mensaje
+  // Control de comportamiento de tecla Enter (↵): Salto de línea vs Enviar mensaje
   window.__DSH_ENTER_NEWLINE__ = true;
   if (window.AndroidCompanion && typeof window.AndroidCompanion.isEnterNewlineEnabled === 'function') {
     try {
@@ -370,12 +370,12 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
     return false;
   }
 
-  // Interceptar tecla Enter en fase de captura para convertirla en salto de lÃ­nea si estÃ¡ activado
+  // Interceptar tecla Enter en fase de captura para convertirla en salto de línea si está activado
   window.addEventListener('keydown', function(event) {
     if (!window.__DSH_ENTER_NEWLINE__) return;
     if (event.key === 'Enter' || event.keyCode === 13) {
       if (isComposerTarget(event.target)) {
-        // Permitir envÃ­o explÃ­cito con Ctrl+Enter o Cmd+Enter si hay teclado fÃ­sico
+        // Permitir envío explícito con Ctrl+Enter o Cmd+Enter si hay teclado físico
         if (event.ctrlKey || event.metaKey) return;
 
         // Si ya trae shiftKey, dejar pasar normalmente

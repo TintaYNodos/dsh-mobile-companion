@@ -68,7 +68,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
                     sendToolAction(context, targetBunkerUrl, decision, requestId);
                 }).start();
             } else {
-                Toast.makeText(context, isApprove ? "PeticiÃ³n aprobada" : "PeticiÃ³n rechazada", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, isApprove ? "Petición aprobada" : "Petición rechazada", Toast.LENGTH_SHORT).show();
             }
         } else if (NotificationHelper.TYPE_DEVICE_PAIRING.equals(actionType)) {
             final String apiAction = isApprove ? "approve_device" : "reject_device";
@@ -86,7 +86,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             bunkerUrl = MainActivity.getActiveBunkerUrl(context);
         }
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
-            postToast(context, "BÃºnker no configurado");
+            postToast(context, "Búnker no configurado");
             return;
         }
 
@@ -104,7 +104,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         }
 
         if (success) {
-            postToast(context, "allow".equals(action) ? "PeticiÃ³n aprobada" : "PeticiÃ³n rechazada");
+            postToast(context, "allow".equals(action) ? "Petición aprobada" : "Petición rechazada");
         } else {
             postToast(context, "No se pudo conectar con el puente");
         }
@@ -115,7 +115,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             bunkerUrl = MainActivity.getActiveBunkerUrl(context);
         }
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
-            postToast(context, "BÃºnker no configurado");
+            postToast(context, "Búnker no configurado");
             return;
         }
 

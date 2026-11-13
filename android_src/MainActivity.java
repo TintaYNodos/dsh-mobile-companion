@@ -813,8 +813,8 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                // Conceder el micrÃ³fono sin mirar el origen permitirÃ­a que
-                // cualquier pÃ¡gina o marco llegado al WebView escuche y suba audio.
+                // Conceder el micrófono sin mirar el origen permitiría que
+                // cualquier página o marco llegado al WebView escuche y suba audio.
                 if (request == null || !isSameBunker(request.getOrigin())) {
                     if (request != null) request.deny();
                     return;
@@ -870,9 +870,9 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 pageLoading = false;
-                // onPageFinished se invoca tambiÃ©n sobre la pÃ¡gina de error y
-                // despuÃ©s de onReceivedError: sin esta guarda se anularÃ­a el
-                // reintento reciÃ©n programado y el punto se pondrÃ­a en verde.
+                // onPageFinished se invoca también sobre la página de error y
+                // después de onReceivedError: sin esta guarda se anularía el
+                // reintento recién programado y el punto se pondría en verde.
                 if (mainFrameFailed) return;
                 if (url == null) return;
                 Uri parsed = Uri.parse(url);
@@ -938,8 +938,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Solo los fallos de red justifican reintentar. Un aborto por navegaciÃ³n o
-     * un esquema no soportado son decisiones, no averÃ­as.
+     * Solo los fallos de red justifican reintentar. Un aborto por navegación o
+     * un esquema no soportado son decisiones, no averías.
      */
     private boolean isTransientNetworkError(WebResourceError error) {
         if (error == null) return false;
@@ -959,7 +959,7 @@ public class MainActivity extends Activity {
 
     /**
      * Frontera de origen: esquema, host y puerto efectivos. Comparar solo el
-     * host abrirÃ­a cualquier otro servicio ofrecido por la misma mÃ¡quina.
+     * host abriría cualquier otro servicio ofrecido por la misma máquina.
      */
     private boolean isSameBunker(Uri uri) {
         if (activeUrl.isEmpty() || uri == null) return false;
@@ -983,7 +983,7 @@ public class MainActivity extends Activity {
         return "https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80;
     }
 
-    /** Completa el esquema y el puerto del bÃºnker cuando el usuario los omite. */
+    /** Completa el esquema y el puerto del búnker cuando el usuario los omite. */
     private String normalizeUrl(String raw) {
         String url = raw == null ? "" : raw.trim();
         if (url.isEmpty()) return url;
@@ -1127,7 +1127,7 @@ public class MainActivity extends Activity {
         startLoad(activeUrl);
     }
 
-    /** Punto Ãºnico de navegaciÃ³n: marca la carga para que los eventos se distingan. */
+    /** Punto único de navegación: marca la carga para que los eventos se distingan. */
     private void startLoad(String url) {
         if (webView == null) return;
         pageLoading = true;
@@ -1141,7 +1141,7 @@ public class MainActivity extends Activity {
         pill = new LinearLayout(this);
         pill.setOrientation(LinearLayout.HORIZONTAL);
         pill.setGravity(Gravity.CENTER);
-        // 48 dp de Ã¡rea tÃ¡ctil: el mÃ­nimo recomendado para un objetivo aislado.
+        // 48 dp de área táctil: el mínimo recomendado para un objetivo aislado.
         pill.setMinimumWidth(dp(48));
         pill.setMinimumHeight(dp(48));
         pill.setClickable(true);
@@ -1173,7 +1173,7 @@ public class MainActivity extends Activity {
         pill.setLayoutParams(params);
         pill.setElevation(dp(8));
 
-        // El clic accesible (TalkBack, ENTER, D-pad) entra por aquÃ­.
+        // El clic accesible (TalkBack, ENTER, D-pad) entra por aquí.
         pill.setOnClickListener(v -> openHub());
 
         pill.setOnTouchListener(new View.OnTouchListener() {
@@ -1292,7 +1292,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * El puente exige clave de acceso. Si el equipo respondiÃ³ 401 y no hay clave
+     * El puente exige clave de acceso. Si el equipo respondió 401 y no hay clave
      * guardada, se abre el editor en lugar de dejar la pantalla en blanco.
      */
     private void promptAccessKey() {
@@ -1571,7 +1571,7 @@ public class MainActivity extends Activity {
         headerText.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Control de transporte â€¢ Red privada ZeroTier / Tailscale");
+        subtitle.setText("Control de transporte • Red privada ZeroTier / Tailscale");
         subtitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         subtitle.setTextColor(inkDim());
         subtitle.setPadding(0, dp(2), 0, 0);
@@ -1663,18 +1663,18 @@ public class MainActivity extends Activity {
         if (isUpdateAvailable) {
             final String finalVer = updateTargetVer;
             final String finalUrl = updateTargetUrl;
-            sheet.addView(action("Instalar actualizaciÃ³n (v" + finalVer + ")", 3, () -> {
+            sheet.addView(action("Instalar actualización (v" + finalVer + ")", 3, () -> {
                 dismissHub();
                 downloadAndInstallApk(finalUrl.isEmpty() ? null : finalUrl, "DSH-Companion.apk", "Actualizando a v" + finalVer + "...");
             }));
         } else {
-            Button btnUpToDate = action("Sistema al dÃ­a (v" + localVer + ")", 4, () -> {
-                Toast.makeText(this, "La aplicaciÃ³n estÃ¡ en la versiÃ³n mÃ¡s reciente (v" + localVer + ")", Toast.LENGTH_SHORT).show();
+            Button btnUpToDate = action("Sistema al día (v" + localVer + ")", 4, () -> {
+                Toast.makeText(this, "La aplicación está en la versión más reciente (v" + localVer + ")", Toast.LENGTH_SHORT).show();
             });
             btnUpToDate.setOnLongClickListener(v -> {
                 AlertDialog dialog = new AlertDialog.Builder(this)
                         .setTitle("Reinstalar v" + localVer)
-                        .setMessage("Â¿Deseas descargar y reinstalar el archivo APK actual?")
+                        .setMessage("¿Deseas descargar y reinstalar el archivo APK actual?")
                         .setPositiveButton("Reinstalar", (d, w) -> {
                             dismissHub();
                             downloadAndInstallApk();
@@ -1698,7 +1698,7 @@ public class MainActivity extends Activity {
         if (!rollbackVer.isEmpty() && !rollbackVer.equals(localVer)) {
             final String finalRollbackVer = rollbackVer;
             final String finalRollbackUrl = rollbackUrl;
-            sheet.addView(action("Revertir a versiÃ³n previa (v" + finalRollbackVer + ")", 2, () -> {
+            sheet.addView(action("Revertir a versión previa (v" + finalRollbackVer + ")", 2, () -> {
                 dismissHub();
                 confirmRollback(finalRollbackVer, finalRollbackUrl);
             }));
@@ -1739,7 +1739,7 @@ public class MainActivity extends Activity {
             dismissHub();
             webView.reload();
         });
-        Button btnClear = actionCompact("Limpiar cachÃ©", false, () -> {
+        Button btnClear = actionCompact("Limpiar caché", false, () -> {
             dismissHub();
             clearCacheAndReload();
         });
@@ -1780,7 +1780,7 @@ public class MainActivity extends Activity {
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView label = new TextView(this);
-        label.setText("TELEMETRÃA PC 1" + (uptime.isEmpty() ? "" : " Â· " + uptime));
+        label.setText("TELEMETRÍA PC 1" + (uptime.isEmpty() ? "" : " · " + uptime));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         label.setLetterSpacing(0.06f);
         label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
@@ -1791,7 +1791,7 @@ public class MainActivity extends Activity {
 
         if (tempC > 0) {
             TextView tempBadge = new TextView(this);
-            tempBadge.setText(tempC + "Â°C");
+            tempBadge.setText(tempC + "°C");
             tempBadge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
             tempBadge.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             tempBadge.setTextColor(tempC > 80 ? Color.parseColor("#F87171") : accentInk());
@@ -1800,9 +1800,9 @@ public class MainActivity extends Activity {
         card.addView(top);
 
         TextView row1 = new TextView(this);
-        String cpuText = "CPU: " + cpuPercent + "%" + (tempC > 0 ? " (" + tempC + "Â°C)" : "");
+        String cpuText = "CPU: " + cpuPercent + "%" + (tempC > 0 ? " (" + tempC + "°C)" : "");
         String ramText = "RAM: " + String.format(Locale.US, "%.1f", ramUsed) + "/" + String.format(Locale.US, "%.1f", ramTotal) + " GB (" + ramPercent + "%)";
-        row1.setText(cpuText + "  Â·  " + ramText);
+        row1.setText(cpuText + "  ·  " + ramText);
         row1.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
         row1.setTypeface(android.graphics.Typeface.MONOSPACE);
         row1.setTextColor(ink());
@@ -1857,9 +1857,9 @@ public class MainActivity extends Activity {
                         Intent sendIntent = new Intent();
                         sendIntent.setAction(Intent.ACTION_SEND);
                         sendIntent.putExtra(Intent.EXTRA_TEXT, textToShare);
-                        sendIntent.putExtra(Intent.EXTRA_SUBJECT, title != null ? title : "ConversaciÃ³n DSH");
+                        sendIntent.putExtra(Intent.EXTRA_SUBJECT, title != null ? title : "Conversación DSH");
                         sendIntent.setType("text/plain");
-                        Intent shareIntent = Intent.createChooser(sendIntent, "Compartir conversaciÃ³n");
+                        Intent shareIntent = Intent.createChooser(sendIntent, "Compartir conversación");
                         startActivity(shareIntent);
                     } catch (Exception e) {
                         Toast.makeText(this, "Error al compartir: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -1895,13 +1895,13 @@ public class MainActivity extends Activity {
             final String content = baos.toString("UTF-8").trim();
 
             if (content.isEmpty()) {
-                Toast.makeText(this, "El archivo seleccionado estÃ¡ vacÃ­o", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "El archivo seleccionado está vacío", Toast.LENGTH_SHORT).show();
                 return;
             }
 
             AlertDialog dialog = new AlertDialog.Builder(this)
-                    .setTitle("Importar conversaciÃ³n")
-                    .setMessage("Archivo cargado (" + content.length() + " caracteres).\nÂ¿Deseas insertar este contenido en el chat activo?")
+                    .setTitle("Importar conversación")
+                    .setMessage("Archivo cargado (" + content.length() + " caracteres).\n¿Deseas insertar este contenido en el chat activo?")
                     .setPositiveButton("Insertar en chat", (d, w) -> {
                         String jsonSafe = org.json.JSONObject.quote(content);
                         String js = "if (window.__DSH_INSERT_INTO_COMPOSER__) window.__DSH_INSERT_INTO_COMPOSER__(" + jsonSafe + ");";
@@ -2041,7 +2041,7 @@ public class MainActivity extends Activity {
         CancellationSignal signal = new CancellationSignal();
         BiometricPrompt prompt = new BiometricPrompt.Builder(this)
                 .setTitle("Acceso a DSH Companion")
-                .setSubtitle("Confirma tu identidad para acceder a la sesiÃ³n")
+                .setSubtitle("Confirma tu identidad para acceder a la sesión")
                 .setNegativeButton("Cancelar", getMainExecutor(), (d, w) -> finish())
                 .build();
 
@@ -2057,7 +2057,7 @@ public class MainActivity extends Activity {
                 if (errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED || errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED) {
                     finish();
                 } else {
-                    Toast.makeText(MainActivity.this, "AutenticaciÃ³n requerida", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Autenticación requerida", Toast.LENGTH_SHORT).show();
                     finish();
                 }
             }
@@ -2141,7 +2141,7 @@ public class MainActivity extends Activity {
         notifCard.setLayoutParams(ncParams);
         form.addView(notifCard);
 
-        form.addView(sectionHeader("SEGURIDAD BIOMÃ‰TRICA"));
+        form.addView(sectionHeader("SEGURIDAD BIOMÉTRICA"));
         LinearLayout bioCard = new LinearLayout(this);
         bioCard.setOrientation(LinearLayout.HORIZONTAL);
         bioCard.setGravity(Gravity.CENTER_VERTICAL);
@@ -2161,7 +2161,7 @@ public class MainActivity extends Activity {
         bioText.addView(bioTitle);
 
         TextView bioDesc = new TextView(this);
-        bioDesc.setText("Pide confirmaciÃ³n biomÃ©trica al abrir la app");
+        bioDesc.setText("Pide confirmación biométrica al abrir la app");
         bioDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         bioDesc.setTextColor(inkDim());
         bioText.addView(bioDesc);
@@ -2233,14 +2233,14 @@ public class MainActivity extends Activity {
         enterText.setLayoutParams(etParams);
 
         TextView enterTitle = new TextView(this);
-        enterTitle.setText("Salto de lÃ­nea con Enter (â†µ)");
+        enterTitle.setText("Salto de línea con Enter (↵)");
         enterTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         enterTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         enterTitle.setTextColor(ink());
         enterText.addView(enterTitle);
 
         TextView enterDesc = new TextView(this);
-        enterDesc.setText("Enter inserta salto de lÃ­nea. Desactiva para enviar con Enter.");
+        enterDesc.setText("Enter inserta salto de línea. Desactiva para enviar con Enter.");
         enterDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         enterDesc.setTextColor(inkDim());
         enterText.addView(enterDesc);
@@ -2251,7 +2251,7 @@ public class MainActivity extends Activity {
         swEnter.setOnCheckedChangeListener((bv, checked) -> {
             prefs.edit().putBoolean(KEY_ENTER_NEWLINE, checked).apply();
             applyEnterBehaviorToWeb();
-            Toast.makeText(this, checked ? "Enter inserta salto de lÃ­nea (â†µ)" : "Enter envÃ­a el mensaje", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, checked ? "Enter inserta salto de línea (↵)" : "Enter envía el mensaje", Toast.LENGTH_SHORT).show();
         });
         enterCard.addView(swEnter);
         LinearLayout.LayoutParams ecParams = new LinearLayout.LayoutParams(
@@ -2389,7 +2389,7 @@ public class MainActivity extends Activity {
         textCol.setLayoutParams(tParams);
 
         TextView title = new TextView(this);
-        title.setText("Prevenir suspensiÃ³n");
+        title.setText("Prevenir suspensión");
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         title.setTextColor(ink());
@@ -2430,12 +2430,12 @@ public class MainActivity extends Activity {
         String resolvedUrl = (targetUrl != null && !targetUrl.isEmpty()) ? targetUrl : fallbackUrl;
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Revertir a versiÃ³n v" + targetVer)
-                .setMessage("Se descargarÃ¡ el instalador de la versiÃ³n previa (v" + targetVer + ").\n\n"
-                        + "Aviso tÃ©cnico de Android: Si el sistema rechaza la instalaciÃ³n directa por ser una versiÃ³n anterior, "
-                        + "desinstala primero la versiÃ³n actual. Tus direcciones y claves guardadas se conservan.")
+                .setTitle("Revertir a versión v" + targetVer)
+                .setMessage("Se descargará el instalador de la versión previa (v" + targetVer + ").\n\n"
+                        + "Aviso técnico de Android: Si el sistema rechaza la instalación directa por ser una versión anterior, "
+                        + "desinstala primero la versión actual. Tus direcciones y claves guardadas se conservan.")
                 .setPositiveButton("Descargar v" + targetVer, (d, which) -> {
-                    downloadAndInstallApk(resolvedUrl, "DSH-Companion-v" + targetVer + ".apk", "Descargando versiÃ³n previa (v" + targetVer + ")...");
+                    downloadAndInstallApk(resolvedUrl, "DSH-Companion-v" + targetVer + ".apk", "Descargando versión previa (v" + targetVer + ")...");
                 })
                 .setNegativeButton("Cancelar", null)
                 .create();
@@ -2564,7 +2564,7 @@ public class MainActivity extends Activity {
         layout.setBackground(rounded(surface(), outline(), 12f));
 
         TextView txtTitle = new TextView(this);
-        txtTitle.setText(titleText != null ? titleText : "ActualizaciÃ³n de binario");
+        txtTitle.setText(titleText != null ? titleText : "Actualización de binario");
         txtTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
         txtTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         txtTitle.setTextColor(ink());
@@ -2891,7 +2891,7 @@ public class MainActivity extends Activity {
             button.setBackground(rounded(
                     color(Color.parseColor("#131D2E"), Color.parseColor("#F0F6FF")),
                     color(Color.parseColor("#1F6FEB"), Color.parseColor("#0969DA")), 8f));
-        } else if (style == 4) { // Up to date / Sistema al dÃ­a
+        } else if (style == 4) { // Up to date / Sistema al día
             button.setTextColor(color(Color.parseColor("#3FB950"), Color.parseColor("#1A7F37")));
             button.setBackground(rounded(
                     color(Color.parseColor("#0D1D16"), Color.parseColor("#EAFBEA")),
@@ -2980,7 +2980,7 @@ public class MainActivity extends Activity {
 
         int nextNum = getPcList().size() + 1;
         final EditText nameInput = field("Nombre de la PC (ej. Laptop)", "PC " + nextNum);
-        final EditText urlInput = field("DirecciÃ³n IP (ej. http://10.x.x.x:57420)", "");
+        final EditText urlInput = field("Dirección IP (ej. http://10.x.x.x:57420)", "");
         final EditText accessInput = field("Clave de acceso (opcional)", "");
         accessInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
@@ -3023,7 +3023,7 @@ public class MainActivity extends Activity {
                 String targetKey = accessInput.getText().toString().trim();
 
                 if (targetUrl.isEmpty()) {
-                    Toast.makeText(this, "Ingresa la direcciÃ³n IP o URL", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Ingresa la dirección IP o URL", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
@@ -3056,11 +3056,11 @@ public class MainActivity extends Activity {
         form.setBackgroundColor(surface());
 
         final EditText nameInput = field("Nombre de la PC", pc.name);
-        final EditText urlInput = field("DirecciÃ³n IP (ej. http://10.x.x.x:57420)", pc.url);
+        final EditText urlInput = field("Dirección IP (ej. http://10.x.x.x:57420)", pc.url);
         final EditText accessInput = field("Clave de acceso (opcional)", pc.accessKey != null ? pc.accessKey : "");
         accessInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
 
-        form.addView(sectionLabel("CONFIGURACIÃ“N DE " + pc.name.toUpperCase()));
+        form.addView(sectionLabel("CONFIGURACIÓN DE " + pc.name.toUpperCase()));
         form.addView(nameInput);
         form.addView(urlInput);
         form.addView(sectionLabel("SEGURIDAD"));
@@ -3116,7 +3116,7 @@ public class MainActivity extends Activity {
                 String targetKey = accessInput.getText().toString().trim();
 
                 if (targetUrl.isEmpty()) {
-                    Toast.makeText(this, "Ingresa la direcciÃ³n IP o URL", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Ingresa la dirección IP o URL", Toast.LENGTH_SHORT).show();
                     return;
                 }
                 if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
@@ -3141,7 +3141,7 @@ public class MainActivity extends Activity {
                 }
                 refreshPillLabel();
                 dialog.dismiss();
-                Toast.makeText(this, "ConfiguraciÃ³n guardada", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Configuración guardada", Toast.LENGTH_SHORT).show();
             });
         });
 
@@ -3267,7 +3267,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         sIsAppVisible = false;
-        // En segundo plano no se reintenta: gastarÃ­a baterÃ­a y radio sin usuario.
+        // En segundo plano no se reintenta: gastaría batería y radio sin usuario.
         ui.removeCallbacks(reconnectTick);
         reconnecting = false;
         if (webView != null) webView.onPause();

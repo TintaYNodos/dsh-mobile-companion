@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -23,7 +23,7 @@ const FORWARDED = new Set(["forwarded", "x-forwarded-for", "x-forwarded-host", "
 /**
  * Cabeceras que autentican al cliente ante el puente y que NUNCA deben llegar
  * al backend: la clave de acceso viaja en `Authorization` y el token en
- * `X-DSH-Companion-Token`. El backend recibe su propia cookie de sesiÃ³n.
+ * `X-DSH-Companion-Token`. El backend recibe su propia cookie de sesión.
  */
 const CLIENT_AUTH = new Set(["authorization", "proxy-authorization", "x-dsh-companion-token"]);
 
@@ -96,11 +96,11 @@ export const originOf = (value) => {
  * Reglas, en orden:
  *  1. El Host debe ser uno de los esperados. Esto corta el DNS rebinding: un
  *     dominio del atacante resuelto a la IP privada llega con su propio Host.
- *  2. `Sec-Fetch-Site` debe ser del propio sitio, navegaciÃ³n directa o ausente
- *     (los clientes que no son navegadores no lo envÃ­an).
+ *  2. `Sec-Fetch-Site` debe ser del propio sitio, navegación directa o ausente
+ *     (los clientes que no son navegadores no lo envían).
  *  3. Si hay Origin, debe ser exactamente uno de los permitidos. `null` y la
- *     cadena vacÃ­a se rechazan: es la firma de un iframe en sandbox.
- *  4. Si no hay Origin pero sÃ­ Referer, se valida el origen del Referer.
+ *     cadena vacía se rechazan: es la firma de un iframe en sandbox.
+ *  4. Si no hay Origin pero sí Referer, se valida el origen del Referer.
  */
 export function isSameOriginRequest(req, allowedOrigins, allowedHosts) {
   const host = String(req.headers.host || "").trim().toLowerCase();
@@ -122,7 +122,7 @@ export function isSameOriginRequest(req, allowedOrigins, allowedHosts) {
     return parsed ? allowedOrigins.has(parsed.toLowerCase()) : false;
   }
 
-  // Sin Origin ni Referer: navegaciÃ³n directa o cliente sin navegador.
+  // Sin Origin ni Referer: navegación directa o cliente sin navegador.
   return true;
 }
 

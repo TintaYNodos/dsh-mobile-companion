@@ -18,15 +18,19 @@ import {
   readCookie,
   rejectRequest,
   requestAccess,
+  revokeAll,
   touchDevice,
 } from "./devices.mjs";
+import { log } from "./log.mjs";
 import { rejectedPage, waitingPage } from "./pairing.mjs";
 import { hasAmbiguousFraming, isDocumentRequest, isJsonRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
+import { terminateAllWsConnections } from "./proxy-ws.mjs";
 import { handleSync, handleListChats, handleGetChat } from "./sync.mjs";
 import { hasStaticRoute, serveStatic } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { collectSystemStats } from "./system-stats.mjs";
+import { panelUrl } from "./panel.mjs";
 
 const waitingClients = new Set();
 
@@ -112,6 +116,12 @@ export async function dispatchRequest(req, res, context) {
   const { pathname } = url;
 
   if (pathname === "/pair" || pathname.startsWith("/pair/")) {
+    const clientIp = normalizeAddress(remoteAddress);
+    if (clientIp.startsWith("127.")) {
+      res.writeHead(302, { Location: panelUrl() });
+      res.end();
+      return;
+    }
     sendText(res, 403, `El panel solo esta disponible en http://127.0.0.1:${config.panelPort}/pair`);
     return;
   }
@@ -209,6 +219,27 @@ export async function dispatchRequest(req, res, context) {
     const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
     if (created) openPanelWindow({ force: true });
     sendJson(res, 200, { ok: true });
+    return;
+  }
+
+  if (pathname === "/dsh-companion/kill-switch" && req.method === "POST") {
+    if (!consumeAllowance(`kill:${remoteAddress}`, { capacity: 5, refillPerSecond: 0.1 })) {
+      sendJson(res, 429, { ok: false, error: "Demasiadas peticiones" });
+      return;
+    }
+    const device = resolveDevice(req, res, remoteAddress);
+    if (!device && !hasValidAccessKey(req)) {
+      sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
+      return;
+    }
+    const revokedCount = revokeAll();
+    if (revokedCount < 0) {
+      sendJson(res, 500, { ok: false, error: "Fallo al persistir registro de revocacion" });
+      return;
+    }
+    const wsClosed = terminateAllWsConnections();
+    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados`);
+    sendJson(res, 200, { ok: true, revoked: revokedCount, message: "Todos los dispositivos han sido revocados" });
     return;
   }
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tintaynodos.dshcompanion"
-    android:versionCode="20"
-    android:versionName="4.3.0">
+    android:versionCode="21"
+    android:versionName="4.4.0">
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -35,6 +35,11 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 

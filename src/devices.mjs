@@ -223,6 +223,7 @@ export function revokeAll() {
   const current = loadRegistry();
   const removed = current.devices.length;
   current.devices = [];
+  current.pending = [];
   const persisted = saveRegistry();
   if (persisted) recordEvent("revoke-all", `${removed} dispositivo${removed === 1 ? "" : "s"}`);
   return persisted ? removed : -1;

@@ -188,7 +188,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native Application (Android)**
 
-- `DSH-Companion.apk` — version 4.3.0, `versionCode` 20, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version 4.4.0, `versionCode` 21, `minSdk` 26, `targetSdk` 35.
 - Sub-240 KB footprint without AndroidX or Kotlin: `classes.dex` is clean, reproducible pure Java bytecode.
 - **Dynamic Multi-PC support:** Add, configure, and switch across unlimited computers with intelligent selector and secure removal.
 - **Background notification actions:** Approve or deny tool executions and `danger-full-access` permission requests directly from the Android notification shade without opening the app window.

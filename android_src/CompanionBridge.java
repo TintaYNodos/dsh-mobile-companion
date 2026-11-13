@@ -107,4 +107,24 @@ public class CompanionBridge {
             }
         });
     }
+
+    @JavascriptInterface
+    public void performHaptic(String type) {
+        mainHandler.post(() -> {
+            MainActivity instance = MainActivity.getInstance();
+            if (instance != null) {
+                instance.vibrateHaptic(type);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void confirmCriticalApproval(String key, String toolName) {
+        mainHandler.post(() -> {
+            MainActivity instance = MainActivity.getInstance();
+            if (instance != null) {
+                instance.requestCriticalBiometricApproval(key, toolName);
+            }
+        });
+    }
 }

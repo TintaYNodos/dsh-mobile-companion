@@ -15,10 +15,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ShortcutInfo;
+import android.content.pm.ShortcutManager;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Icon;
 import android.hardware.biometrics.BiometricPrompt;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -30,8 +33,11 @@ import android.os.CancellationSignal;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.provider.Settings;
 import android.util.TypedValue;
+import android.view.HapticFeedbackConstants;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -235,13 +241,126 @@ public class MainActivity extends Activity {
         }
     }
 
+    public void vibrateHaptic(String type) {
+        try {
+            if (root != null) {
+                root.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            }
+            Vibrator vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    int duration = "alert".equalsIgnoreCase(type) ? 70 : ("reject".equalsIgnoreCase(type) ? 45 : 25);
+                    vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE));
+                } else {
+                    vibrator.vibrate(25);
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
     public void dispatchAction(String action, String key) {
+        if ("allow".equals(action) && prefs.getBoolean("biometric_critical_actions_enabled", true)
+                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            ui.post(() -> requestCriticalBiometricApproval(key, "Herramienta"));
+            return;
+        }
         ui.post(() -> {
+            vibrateHaptic("confirm");
             if (webView != null) {
                 String safeAction = action.replace("'", "\\'");
                 String safeKey = key.replace("'", "\\'");
                 String script = "if (window.__DSH_COMPANION_ACTION__) { window.__DSH_COMPANION_ACTION__('" + safeAction + "', '" + safeKey + "'); }";
                 webView.evaluateJavascript(script, null);
+            }
+        });
+    }
+
+    public void requestCriticalBiometricApproval(String key, String toolName) {
+        if (!prefs.getBoolean("biometric_critical_actions_enabled", true) || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            vibrateHaptic("confirm");
+            if (webView != null) {
+                String safeKey = key.replace("'", "\\'");
+                webView.evaluateJavascript("if (window.__DSH_COMPANION_ACTION__) { window.__DSH_COMPANION_ACTION__('allow', '" + safeKey + "'); }", null);
+            }
+            return;
+        }
+
+        CancellationSignal signal = new CancellationSignal();
+        BiometricPrompt prompt = new BiometricPrompt.Builder(this)
+                .setTitle("Confirmar accion critica")
+                .setSubtitle("Autorizar ejecucion de " + (toolName != null && !toolName.isEmpty() ? toolName : "herramienta"))
+                .setNegativeButton("Cancelar", getMainExecutor(), (d, w) -> {
+                    vibrateHaptic("reject");
+                    Toast.makeText(this, "Accion cancelada por el usuario", Toast.LENGTH_SHORT).show();
+                })
+                .build();
+
+        try {
+            prompt.authenticate(signal, getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
+                @Override
+                public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                    super.onAuthenticationSucceeded(result);
+                    vibrateHaptic("confirm");
+                    if (webView != null) {
+                        String safeKey = key.replace("'", "\\'");
+                        webView.evaluateJavascript("if (window.__DSH_COMPANION_ACTION__) { window.__DSH_COMPANION_ACTION__('allow', '" + safeKey + "'); }", null);
+                    }
+                    Toast.makeText(MainActivity.this, "Accion autorizada biometricamente", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onAuthenticationError(int errorCode, CharSequence errString) {
+                    super.onAuthenticationError(errorCode, errString);
+                    vibrateHaptic("reject");
+                    Toast.makeText(MainActivity.this, "No se autorizo la accion: " + errString, Toast.LENGTH_SHORT).show();
+                }
+            });
+        } catch (Throwable e) {
+            vibrateHaptic("confirm");
+            if (webView != null) {
+                String safeKey = key.replace("'", "\\'");
+                webView.evaluateJavascript("if (window.__DSH_COMPANION_ACTION__) { window.__DSH_COMPANION_ACTION__('allow', '" + safeKey + "'); }", null);
+            }
+        }
+    }
+
+    private String pendingSharedText = null;
+
+    private void handleIncomingIntent(Intent intent) {
+        if (intent == null) return;
+
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            CharSequence shared = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+            if (shared != null && shared.length() > 0) {
+                pendingSharedText = shared.toString();
+                injectSharedTextIfReady();
+            }
+            return;
+        }
+
+        if (intent.hasExtra("shortcut_action")) {
+            String scAction = intent.getStringExtra("shortcut_action");
+            if ("new_chat".equals(scAction)) {
+                ui.postDelayed(() -> {
+                    if (webView != null) {
+                        webView.evaluateJavascript("var btn = document.querySelector('button[aria-label*=\"New\" i], button[aria-label*=\"Nuevo\" i], [class*=\"newChat\" i]'); if (btn) btn.click();", null);
+                    }
+                }, 800);
+            } else if ("telemetry".equals(scAction)) {
+                ui.postDelayed(this::openHub, 300);
+            } else if ("network".equals(scAction)) {
+                ui.postDelayed(this::openAddressEditor, 300);
+            }
+        }
+    }
+
+    private void injectSharedTextIfReady() {
+        if (pendingSharedText == null || pendingSharedText.isEmpty() || webView == null) return;
+        String json = pendingSharedText.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+        webView.evaluateJavascript("if (window.__DSH_INSERT_INTO_COMPOSER__) { window.__DSH_INSERT_INTO_COMPOSER__(\"" + json + "\"); }", (res) -> {
+            if ("true".equals(res)) {
+                Toast.makeText(this, "Texto compartido insertado en el compositor", Toast.LENGTH_SHORT).show();
+                pendingSharedText = null;
             }
         });
     }
@@ -407,6 +526,9 @@ public class MainActivity extends Activity {
             ui.postDelayed(this::downloadAndInstallApk, 800);
         }
 
+        setupDynamicShortcuts();
+        handleIncomingIntent(getIntent());
+
         ui.postDelayed(disconnectionWatchdog, 30_000L);
         ui.postDelayed(deviceCheckPoll, 15_000L);
         checkGitHubReleases();
@@ -419,6 +541,54 @@ public class MainActivity extends Activity {
         if (intent != null && intent.getBooleanExtra("trigger_update", false)) {
             ui.postDelayed(this::downloadAndInstallApk, 600);
         }
+        handleIncomingIntent(intent);
+    }
+
+    private void setupDynamicShortcuts() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return;
+        try {
+            ShortcutManager sm = getSystemService(ShortcutManager.class);
+            if (sm == null) return;
+
+            Intent newChatIntent = new Intent(this, MainActivity.class)
+                    .setAction(Intent.ACTION_VIEW)
+                    .putExtra("shortcut_action", "new_chat");
+
+            Intent telemetryIntent = new Intent(this, MainActivity.class)
+                    .setAction(Intent.ACTION_VIEW)
+                    .putExtra("shortcut_action", "telemetry");
+
+            Intent networkIntent = new Intent(this, MainActivity.class)
+                    .setAction(Intent.ACTION_VIEW)
+                    .putExtra("shortcut_action", "network");
+
+            ShortcutInfo sc1 = new ShortcutInfo.Builder(this, "sc_new_chat")
+                    .setShortLabel("Nuevo chat")
+                    .setLongLabel("Nuevo chat en Harness")
+                    .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))
+                    .setIntent(newChatIntent)
+                    .build();
+
+            ShortcutInfo sc2 = new ShortcutInfo.Builder(this, "sc_telemetry")
+                    .setShortLabel("Telemetria PC")
+                    .setLongLabel("Monitoreo de hardware")
+                    .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))
+                    .setIntent(telemetryIntent)
+                    .build();
+
+            ShortcutInfo sc3 = new ShortcutInfo.Builder(this, "sc_network")
+                    .setShortLabel("Estado de red")
+                    .setLongLabel("Diagnostico y rutas")
+                    .setIcon(Icon.createWithResource(this, R.mipmap.ic_launcher))
+                    .setIntent(networkIntent)
+                    .build();
+
+            List<ShortcutInfo> list = new ArrayList<>();
+            list.add(sc1);
+            list.add(sc2);
+            list.add(sc3);
+            sm.setDynamicShortcuts(list);
+        } catch (Throwable ignored) {}
     }
 
     // ---------------------------------------------------------------- utilidades
@@ -720,6 +890,7 @@ public class MainActivity extends Activity {
                 checkAndDispatchPendingAction();
                 applyThemeToWeb();
                 applyEnterBehaviorToWeb();
+                injectSharedTextIfReady();
             }
 
             @Override
@@ -886,8 +1057,41 @@ public class MainActivity extends Activity {
 
     private void markFailed() {
         markRetrying();
-        showBanner("Sin respuesta del bunker. Reconectando automaticamente.");
+        String diagnosticMsg = diagnoseConnectionFailure();
+        showBanner(diagnosticMsg);
         scheduleReconnect(0);
+    }
+
+    private String diagnoseConnectionFailure() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            Network net = cm.getActiveNetwork();
+            if (net == null) return "Sin conexion a internet en el celular.";
+            NetworkCapabilities cap = cm.getNetworkCapabilities(net);
+            if (cap == null || !cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                return "Sin conexion a internet en el celular.";
+            }
+        }
+
+        boolean hasVpnInterface = false;
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+            while (interfaces != null && interfaces.hasMoreElements()) {
+                NetworkInterface iface = interfaces.nextElement();
+                if (!iface.isUp() || iface.isLoopback()) continue;
+                String name = iface.getName().toLowerCase();
+                if (name.contains("tun") || name.contains("zt") || name.contains("tailscale") || name.contains("vpn")) {
+                    hasVpnInterface = true;
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {}
+
+        if (!hasVpnInterface) {
+            return "Red privada inactiva en el telefono. Abre ZeroTier o Tailscale.";
+        }
+
+        return "Computadora no responde. Revisa que la PC este encendida y conectada a la VPN.";
     }
 
     private void scheduleReconnect(long delayMs) {
@@ -1308,8 +1512,14 @@ public class MainActivity extends Activity {
             Window window = dialog.getWindow();
             if (window == null) return;
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            window.setGravity(Gravity.BOTTOM);
+            int widthDp = getResources().getConfiguration().screenWidthDp;
+            if (widthDp >= 600) {
+                window.setLayout(dp(540), ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setGravity(Gravity.CENTER);
+            } else {
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setGravity(Gravity.BOTTOM);
+            }
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             WindowManager.LayoutParams attributes = window.getAttributes();
             attributes.dimAmount = 0.55f;
@@ -1965,9 +2175,47 @@ public class MainActivity extends Activity {
         bioCard.addView(swBio);
         LinearLayout.LayoutParams bcParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        bcParams.bottomMargin = dp(14);
+        bcParams.bottomMargin = dp(8);
         bioCard.setLayoutParams(bcParams);
         form.addView(bioCard);
+
+        LinearLayout bioCritCard = new LinearLayout(this);
+        bioCritCard.setOrientation(LinearLayout.HORIZONTAL);
+        bioCritCard.setGravity(Gravity.CENTER_VERTICAL);
+        bioCritCard.setPadding(dp(14), dp(10), dp(14), dp(10));
+        bioCritCard.setBackground(rounded(raised(), outline(), 8f));
+
+        LinearLayout bioCritText = new LinearLayout(this);
+        bioCritText.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams bctParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        bioCritText.setLayoutParams(bctParams);
+
+        TextView bioCritTitle = new TextView(this);
+        bioCritTitle.setText("Doble biometria en acciones criticas");
+        bioCritTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        bioCritTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        bioCritTitle.setTextColor(ink());
+        bioCritText.addView(bioCritTitle);
+
+        TextView bioCritDesc = new TextView(this);
+        bioCritDesc.setText("Pide huella para autorizar herramientas de riesgo en la PC");
+        bioCritDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        bioCritDesc.setTextColor(inkDim());
+        bioCritText.addView(bioCritDesc);
+        bioCritCard.addView(bioCritText);
+
+        Switch swBioCrit = new Switch(this);
+        swBioCrit.setChecked(prefs.getBoolean("biometric_critical_actions_enabled", true));
+        swBioCrit.setOnCheckedChangeListener((bv, checked) -> {
+            prefs.edit().putBoolean("biometric_critical_actions_enabled", checked).apply();
+            Toast.makeText(this, checked ? "Doble biometria activada" : "Doble biometria desactivada", Toast.LENGTH_SHORT).show();
+        });
+        bioCritCard.addView(swBioCrit);
+        LinearLayout.LayoutParams bccParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bccParams.bottomMargin = dp(14);
+        bioCritCard.setLayoutParams(bccParams);
+        form.addView(bioCritCard);
 
         form.addView(sectionHeader("COMPOSITOR Y TECLADO"));
         LinearLayout enterCard = new LinearLayout(this);
@@ -2009,6 +2257,40 @@ public class MainActivity extends Activity {
         enterCard.setLayoutParams(ecParams);
         form.addView(enterCard);
 
+        form.addView(sectionHeader("MODO PANICO / EMERGENCIA"));
+        LinearLayout killCard = new LinearLayout(this);
+        killCard.setOrientation(LinearLayout.VERTICAL);
+        killCard.setPadding(dp(14), dp(12), dp(14), dp(12));
+        killCard.setBackground(rounded(raised(), outline(), 8f));
+
+        TextView killTitle = new TextView(this);
+        killTitle.setText("Kill Switch (Revocar accesos)");
+        killTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+        killTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        killTitle.setTextColor(Color.parseColor("#EF4444"));
+        killCard.addView(killTitle);
+
+        TextView killDesc = new TextView(this);
+        killDesc.setText("Revoca de inmediato todos los dispositivos emparejados en la PC y cierra la sesion local.");
+        killDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        killDesc.setTextColor(inkDim());
+        killDesc.setPadding(0, dp(2), 0, dp(10));
+        killCard.addView(killDesc);
+
+        final AlertDialog settingsDialogRef[] = new AlertDialog[1];
+        Button btnKill = actionCompact("Activar Kill Switch", false, () -> {
+            if (settingsDialogRef[0] != null) settingsDialogRef[0].dismiss();
+            confirmKillSwitch();
+        });
+        btnKill.setTextColor(Color.parseColor("#EF4444"));
+        killCard.addView(btnKill);
+
+        LinearLayout.LayoutParams kcParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        kcParams.bottomMargin = dp(14);
+        killCard.setLayoutParams(kcParams);
+        form.addView(killCard);
+
         ScrollView scroll = new ScrollView(this);
         scroll.addView(form);
 
@@ -2017,6 +2299,7 @@ public class MainActivity extends Activity {
                 .setView(scroll)
                 .setPositiveButton("Listo", null)
                 .create();
+        settingsDialogRef[0] = dialog;
 
         btnSys.setOnClickListener(v -> {
             prefs.edit().putInt("theme_mode", 0).apply();
@@ -2036,6 +2319,58 @@ public class MainActivity extends Activity {
 
         styleDialog(dialog);
         dialog.show();
+    }
+
+    private void confirmKillSwitch() {
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Kill Switch de Emergencia")
+                .setMessage("¿Deseas revocar de inmediato todos los dispositivos autorizados en la computadora y cerrar la sesion?")
+                .setPositiveButton("Revocar todo ahora", (d, w) -> executeKillSwitch())
+                .setNegativeButton("Cancelar", null)
+                .create();
+        styleDialog(dialog);
+        dialog.show();
+        try {
+            Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (pos != null) {
+                pos.setTextColor(Color.parseColor("#EF4444"));
+                pos.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private void executeKillSwitch() {
+        vibrateHaptic("alert");
+        String base = activeUrl != null ? activeUrl : urlForSlot(1);
+        String target = base.replaceAll("/+$", "") + "/dsh-companion/kill-switch";
+
+        new Thread(() -> {
+            try {
+                URL u = new URL(target);
+                HttpURLConnection conn = (HttpURLConnection) u.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(3000);
+                String cookie = CookieManager.getInstance().getCookie(target);
+                if (cookie != null) conn.setRequestProperty("Cookie", cookie);
+                PcEntry pc = getActivePc();
+                if (pc != null && pc.accessKey != null && !pc.accessKey.trim().isEmpty()) {
+                    String auth = "dsh:" + pc.accessKey.trim();
+                    String b64 = Base64.encodeToString(auth.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+                    conn.setRequestProperty("Authorization", "Basic " + b64);
+                }
+                conn.getResponseCode();
+                conn.disconnect();
+            } catch (Throwable ignored) {}
+
+            ui.post(() -> {
+                CookieManager.getInstance().removeAllCookies(null);
+                CookieManager.getInstance().flush();
+                Toast.makeText(this, "Kill Switch ejecutado: accesos revocados", Toast.LENGTH_LONG).show();
+                if (webView != null) webView.loadUrl("about:blank");
+                boot();
+            });
+        }).start();
     }
 
     private View buildKeepAwakeCard() {

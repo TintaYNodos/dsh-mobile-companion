@@ -168,7 +168,7 @@ A chave manual continua existindo como contingência para acesso via navegador e
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão 4.3.0, `versionCode` 20, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versão 4.4.0, `versionCode` 21, `minSdk` 26, `targetSdk` 35.
 - Pesa menos de 240 KB, sem AndroidX nem Kotlin: o `classes.dex` é código Java puro e reproduzível.
 - **Suporte Multi-PC Dinâmico:** Adicione e alterne entre computadores ilimitados com seletor inteligente e remoção segura.
 - **Ações em notificações em segundo plano:** Permite autorizar ou negar ferramentas e solicitações de permissão `danger-full-access` diretamente da barra de notificações do Android sem abrir a janela do app.

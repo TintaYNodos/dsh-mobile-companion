@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  dsh-companion:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tintaynodos/dsh-companion:latest
+    container_name: dsh-companion
+    restart: unless-stopped
+    # En Linux para acceso directo a interfaces ZeroTier/Tailscale se recomienda:
+    # network_mode: host
+    ports:
+      - "57420:57420"
+      - "127.0.0.1:57421:57421"
+    volumes:
+      - dsh-data:/home/node/.dsh
+      - ./synced_chats:/app/synced_chats
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://127.0.0.1:57420/dsh-companion/status\", (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  dsh-data:
+    driver: local

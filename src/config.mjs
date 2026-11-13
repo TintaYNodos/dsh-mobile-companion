@@ -24,11 +24,11 @@ const text = (value) => String(value ?? "").trim();
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "4.3.0",
-  apkVersion: "4.3.0",
-  apkVersionCode: 20,
-  previousApkVersion: "4.2.2",
-  previousApkVersionCode: 19,
+  version: "4.4.0",
+  apkVersion: "4.4.0",
+  apkVersionCode: 21,
+  previousApkVersion: "4.3.0",
+  previousApkVersionCode: 20,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),

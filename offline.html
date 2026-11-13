@@ -561,6 +561,24 @@
   function renderChatCards(chats) {
     chatListContainer.innerHTML = '';
     if (!Array.isArray(chats) || chats.length === 0) {
+      try {
+        const lastChatRaw = localStorage.getItem('dsh_last_synced_chat');
+        if (lastChatRaw) {
+          const lastChat = JSON.parse(lastChatRaw);
+          if (lastChat && lastChat.text) {
+            const card = document.createElement('div');
+            card.className = 'chat-card';
+            card.style.borderLeft = '3px solid var(--accent)';
+            card.innerHTML = `<div class="chat-title">${escapeHtml(lastChat.title || 'Ultima conversacion en cache')}</div>
+              <div class="chat-meta"><span>Copia local de sesion activa</span><span>${lastChat.updatedAt ? new Date(lastChat.updatedAt).toLocaleTimeString() : ''}</span></div>`;
+            card.addEventListener('click', () => {
+              openOfflineCachedChat(lastChat);
+            });
+            chatListContainer.appendChild(card);
+            return;
+          }
+        }
+      } catch {}
       chatListContainer.innerHTML = '<div class="empty-state">No hay sesiones sincronizadas disponibles. Cuando el búnker esté activo, las conversaciones sincronizadas desde el móvil aparecerán aquí.</div>';
       return;
     }
@@ -609,6 +627,25 @@
         } catch {}
       }
     }
+  }
+
+  function openOfflineCachedChat(cachedChat) {
+    viewList.style.display = 'none';
+    viewDetail.classList.add('active');
+
+    const titleEl = document.getElementById('chatDetailTitle');
+    const dateEl = document.getElementById('chatDetailDate');
+    const countEl = document.getElementById('chatDetailCount');
+    const idEl = document.getElementById('chatDetailId');
+    const bodyEl = document.getElementById('chatDetailBody');
+
+    titleEl.textContent = cachedChat.title || 'Conversacion en cache local';
+    dateEl.textContent = cachedChat.updatedAt ? new Date(cachedChat.updatedAt).toLocaleString() : 'Copia local';
+    countEl.textContent = 'Modo offline';
+    idEl.textContent = 'cache:local';
+
+    bodyEl.innerHTML = '';
+    bodyEl.appendChild(renderSafeContent(cachedChat.text || ''));
   }
 
   async function openChatDetail(id, fallbackTitle) {

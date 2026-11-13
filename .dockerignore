@@ -1,0 +1,13 @@
+android_src/
+gradle_tool/
+res/
+test/
+internal_docs/
+*.apk
+*.idsig
+*.log
+*.tmp
+.git/
+.gitignore
+*.bat
+*.vbs

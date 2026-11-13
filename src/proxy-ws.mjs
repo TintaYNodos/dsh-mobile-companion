@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -10,7 +10,19 @@ import { scrubHeaders } from "./http.mjs";
 import { invalidateTargetPort } from "./network.mjs";
 import { log } from "./log.mjs";
 
+const activeSockets = new Set();
+
+export function terminateAllWsConnections() {
+  const count = activeSockets.size;
+  for (const s of activeSockets) {
+    try { s.destroy(); } catch {}
+  }
+  activeSockets.clear();
+  return count;
+}
+
 export function handleWsProxy(req, socket, head, { targetPort, originAllowed }) {
+  activeSockets.add(socket);
   socket.pause();
   socket.setNoDelay(true);
   socket.setKeepAlive(true, 15_000);
@@ -30,6 +42,7 @@ export function handleWsProxy(req, socket, head, { targetPort, originAllowed }) 
   let destroyed = false;
 
   const hardClose = () => {
+    activeSockets.delete(socket);
     if (destroyed) return;
     destroyed = true;
     if (handshakeTimer) clearTimeout(handshakeTimer);

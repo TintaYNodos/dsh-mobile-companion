@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -33,11 +33,9 @@ const bindPrefix = binding.prefix ?? 24;
 const allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
 const allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
 
-if (bindHost.startsWith("127.")) {
-  for (const alias of ["127.0.0.1", "localhost", "[::1]"]) {
-    allowedOrigins.add(`http://${alias}:${config.listenPort}`);
-    allowedHosts.add(`${alias}:${config.listenPort}`);
-  }
+for (const alias of ["127.0.0.1", "localhost", "[::1]"]) {
+  allowedOrigins.add(`http://${alias}:${config.listenPort}`);
+  allowedHosts.add(`${alias}:${config.listenPort}`);
 }
 
 const REALM = 'Basic realm="DSH Companion", charset="UTF-8"';
@@ -159,9 +157,38 @@ server.listen(config.listenPort, bindHost, () => {
   }
 });
 
+let loopbackServer = null;
+if (!bindHost.startsWith("127.")) {
+  loopbackServer = http.createServer((req, res) => {
+    dispatchRequest(req, res, routeContext).catch((error) => {
+      warn("bridge", `Peticion fallida: ${error.message}`);
+      if (!res.headersSent) sendText(res, 500, "Fallo interno del puente");
+      else if (!res.destroyed) res.destroy();
+    });
+  });
+
+  loopbackServer.headersTimeout = config.headersTimeoutMs;
+  loopbackServer.requestTimeout = config.requestTimeoutMs;
+  loopbackServer.keepAliveTimeout = config.keepAliveTimeoutMs;
+  loopbackServer.maxConnections = config.maxConnections;
+
+  loopbackServer.on("upgrade", (req, socket, head) => {
+    server.emit("upgrade", req, socket, head);
+  });
+
+  loopbackServer.on("error", (error) => {
+    warn("bridge", `No se pudo enlazar loopback 127.0.0.1:${config.listenPort}: ${error.message}`);
+  });
+
+  loopbackServer.listen(config.listenPort, "127.0.0.1", () => {
+    log("bridge", `Loopback local activo en http://127.0.0.1:${config.listenPort}`);
+  });
+}
+
 const shutdown = (signal) => {
   log("bridge", `Cerrando por ${signal}`);
   server.close(() => process.exit(0));
+  if (loopbackServer) loopbackServer.close();
   setTimeout(() => process.exit(0), 3000).unref();
 };
 

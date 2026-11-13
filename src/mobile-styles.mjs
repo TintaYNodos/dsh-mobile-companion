@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -123,6 +123,41 @@ body[data-ds-dark-theme] {
   background-color: var(--dsw-alias-bg-base, #151517);
   color: var(--dsw-alias-label-primary, #e6edf3);
 }
+
+/* Modo Tablet, Plegables y Pantallas Grandes (>= 600px y >= 768px) */
+@media (min-width: 600px) {
+  [class*="_frame"], main, #root, #app {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  [class*="chat"], [class*="conversation"], article, .message,
+  form:has(textarea), [class*="composer"] {
+    max-width: min(880px, 92vw) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  [role="menu"], [data-anchored], [data-context-menu], [class*="_list_"], [class*="_surface_"] {
+    max-width: 480px !important;
+    border-radius: 14px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  [class*="chat"], [class*="conversation"], article, .message,
+  form:has(textarea), [class*="composer"] {
+    max-width: min(960px, 90vw) !important;
+  }
+
+  /* Distribución de barra de acciones en tablet */
+  form:has(textarea) [class*="actionRow"],
+  [class*="composer"] [class*="actionRow"] {
+    justify-content: space-between !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .001ms !important;

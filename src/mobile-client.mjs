@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
@@ -114,31 +114,61 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
   }
 
   function diagnoseConnection() {
-    fetch('/dsh-companion/status', { cache: 'no-store' })
-      .then(function(r) { return r.ok ? r.json() : null; })
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      showDiagnosis('Sin conexion a internet en el celular.', 'error');
+      return;
+    }
+
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeoutId = controller ? setTimeout(function() { controller.abort(); }, 3500) : null;
+
+    fetch('/dsh-companion/status', { cache: 'no-store', signal: controller ? controller.signal : undefined })
+      .then(function(r) {
+        if (timeoutId) clearTimeout(timeoutId);
+        return r.ok ? r.json() : null;
+      })
       .then(function(data) {
         if (!data) {
-          showDiagnosis('TÃºnel desconectado: El puente no responde. Verifica la VPN.');
+          showDiagnosis('El puente no responde. Revisa que la computadora este encendida y en la VPN.', 'warning');
           return;
         }
         if (!data.dshOnline) {
-          showDiagnosis('La PC responde, pero DeepSeek Harness estÃ¡ cerrado.');
+          showDiagnosis('DeepSeek Harness no esta abierto en Windows. Inicia la aplicacion en la PC.', 'warning');
           return;
         }
-        showDiagnosis('Harness activo en PC. Reconectando tÃºnel WebSocket...');
+        showDiagnosis('Harness activo en PC. Reconectando tunel privado...', 'info');
       })
-      .catch(function() {
-        showDiagnosis('Sin conexiÃ³n con la PC. Verifica que la VPN estÃ© activa.');
+      .catch(function(err) {
+        if (timeoutId) clearTimeout(timeoutId);
+        var isAbort = err && (err.name === 'AbortError' || /timeout/i.test(err.message || ''));
+        if (isAbort) {
+          showDiagnosis('Computadora no responde en la IP privada. Revisa la conexion VPN de la PC.', 'error');
+        } else {
+          showDiagnosis('Red privada inactiva en el telefono. Abre ZeroTier o Tailscale y verifica la conexion.', 'error');
+        }
       });
   }
 
-  function showDiagnosis(msg) {
+  function showDiagnosis(msg, level) {
     var diagEl = document.getElementById('dsh-connection-diagnosis');
     if (!diagEl) {
       diagEl = document.createElement('div');
       diagEl.id = 'dsh-connection-diagnosis';
-      diagEl.style.cssText = 'position:fixed;top:max(env(safe-area-inset-top,0px),8px);left:12px;right:12px;background:#1E1A11;border:1px solid #D97706;color:#FCD34D;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:500;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:space-between;pointer-events:none;';
+      diagEl.style.cssText = 'position:fixed;top:max(env(safe-area-inset-top,0px),8px);left:12px;right:12px;padding:9px 14px;border-radius:10px;font-size:12px;font-weight:600;letter-spacing:0.02em;z-index:99999;box-shadow:0 4px 18px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:space-between;pointer-events:none;transition:background 0.2s,border-color 0.2s;';
       document.body.appendChild(diagEl);
+    }
+    if (level === 'error') {
+      diagEl.style.background = '#2A1215';
+      diagEl.style.border = '1px solid #E11D48';
+      diagEl.style.color = '#FDA4AF';
+    } else if (level === 'warning') {
+      diagEl.style.background = '#1E1A11';
+      diagEl.style.border = '1px solid #D97706';
+      diagEl.style.color = '#FCD34D';
+    } else {
+      diagEl.style.background = '#0F172A';
+      diagEl.style.border = '1px solid #0284C7';
+      diagEl.style.color = '#7DD3FC';
     }
     diagEl.textContent = msg;
   }
@@ -363,7 +393,60 @@ export const NOTIFICATION_BRIDGE_SCRIPT = `
     }
   }, true);
 
+  // Barra de comandos rapidos sobre el compositor
+  var QUICK_ACTIONS = [
+    { label: "Auditar", prompt: "Audita el codigo anterior buscando vulnerabilidades, edge cases y optimizaciones." },
+    { label: "Explicar", prompt: "Explica de forma clara y estructurada el funcionamiento del contenido anterior." },
+    { label: "Pruebas", prompt: "Escribe pruebas unitarias completas y casos limite para el codigo anterior." },
+    { label: "Continuar", prompt: "Continua exactamente desde donde se quedo, sin repetir lo anterior." }
+  ];
+
+  function renderQuickActions() {
+    var composer = document.querySelector('form:has(textarea), [class*="composer"]');
+    if (!composer) return;
+    var existing = document.getElementById('dsh-quick-actions');
+    if (existing) return;
+
+    var bar = document.createElement('div');
+    bar.id = 'dsh-quick-actions';
+    bar.style.cssText = 'display:flex;gap:6px;padding:4px 0 6px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;';
+
+    QUICK_ACTIONS.forEach(function(act) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = act.label;
+      btn.style.cssText = 'background:transparent;border:1px solid var(--dsw-alias-border-base,#30363D);color:var(--dsw-alias-label-secondary,#8B949E);padding:4px 10px;border-radius:14px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;';
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.AndroidCompanion && window.AndroidCompanion.performHaptic) {
+          try { window.AndroidCompanion.performHaptic('confirm'); } catch(err) {}
+        }
+        window.__DSH_INSERT_INTO_COMPOSER__(act.prompt);
+      };
+      bar.appendChild(btn);
+    });
+
+    composer.parentNode.insertBefore(bar, composer);
+  }
+
+  function cacheLastChat() {
+    try {
+      var text = window.__DSH_EXTRACT_CHAT_TEXT__();
+      if (text && text.length > 30) {
+        var title = (document.title || '').replace(/^DeepSeek Harness\s*[-·]?\s*/i, '').trim() || 'Conversacion reciente';
+        localStorage.setItem('dsh_last_synced_chat', JSON.stringify({
+          title: title,
+          text: text,
+          updatedAt: new Date().toISOString()
+        }));
+      }
+    } catch(e) {}
+  }
+
   setInterval(checkPreviewTabs, 1000);
+  setInterval(renderQuickActions, 2000);
+  setInterval(cacheLastChat, 10000);
 })();
 </script>
 `;

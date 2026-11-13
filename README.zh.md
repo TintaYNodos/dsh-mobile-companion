@@ -168,7 +168,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用安全（Android）**
 
-- `DSH-Companion.apk` — 版本 4.3.0，`versionCode` 20，`minSdk` 26，`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 4.4.0，`versionCode` 21，`minSdk` 26，`targetSdk` 35。
 - 体积小于 240 KB，完全不依赖 AndroidX 或 Kotlin：`classes.dex` 均为纯净、可重现构建的原生 Java 代码。
 - **动态多电脑支持：** 支持无限添加与切换计算机节点，具备智能选择与安全删除机制。
 - **后台交互式通知：** 支持直接在 Android 系统通知栏中批准或拒绝工具调用以及 `danger-full-access` 沙盒权限，无需打断当前工作流打开应用主界面。

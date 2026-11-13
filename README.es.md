@@ -195,7 +195,7 @@ defensa correcta es mantener la red privada con autorización manual.
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión 4.3.0, `versionCode` 20, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión 4.4.0, `versionCode` 21, `minSdk` 26, `targetSdk` 35.
 - Pesa menos de 240 KB, sin AndroidX ni Kotlin: el `classes.dex` es código Java puro y reproducible.
 - **Soporte Multi-PC Dinámico:** Permite agregar y conmutar cualquier cantidad de computadoras con selector inteligente y eliminación segura.
 - **Acciones en notificaciones en segundo plano:** Permite autorizar o denegar herramientas y permisos `danger-full-access` directamente desde la barra de notificaciones sin abrir la ventana de la app.

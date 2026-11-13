@@ -66,6 +66,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
@@ -471,7 +473,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        setTheme(isDark() ? R.style.Theme_Companion : R.style.Theme_Companion_Light);
+        int themeRes = isDark() ? R.style.Theme_Companion : R.style.Theme_Companion_Light;
+        setTheme(themeRes);
         super.onCreate(savedInstanceState);
         sInstance = this;
         applySystemBarsTheme();

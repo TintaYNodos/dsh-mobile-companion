@@ -168,7 +168,7 @@ La clé manuelle existe toujours comme solution de secours pour une connexion de
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version 4.4.0, `versionCode` 21, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version 4.4.1, `versionCode` 22, `minSdk` 26, `targetSdk` 35.
 - Moins de 240 Ko, sans AndroidX ni Kotlin : le fichier `classes.dex` est composé de code Java pur et reproductible.
 - **Prise en charge Multi-PC dynamique :** ajoutez et commutez un nombre illimité d'ordinateurs avec sélecteur intelligent et suppression sécurisée.
 - **Actions interactives dans les notifications en arrière-plan :** permet d'autoriser ou de refuser l'exécution d'outils et les permissions de bac à sable `danger-full-access` directement depuis la barre de notifications, sans avoir à ouvrir la fenêtre de l'application.

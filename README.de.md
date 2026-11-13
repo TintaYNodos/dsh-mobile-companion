@@ -168,7 +168,7 @@ Der manuelle Schlüssel verbleibt als Fallback für den Browserzugriff in `%USER
 
 **Native App (Android)**
 
-- `DSH-Companion.apk` — Version 4.4.0, `versionCode` 21, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — Version 4.4.1, `versionCode` 22, `minSdk` 26, `targetSdk` 35.
 - Weniger als 240 KB, ohne AndroidX oder Kotlin: `classes.dex` besteht aus reinem, reproduzierbarem Java-Bytecode.
 - **Dynamische Multi-PC-Unterstützung:** Beliebig viele Computer hinzufügen und umschalten, inklusive intelligenter Auswahl und sicherem Löschen.
 - **Interaktive Hintergrundbenachrichtigungen:** Ermöglicht das Genehmigen oder Ablehnen von Werkzeugen und `danger-full-access`-Berechtigungen direkt aus der Benachrichtigungsleiste heraus, ohne das App-Fenster öffnen zu müssen.

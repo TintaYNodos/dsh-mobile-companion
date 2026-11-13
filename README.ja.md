@@ -168,7 +168,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **ネイティブアプリのセキュリティ（Android）**
 
-- `DSH-Companion.apk` — バージョン 4.4.0、`versionCode` 21、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — バージョン 4.4.1、`versionCode` 22、`minSdk` 26、`targetSdk` 35。
 - サイズは 240 KB 未満、AndroidX や Kotlin は完全不使用：`classes.dex` は純粋かつ再現可能な Java コード。
 - **動的マルチPCサポート：** 任意の数のPCを追加・切り替え可能。スマートセレクターと安全な削除機能を搭載。
 - **バックグラウンド通知アクション：** アプリ画面を開くことなく、Android の通知バーから直接ツール実行や `danger-full-access` 権限を承認・拒否可能。

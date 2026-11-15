@@ -10,7 +10,7 @@ La aplicación móvil no reimplementa la interfaz: muestra la propia Web GUI de 
 
 Edición endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versión actual: **5.0.0** (`versionCode` 38).
+Versión actual: **5.0.1** (`versionCode` 39).
 
 ---
 
@@ -254,7 +254,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión **5.0.0**, `versionCode` 38, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión **5.0.1**, `versionCode` 39, `minSdk` 26, `targetSdk` 35.
 - Sin AndroidX y sin Kotlin: bytecode Java puro, alrededor de 210 KB.
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, DeepSeek). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.

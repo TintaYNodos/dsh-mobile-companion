@@ -23,6 +23,10 @@ const ASSETS = new Map([
   ["/DSH-Companion-previous.apk", { file: "../DSH-Companion-previous.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion-previous.apk" }],
 ]);
 
+// P51: las paginas propias no tenian CSP. La offline es autocontenida (sin
+// recursos externos) y el simulador igual, asi que se puede cerrar del todo.
+const HTML_CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'";
+
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".svg": "image/svg+xml",
@@ -68,7 +72,8 @@ export function serveStatic(pathname, req, res) {
       return;
     }
 
-    res.writeHead(200, { ...baseHeaders, "Content-Length": stats.size });
+    res.writeHead(200, {
+    ...(entry.type.startsWith("text/html") ? { "Content-Security-Policy": HTML_CSP, "X-Frame-Options": "DENY", "X-Content-Type-Options": "nosniff" } : {}), ...baseHeaders, "Content-Length": stats.size });
     if (req.method === "HEAD") {
       res.end();
       return;

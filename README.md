@@ -10,7 +10,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **5.0.0** (`versionCode` 38).
+Current version: **5.0.1** (`versionCode` 39).
 
 ---
 
@@ -254,7 +254,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **5.0.0**, `versionCode` 38, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.0.1**, `versionCode` 39, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.

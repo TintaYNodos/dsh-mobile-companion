@@ -3,6 +3,31 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.0.1 — `versionCode` 39
+
+Correcciones sobre la 5.0.0, sin cambios de comportamiento fuera de los listados.
+
+### Corregido
+
+- **La suite ya no borra el registro real de dispositivos.** `verify_registry_safety`
+  eliminaba `companion-devices.json` como parte de la prueba y lo dejaba borrado:
+  un `npm test` desemparejaba los teléfonos. Ahora respalda antes y restaura siempre.
+- **Las notificaciones ya no ofrecen aprobar lo que no se puede aprobar.** El puente
+  responde 501 a `/action` y el emparejamiento exige el panel local, así que los
+  botones Aceptar/Rechazar/Autorizar desaparecen: el aviso dice dónde aprobar.
+  El receptor, si se pulsa una acción antigua, informa en vez de fingir.
+- **Límite de subida en el proxy** (256 MB): un cliente autorizado ya no puede llenar
+  memoria o disco subiendo sin tope.
+- **El descubrimiento valida que el host sea el puente** (JSON con `service`), no
+  cualquier servicio que responda 200 en `/dsh-companion/status`.
+- **El kill switch cierra también las sesiones del panel**, no solo los túneles.
+- **`CleartextPolicy` incluye CGNAT` (100.64/10) y es fail-closed**: si la política no
+  se puede evaluar, el tráfico `http://` se bloquea.
+- **WebView**: `setAllowContentAccess(false)` y reproducción de medios requiere gesto.
+- **bridge.log rota** al arrancar si supera 5 MB.
+- **CSP y cabeceras de seguridad** en las páginas propias (`offline`, `simulator`).
+- **Eliminada configuración muerta** (`DSH_PAIR_OPEN`).
+
 ## 5.0.0 — `versionCode` 38
 
 Versión mayor: cambia el modelo de confianza y el flujo de emparejamiento, así que

@@ -74,7 +74,9 @@ final class NotificationsApproval {
         }
 
         String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmación";
-        String fullText = body;
+        // P3: sin botones en la notificacion; se indica donde si se puede aprobar.
+        String hint = "Abre DeepSeek Harness en la computadora para aprobar o rechazar.";
+        String fullText = body + "\n" + hint;
         if (detail != null && !detail.trim().isEmpty()) {
             fullText = body + "\n" + detail;
         }
@@ -95,9 +97,7 @@ final class NotificationsApproval {
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_SECRET)
-                .setColor(Color.parseColor("#0EA5E9"))
-                .addAction(new Notification.Action.Builder(0, "Aceptar", approvePending).build())
-                .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
+                .setColor(Color.parseColor("#0EA5E9"));
 
         nm.notify(notifId, builder.build());
     }

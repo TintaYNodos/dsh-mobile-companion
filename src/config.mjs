@@ -24,11 +24,11 @@ const text = (value) => String(value ?? "").trim();
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.0.0",
-  apkVersion: "5.0.0",
-  apkVersionCode: 38,
-  previousApkVersion: "4.5.10",
-  previousApkVersionCode: 37,
+  version: "5.0.1",
+  apkVersion: "5.0.1",
+  apkVersionCode: 39,
+  previousApkVersion: "5.0.0",
+  previousApkVersionCode: 38,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
@@ -68,7 +68,6 @@ export const config = Object.freeze({
   deviceTtlDays: positiveInt(process.env.DSH_DEVICE_TTL_DAYS, 30),
   deviceRefreshMs: positiveInt(process.env.DSH_DEVICE_REFRESH_HOURS, 24) * 60 * 60 * 1000,
   pendingTtlMs: positiveInt(process.env.DSH_PENDING_TTL_MIN, 15) * 60 * 1000,
-  autoApprove: text(process.env.DSH_PAIR_OPEN) === "1",
   listenHostLabel: `${text(process.env.DSH_BIND_HOST) || "127.0.0.1"}:${positiveInt(process.env.DSH_LISTEN_PORT, 57420)}`,
   allowCidrs: text(process.env.DSH_ALLOW_CIDR)
     .split(",")

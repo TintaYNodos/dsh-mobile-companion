@@ -148,7 +148,7 @@ public class NotificationActionReceiver extends BroadcastReceiver {
                         .apply();
                 postToast(context, "allow".equals(action) ? "Petición aprobada" : "Petición rechazada");
             } else {
-                postToast(context, "No se pudo conectar con el puente");
+                postToast(context, "La aprobación desde la notificación no está disponible; apruébala en la computadora");
             }
         } catch (Exception e) {
             success = false;

@@ -122,13 +122,11 @@ public final class NotificationHelper {
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setContentTitle(title)
                 .setContentText(summary)
-                .setStyle(new Notification.BigTextStyle().bigText("Código en pantalla: " + code + "\n" + summary))
+                .setStyle(new Notification.BigTextStyle().bigText("Código en pantalla: " + code + "\n" + summary + "\n\nApruébalo desde el panel de la computadora."))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_SECRET)
-                .setColor(Color.parseColor("#0EA5E9"))
-                .addAction(new Notification.Action.Builder(0, "Autorizar", approvePending).build())
-                .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
+                .setColor(Color.parseColor("#0EA5E9"));
 
         nm.notify(notifId, builder.build());
     }

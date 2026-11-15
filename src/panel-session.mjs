@@ -96,6 +96,15 @@ export const createSession = () => {
   return id;
 };
 
+/** Cierra todas las sesiones del panel: el kill switch no deja ninguna abierta. */
+export const invalidatePanelSessions = () => {
+  const count = sessions.size;
+  sessions.clear();
+  tickets.clear();
+  rotateBootstrapToken();
+  return count;
+};
+
 export const sessionValid = (id) => {
   if (!id) return false;
   const expiresAt = sessions.get(id);

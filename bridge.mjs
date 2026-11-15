@@ -10,6 +10,8 @@
  */
 
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { spawn } from "node:child_process";
 import { config } from "./src/config.mjs";
 import { log, warn } from "./src/log.mjs";
@@ -20,6 +22,22 @@ import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPa
 import { isSameOriginRequest, sendText } from "./src/http.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
 import { dispatchRequest } from "./src/routes.mjs";
+
+/**
+ * P25: bridge.log lo escribe la redireccion de run-hidden.vbs y crecia sin
+ * limite. Al arrancar, si pasa de 5 MB se rota a bridge.log.1.
+ */
+const rotateLogFile = () => {
+  try {
+    const logFile = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "bridge.log");
+    if (!fs.existsSync(logFile)) return;
+    if (fs.statSync(logFile).size < 5 * 1024 * 1024) return;
+    const previous = logFile + ".1";
+    if (fs.existsSync(previous)) fs.unlinkSync(previous);
+    fs.renameSync(logFile, previous);
+  } catch {}
+};
+rotateLogFile();
 
 const binding = findVpnAddress();
 const bindHost = binding.address;

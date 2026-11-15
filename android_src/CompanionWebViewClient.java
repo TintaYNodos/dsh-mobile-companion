@@ -189,9 +189,19 @@ class CompanionWebViewClient extends WebViewClient {
                         headers, new java.io.ByteArrayInputStream(
                         "Bloqueado: tráfico en claro hacia un host no privado.".getBytes("UTF-8")));
             }
-        } catch (Throwable ignored) {
-            // Ante un fallo de la política, se deja pasar la petición normal:
-            // romper la carga de la app por un error de parseo sería peor.
+        } catch (Throwable error) {
+            // P36: si la política no se puede evaluar, el tráfico en claro se
+            // bloquea (fail-closed). Dejarlo pasar convertía un error de parseo
+            // en una fuga silenciosa; https y los esquemas locales no se tocan.
+            try {
+                String raw = request != null && request.getUrl() != null ? request.getUrl().toString() : "";
+                if (raw.toLowerCase(java.util.Locale.ROOT).startsWith("http://")) {
+                    android.util.Log.w("DshWebView", "política no evaluable, http bloqueado: " + raw);
+                    return new android.webkit.WebResourceResponse("text/plain", "utf-8", 403, "Bloqueado",
+                            new java.util.HashMap<String, String>(), new java.io.ByteArrayInputStream(new byte[0]));
+                }
+            } catch (Throwable ignored) {
+            }
         }
         return null;
     }

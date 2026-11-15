@@ -79,7 +79,15 @@ await call("/dsh-companion/status", { "user-agent": "prueba" });
 const repaired = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 check("el dispositivo sobrevive al ciclo", repaired.devices.some((d) => d.id === "dispositivo-importante"), `${repaired.devices.length} dispositivo(s)`);
 
-// 4. Archivo ausente: debe poder crear uno nuevo.
+// 4. Archivo ausente: debe poder crear uno nuevo. El registro REAL se
+// respalda antes y se restaura siempre: esta prueba no puede desemparejar los
+// telefonos del usuario.
+const snapshotBeforeMissing = fs.existsSync(registryPath) ? fs.readFileSync(registryPath) : null;
+process.on("exit", () => {
+  try {
+    if (snapshotBeforeMissing) fs.writeFileSync(registryPath, snapshotBeforeMissing);
+  } catch {}
+});
 fs.unlinkSync(registryPath);
 const status = await call("/dsh-companion/status", { "user-agent": "prueba" });
 check("sin archivo el puente sigue respondiendo", status === 200, `status=${status}`);

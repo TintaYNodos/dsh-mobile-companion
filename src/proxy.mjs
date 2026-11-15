@@ -28,6 +28,7 @@ const copyHeaders = (proxyRes) => {
   return headers;
 };
 
+const MAX_UPLOAD_BYTES = 256 * 1024 * 1024;
 const upstreamAgent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 15_000,
@@ -246,6 +247,21 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
         // aborta la petición antes de que llegue la respuesta (ECONNRESET en
         // todos los POST).
         req.on("error", () => proxyReq.destroy());
+        // P4: un cliente autorizado podia llenar memoria/disco subiendo sin
+        // limite. Se corta al pasar del tope y se responde 413.
+        let uploaded = 0;
+        req.on("data", (chunk) => {
+          uploaded += chunk.length;
+          if (uploaded > MAX_UPLOAD_BYTES && !proxyReq.destroyed) {
+            proxyReq.destroy();
+            req.unpipe(proxyReq);
+            if (!res.headersSent) {
+              res.writeHead(413, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+              res.end("Cuerpo demasiado grande");
+            }
+            req.resume();
+          }
+        });
         req.pipe(proxyReq, { end: true });
       }
     });

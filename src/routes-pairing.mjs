@@ -25,6 +25,7 @@ import { log, warn } from "./log.mjs";
 import { rejectedPage, waitingPage } from "./pairing.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { terminateAllWsConnections } from "./proxy-ws.mjs";
+import { invalidatePanelSessions } from "./panel-session.mjs";
 
 const waitingClients = new Set();
 
@@ -174,6 +175,9 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
       return true;
     }
     const wsClosed = terminateAllWsConnections();
+    // Ademas del tunel, se cierran las sesiones del panel: si no, la pestana
+    // abierta sigue aprobando dispositivos despues del kill switch.
+    const panelSessionsClosed = invalidatePanelSessions();
     // Ademas de revocar dispositivos se rota la clave maestra: si no, "cortar
     // accesos" dejaba viva la credencial que abre todo.
     let rotated = false;
@@ -183,7 +187,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     } catch (error) {
       warn("pair", `No se pudo rotar la clave: ${error.message}`);
     }
-    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotated}`);
+    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotated}, sesiones de panel cerradas: ${panelSessionsClosed}`);
     sendJson(res, 200, { ok: true, revoked: revokedCount, message: "Todos los dispositivos han sido revocados" });
     return true;
   }

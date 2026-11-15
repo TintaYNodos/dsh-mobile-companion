@@ -10,7 +10,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.0.0**（`versionCode` 38）。
+現在のバージョン：**5.0.1**（`versionCode` 39）。
 
 ---
 
@@ -247,7 +247,7 @@ Node.js 20 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.0.0**、`versionCode` 38、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — バージョン **5.0.1**、`versionCode` 39、`minSdk` 26、`targetSdk` 35。
 - AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 210 KB。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。

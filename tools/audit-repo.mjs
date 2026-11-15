@@ -129,9 +129,17 @@ if (fs.existsSync("package.json") && fs.existsSync("src/config.mjs") && fs.exist
 
 // 8. Nombres de archivo que la documentación afirma
 const allText = tracked.filter((x) => /\.(md|mjs|java|html)$/.test(x)).map(read).join("\n");
+// Archivos que la documentacion menciona pero viven en el HOME del usuario en
+// tiempo de ejecucion, no en el repositorio.
+const RUNTIME_FILES = new Set([
+  "companion-devices.json", "companion-access-key", "companion-panel-token",
+  "companion-panel-url.txt", "bridge.log", "session.v4.jsonl.zstd",
+  ".credentials.yaml", "dsh-companion.service",
+]);
 for (const m of allText.matchAll(/`([A-Za-z0-9_.\/-]+\.(?:mjs|java|json|md|html|css|js|yml|bat|vbs|sh|plist|svg|webmanifest))`/g)) {
   const name = m[1];
-  if (name.includes("/") || tracked.some((f) => path.basename(f) === name)) continue;
+  if (name.includes("/") || RUNTIME_FILES.has(path.basename(name))) continue;
+  if (tracked.some((f) => path.basename(f) === name)) continue;
   F(`documentación menciona un archivo inexistente: ${name}`);
 }
 

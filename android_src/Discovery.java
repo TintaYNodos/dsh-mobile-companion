@@ -165,6 +165,8 @@ class Discovery {
         }
     }
 
+    private static final String COMPANION_SERVICE = "dsh-companion";
+
     static boolean probe(String statusUrl) {
         HttpURLConnection connection = null;
         try {
@@ -180,6 +182,25 @@ class Discovery {
 
             int code = connection.getResponseCode();
 
+            // P5: cualquier host que devolviera 200 se auto-conectaba. Se exige
+            // que el JSON se identifique como el puente antes de aceptarlo.
+            boolean looksLikeCompanion = false;
+            if (code == 200) {
+                try (java.io.InputStream is = connection.getInputStream()) {
+                    java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+                    byte[] chunk = new byte[1024];
+                    int read;
+                    int total = 0;
+                    while ((read = is.read(chunk)) != -1 && total < 8192) {
+                        buffer.write(chunk, 0, read);
+                        total += read;
+                    }
+                    String body = buffer.toString("UTF-8");
+                    looksLikeCompanion = body.contains("\"" + COMPANION_SERVICE + "\"");
+                } catch (Exception ignored) {
+                }
+            }
+
             // El puente empareja la primera vez: guarda la credencial en el mismo
             // almacen de cookies que usa el WebView para no volver a pedir nada.
             String setCookie = connection.getHeaderField("Set-Cookie");
@@ -190,7 +211,7 @@ class Discovery {
                 }
             }
 
-            return code == 200;
+            return looksLikeCompanion;
         } catch (Exception ignored) {
             return false;
         } finally {

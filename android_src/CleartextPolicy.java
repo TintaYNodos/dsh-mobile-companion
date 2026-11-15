@@ -100,6 +100,8 @@ final class CleartextPolicy {
         if (octets[0] == 192 && octets[1] == 168) return true;    // 192.168.0.0/16
         if (octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31) return true; // 172.16/12
         if (octets[0] == 169 && octets[1] == 254) return true;    // link-local
+        // CGNAT 100.64.0.0/10 (lo usan algunas VPN y redes de operador)
+        if (octets[0] == 100 && octets[1] >= 64 && octets[1] <= 127) return true;
         return false;
     }
 

@@ -65,3 +65,9 @@ desktop.ini
 tmp/
 temp/
 *.tmp
+
+# Artefactos de compilación y capturas locales (no se publican)
+out/
+simulator/captures/
+HOJA_ERRORES_CAPTURAS.md
+INFORME_ESCANEO_*.md

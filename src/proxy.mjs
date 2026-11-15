@@ -4,6 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 import http from "node:http";
+import { pipeline } from "node:stream";
 import { config } from "./config.mjs";
 import { injectSessionHeaders, getAuthority, invalidateSession } from "./crypto.mjs";
 import { log } from "./log.mjs";
@@ -69,7 +70,15 @@ const bufferHtml = (proxyRes, capBytes) =>
 const streamThrough = (clientRes, proxyRes, prefix) => {
   clientRes.writeHead(proxyRes.statusCode ?? 502, copyHeaders(proxyRes));
   if (prefix && prefix.length) clientRes.write(prefix);
-  proxyRes.pipe(clientRes, { end: true });
+  // Un reset del backend a mitad de cuerpo emite "error" en el IncomingMessage:
+  // sin listener, Node lo trata como no capturado y tumba el puente completo
+  // junto con todos los túneles. pipeline() cierra ambos lados; solo se
+  // destruyen explícitamente cuando hay error (en el cierre normal ya terminaron).
+  pipeline(proxyRes, clientRes, (error) => {
+    if (!error) return;
+    if (!clientRes.destroyed) clientRes.destroy();
+    proxyRes.destroy();
+  });
 };
 
 const deliverHtml = (clientRes, proxyRes, html) => {
@@ -230,6 +239,13 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
       if (idempotent) {
         proxyReq.end();
       } else {
+        // El cuerpo de subida puede cortarse y emitir "error" en el request: sin
+        // listener, Node lo trata como no capturado y cae el proceso. Se
+        // mantiene pipe() y NO pipeline(): el callback de pipeline se dispara
+        // en cuanto el cuerpo termina de enviarse, y destruir ahí el proxyReq
+        // aborta la petición antes de que llegue la respuesta (ECONNRESET en
+        // todos los POST).
+        req.on("error", () => proxyReq.destroy());
         req.pipe(proxyReq, { end: true });
       }
     });

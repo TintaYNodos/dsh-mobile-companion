@@ -4,6 +4,9 @@
  * See LICENSE file in repository root for full terms.
  */
 import { config } from "./config.mjs";
+import { generateQrSvg } from "./qr.mjs";
+
+export { generateQrSvg };
 
 export const escapeHtml = (value) =>
   String(value ?? "")
@@ -133,8 +136,10 @@ export const stateStamp = ({ pending = [], devices = [], events = [] } = {}) =>
     events[0]?.at || "",
   ].join("|");
 
-export function approvalPage({ pending = [], devices = [], events = [], flash = "", stamp = "" } = {}, helpers = {}) {
+export function approvalPage({ pending = [], devices = [], events = [], flash = "", stamp = "", bunkerUrl = "" } = {}, helpers = {}) {
   const { describeAgent = (a) => a, when = (w) => w, ago = (a) => a, isoOf = (i) => i } = helpers;
+  const effectiveBunkerUrl = bunkerUrl || `http://${config.bindHost || "127.0.0.1"}:${config.listenPort}`;
+  const qrSvg = generateQrSvg(effectiveBunkerUrl, { size: 180, margin: 2 });
 
   const pendingCard = (entry) => `<article class="card">
   <div class="row">
@@ -216,6 +221,13 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
     "Autorizar dispositivos",
     `${brand("DSH Companion", "Autorizar dispositivos · solo esta computadora")}
      ${flashText ? `<div class="flash ${flashTone}" role="status">${escapeHtml(flashText)}</div>` : ""}
+     <div class="qr-container" style="display:flex;flex-direction:column;align-items:center;text-align:center;margin:16px auto 24px;padding:18px 16px;background:var(--raised);border:1px solid var(--line);border-radius:14px;max-width:340px;">
+       <div style="background:#ffffff;padding:12px;border-radius:12px;display:inline-flex;box-shadow:0 4px 16px rgba(0,0,0,0.18);">
+         ${qrSvg}
+       </div>
+       <p style="margin-top:14px;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.4;">Escanea con la cámara del teléfono para conectar al instante</p>
+       <p class="meta" style="margin-top:6px;font-size:12px;word-break:break-all;"><code>${escapeHtml(effectiveBunkerUrl)}</code></p>
+     </div>
      <div class="stats">
        <span class="chip"><b>${pending.length}</b> solicitud${pending.length === 1 ? "" : "es"}</span>
        <span class="chip"><b>${devices.length}</b> dispositivo${devices.length === 1 ? "" : "s"}</span>

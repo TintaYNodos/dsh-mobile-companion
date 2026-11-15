@@ -8,7 +8,14 @@ import path from "node:path";
 import { config } from "./config.mjs";
 
 const ASSETS = new Map([
+  ["/simulator", { file: "simulator/simulator.html", type: "text/html; charset=utf-8", cache: "no-store" }],
   ["/offline", { file: "offline.html", type: "text/html; charset=utf-8", cache: "no-store" }],
+  ["/offline.css", { file: "offline.css", type: "text/css; charset=utf-8", cache: "no-store" }],
+  ["/offline-reader.css", { file: "offline-reader.css", type: "text/css; charset=utf-8", cache: "no-store" }],
+  ["/offline-satellite.css", { file: "offline-satellite.css", type: "text/css; charset=utf-8", cache: "no-store" }],
+  ["/offline-core.js", { file: "offline-core.js", type: "application/javascript; charset=utf-8", cache: "no-store" }],
+  ["/offline-reader.js", { file: "offline-reader.js", type: "application/javascript; charset=utf-8", cache: "no-store" }],
+  ["/offline-satellite.js", { file: "offline-satellite.js", type: "application/javascript; charset=utf-8", cache: "no-store" }],
   ["/companion.webmanifest", { file: "manifest.webmanifest", type: "application/manifest+json; charset=utf-8", cache: "public, max-age=3600" }],
   ["/icon.svg", { file: "icon.svg", type: "image/svg+xml", cache: "public, max-age=86400" }],
   ["/DSH-Companion.apk", { file: "../DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],

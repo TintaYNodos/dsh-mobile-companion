@@ -11,14 +11,22 @@
 
 import os from "node:os";
 import fs from "node:fs";
-import { execSync } from "node:child_process";
+import path from "node:path";
+import { execSync, spawnSync } from "node:child_process";
 
 let lastCpus = os.cpus();
 let lastCpuTime = Date.now();
 let lastCpuPercent = 0;
 
+let hasThermalZone = null;
 let lastTempC = null;
 let lastTempSampleTime = 0;
+
+/** Búfer circular en memoria para el historial de telemetría (últimos 5 minutos: 30 puntos cada 10s) */
+export const MAX_TELEMETRY_HISTORY = 30;
+export const TELEMETRY_INTERVAL_MS = 10000;
+export const telemetryHistory = [];
+let lastHistoryRecordTime = 0;
 
 function calculateCpuPercent() {
   const currentCpus = os.cpus();
@@ -50,6 +58,8 @@ function calculateCpuPercent() {
 }
 
 function queryTemperature() {
+  if (hasThermalZone === false) return null;
+
   const now = Date.now();
   if (now - lastTempSampleTime < 5000 && lastTempC !== null) {
     return lastTempC;
@@ -60,14 +70,24 @@ function queryTemperature() {
     try {
       const output = execSync(
         "powershell.exe -NoProfile -Command \"(Get-CimInstance Win32_PerfFormattedData_Counters_ThermalZoneInformation -ErrorAction SilentlyContinue | Select-Object -First 1).Temperature\"",
-        { encoding: "utf8", timeout: 1200, stdio: ["ignore", "pipe", "ignore"] }
+        { encoding: "utf8", timeout: 800, stdio: ["ignore", "pipe", "ignore"] }
       ).trim();
       const kelvin = Number.parseInt(output, 10);
       if (Number.isFinite(kelvin) && kelvin > 200 && kelvin < 400) {
+        hasThermalZone = true;
         lastTempC = Math.round(kelvin - 273.15);
         return lastTempC;
       }
-    } catch {}
+      if (hasThermalZone === null) {
+        hasThermalZone = false;
+      }
+    } catch {
+      if (hasThermalZone === null) {
+        hasThermalZone = false;
+      }
+    }
+  } else {
+    hasThermalZone = false;
   }
   return lastTempC;
 }
@@ -81,6 +101,122 @@ function formatUptime(seconds) {
   return `${m}m`;
 }
 
+let hasBattery = null;
+let lastBattery = null;
+let lastBatterySampleTime = 0;
+const BATTERY_CACHE_MS = 30000;
+
+export function queryBattery() {
+  if (hasBattery === false) return null;
+
+  const now = Date.now();
+  if (hasBattery === true && now - lastBatterySampleTime < BATTERY_CACHE_MS && lastBattery !== null) {
+    return lastBattery;
+  }
+
+  let result = null;
+
+  if (process.platform === "win32") {
+    try {
+      const res = spawnSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-Command",
+          "Get-CimInstance Win32_Battery -EA SilentlyContinue | Select-Object -First 1 -Property EstimatedChargeRemaining,BatteryStatus | ConvertTo-Json -Compress",
+        ],
+        { encoding: "utf8", timeout: 2500, stdio: ["ignore", "pipe", "ignore"] }
+      );
+      const out = res.stdout ? res.stdout.trim() : "";
+      if (out) {
+        const parsed = JSON.parse(out);
+        const percent = Number(parsed.EstimatedChargeRemaining);
+        const statusNum = Number(parsed.BatteryStatus);
+        if (Number.isFinite(percent)) {
+          const charging = statusNum >= 6 && statusNum <= 9;
+          const plugged = charging || statusNum === 2 || statusNum === 3;
+          let status = "discharging";
+          if (charging) status = "charging";
+          else if (statusNum === 3) status = "full";
+          else if (plugged) status = "plugged";
+          else if (statusNum === 1 || statusNum === 4 || statusNum === 5) status = "discharging";
+          else status = "unknown";
+
+          result = { percent, plugged, charging, status };
+        }
+      }
+    } catch {
+      if (hasBattery === true) return lastBattery;
+    }
+  } else if (process.platform === "linux") {
+    try {
+      const base = "/sys/class/power_supply";
+      if (fs.existsSync(base)) {
+        const entries = fs.readdirSync(base).filter((e) => e.startsWith("BAT"));
+        if (entries.length > 0) {
+          const batPath = path.join(base, entries[0]);
+          const capFile = path.join(batPath, "capacity");
+          const statFile = path.join(batPath, "status");
+          if (fs.existsSync(capFile)) {
+            const percent = parseInt(fs.readFileSync(capFile, "utf8").trim(), 10);
+            const rawStatus = fs.existsSync(statFile)
+              ? fs.readFileSync(statFile, "utf8").trim().toLowerCase()
+              : "unknown";
+            const charging = rawStatus === "charging";
+            const plugged = charging || rawStatus === "full" || rawStatus === "not charging";
+            result = {
+              percent: Number.isFinite(percent) ? percent : 0,
+              plugged,
+              charging,
+              status: rawStatus,
+            };
+          }
+        }
+      }
+    } catch {
+      if (hasBattery === true) return lastBattery;
+    }
+  } else if (process.platform === "darwin") {
+    try {
+      const out = execSync("pmset -g batt", {
+        encoding: "utf8",
+        timeout: 1500,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      if (out.includes("InternalBattery") || out.includes("Battery")) {
+        const match = out.match(/(\d+)%\s*;\s*([^;]+);/);
+        if (match) {
+          const percent = parseInt(match[1], 10);
+          const raw = match[2].trim().toLowerCase();
+          const charging = raw.includes("charging");
+          const plugged = charging || raw.includes("charged") || out.includes("'AC Power'");
+          const status = charging ? "charging" : raw.includes("charged") ? "full" : "discharging";
+          result = { percent, plugged, charging, status };
+        }
+      }
+    } catch {
+      if (hasBattery === true) return lastBattery;
+    }
+  }
+
+  if (result === null) {
+    if (hasBattery === null) {
+      hasBattery = false;
+    }
+    return null;
+  }
+
+  hasBattery = true;
+  lastBattery = result;
+  lastBatterySampleTime = now;
+  return lastBattery;
+}
+
+// Inicialización temprana para detectar presencia de batería al arrancar
+try {
+  queryBattery();
+} catch {}
+
 export function collectSystemStats() {
   const cpuPercent = calculateCpuPercent();
   const tempC = queryTemperature();
@@ -92,6 +228,24 @@ export function collectSystemStats() {
   const ramTotalGb = Number((totalMemBytes / (1024 ** 3)).toFixed(1));
   const ramUsedGb = Number((usedMemBytes / (1024 ** 3)).toFixed(1));
   const ramPercent = Math.round((usedMemBytes / totalMemBytes) * 100);
+
+  const ramTotalMb = Math.round(totalMemBytes / (1024 * 1024));
+  const ramUsedMb = Math.round(usedMemBytes / (1024 * 1024));
+
+  const now = Date.now();
+  if (now - lastHistoryRecordTime >= TELEMETRY_INTERVAL_MS) {
+    lastHistoryRecordTime = now;
+    telemetryHistory.push({
+      time: now,
+      cpuPercent,
+      tempC,
+      ramUsedMb,
+      ramTotalMb,
+    });
+    if (telemetryHistory.length > MAX_TELEMETRY_HISTORY) {
+      telemetryHistory.shift();
+    }
+  }
 
   let disk = null;
   try {
@@ -120,6 +274,7 @@ export function collectSystemStats() {
       percent: ramPercent,
     },
     disk,
+    battery: queryBattery(),
     uptime: formatUptime(os.uptime()),
     timestamp: Date.now(),
   };

@@ -24,11 +24,11 @@ const text = (value) => String(value ?? "").trim();
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "4.4.1",
-  apkVersion: "4.4.1",
-  apkVersionCode: 22,
-  previousApkVersion: "4.4.0",
-  previousApkVersionCode: 21,
+  version: "4.5.10",
+  apkVersion: "4.5.10",
+  apkVersionCode: 37,
+  previousApkVersion: "4.5.9",
+  previousApkVersionCode: 36,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
@@ -60,6 +60,10 @@ export const config = Object.freeze({
   accessKey: text(process.env.DSH_ACCESS_KEY),
   accessKeyDisabled: text(process.env.DSH_ACCESS_DISABLE) === "1",
 
+  // Terminal remota: apagada salvo que se pida explicitamente. Es shell
+  // arbitrario en la PC a peticion de cualquier dispositivo emparejado.
+  enableTerminal: text(process.env.DSH_ENABLE_TERMINAL) === "1",
+
   // Sesion de dispositivo: 30 dias, renovada deslizantemente con el uso.
   deviceTtlDays: positiveInt(process.env.DSH_DEVICE_TTL_DAYS, 30),
   deviceRefreshMs: positiveInt(process.env.DSH_DEVICE_REFRESH_HOURS, 24) * 60 * 60 * 1000,
@@ -73,3 +77,4 @@ export const config = Object.freeze({
 
   dshHome: text(process.env.DSH_HOME) || path.join(process.env.USERPROFILE || os.homedir(), ".dsh"),
 });
+

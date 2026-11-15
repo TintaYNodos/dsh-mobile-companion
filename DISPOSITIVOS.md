@@ -18,7 +18,7 @@ La pantalla del teléfono se actualiza por sí misma cada 2 segundos.
 
 - Escucha **solo en 127.0.0.1:57421**. No es alcanzable desde la VPN: desde otro
   equipo el puente responde 403.
-- Exige su **propia credencial**, guardada en `%USERPROFILE%\.dsh\companion-panel-token`.
+- Exige su **propia credencial**: un boleto de un solo uso guardado en `%USERPROFILE%\.dsh\companion-panel-token`. Al abrirlo se canjea por una cookie de sesión HttpOnly cuyo identificador solo vive en memoria y caduca a las 12 h; el boleto se regenera en cada canje.
   `panel.bat` la inyecta en la URL y el panel la cambia por una cookie de una semana,
   para que el token no quede en el historial.
 - Muestra las solicitudes pendientes y los **dispositivos autorizados**.
@@ -53,8 +53,9 @@ un navegador escribiéndola una vez. La app no la usa.
 | Variable | Por defecto | Efecto |
 | --- | --- | --- |
 | `DSH_PANEL_PORT` | `57421` | Puerto del panel local |
-| `DSH_PANEL_TOKEN` | autogenerado | Credencial del panel |
+| `DSH_PANEL_TOKEN` | autogenerado | Boleto inicial de un solo uso del panel (se regenera al canjearse) |
 | `DSH_DEVICE_TTL_DAYS` | `30` | Días de vigencia de la sesión |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Cada cuánto se renueva al usarla |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutos que una solicitud espera aprobación |
-| `DSH_ACCESS_DISABLE=1` | — | Sin aprobación ni clave: cualquiera de la red entra |
+| `DSH_ACCESS_DISABLE=1` | — | Sin aprobación ni clave. Solo se permite con el puente enlazado a `127.0.0.1` |
+| `DSH_ENABLE_TERMINAL=1` | — | Activa la terminal remota (apagada por defecto; además exige loopback) |

@@ -85,12 +85,15 @@ server.keepAliveTimeout = config.keepAliveTimeoutMs;
 server.maxConnections = config.maxConnections;
 
 server.on("upgrade", (req, socket, head) => {
+  const remote = String(socket.remoteAddress || "");
   if (!isClientAuthorized(socket.remoteAddress, bindHost, bindPrefix)) {
+    log("ws", `rechazado por red: ${remote}`);
     socket.destroy();
     return;
   }
 
   if (accessKeyEnabled() && !hasValidAccessKey(req) && !findPairedDevice(req)) {
+    log("ws", `rechazado sin credencial valida: ${remote}`);
     socket.end("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: " + REALM + "\r\nConnection: close\r\n\r\n");
     return;
   }
@@ -104,12 +107,19 @@ server.on("upgrade", (req, socket, head) => {
   }
 
   const trustedOrigin = isSameOriginRequest(req, allowedOrigins, allowedHosts);
+  if (!trustedOrigin) {
+    log("ws", `origen no confiable (${req.headers.origin || "sin Origin"}) desde ${remote}`);
+  }
 
   resolveTargetPort()
     .then((targetPort) => {
+      log("ws", `tunel ${url.pathname} -> ${config.targetHost}:${targetPort} para ${remote}`);
       handleWsProxy(req, socket, head, { targetPort, originAllowed: trustedOrigin });
     })
-    .catch(() => socket.destroy());
+    .catch((error) => {
+      log("ws", `sin puerto de destino: ${error.message}`);
+      socket.destroy();
+    });
 });
 
 server.on("clientError", (error, socket) => {
@@ -146,7 +156,9 @@ server.listen(config.listenPort, bindHost, () => {
 
   if (accessKeyEnabled()) {
     log("bridge", `Dispositivos autorizados: ${deviceSummary().length}`);
-    log("bridge", `Clave manual de respaldo: ${resolveAccessKey()}`);
+    // Nunca la clave completa: este log acaba en copias de soporte y respaldos.
+    const key = resolveAccessKey();
+    log("bridge", `Clave manual de respaldo: ****${key.slice(-4)}`);
   } else {
     warn("bridge", "Clave de acceso desactivada por DSH_ACCESS_DISABLE=1");
     warn("bridge", "Cualquier dispositivo de la red privada puede abrir esta sesion");

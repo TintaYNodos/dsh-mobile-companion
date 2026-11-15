@@ -2,220 +2,299 @@
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
-> 🌐 **语言说明：** 本文档翻译旨在方便全球开发者使用 DSH Mobile Companion。非常欢迎社区提出语言修正和 Pull Request（拉取请求）。标准参考原版文档为[西班牙语 (墨西哥)](README.es.md)。
+> 🌐 **语言说明：** 本文档经过翻译，以便全球开发者都能使用 DSH Mobile Companion。非常欢迎社区提出语言修正、措辞改进和拉取请求。标准参考文档为[西班牙语（墨西哥）](README.es.md)。
 
-通过 ZeroTier 或 Tailscale 零信任私有网络在移动端安全访问 DeepSeek Harness，无需公网开放端口，且不破坏提示词缓存（Prompt Cache）。
+通过 ZeroTier 或 Tailscale 私有网络在移动端访问 DeepSeek Harness，无需开放端口，也不会破坏提示词缓存。
 
-移动应用并未重新实现前端界面：它直接呈现 DeepSeek Harness 原生 Web GUI，并自动注入移动端触控优化。你在手机上看到的，就是电脑端运行的完全相同的产品。
+移动应用并未重新实现界面：它直接渲染 DeepSeek Harness 自带的 Web GUI，并叠加一层触控适配。你在手机上看到的，就是电脑上运行的同一个产品。
 
-由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的高安全加固版本。
+由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
+
+当前版本：**4.5.10**（`versionCode` 37）。
 
 ---
 
 ## 解决的问题
 
-DeepSeek Harness 监听在 `127.0.0.1`，并通过由 `.credentials.yaml` 派生的 HMAC Cookie 保护其会话。因此，仅靠开放端口或通用隧道工具远远不够：没有该 Cookie，界面会直接返回 401 未授权；若随意重写请求来源（Origin），则会破坏维持提示词缓存（Prompt Cache）所需的稳定前缀。
+DeepSeek Harness 监听 `127.0.0.1`，并用由 `.credentials.yaml` 派生的 HMAC Cookie 保护其会话。因此，仅仅开放端口或使用通用隧道并不够：没有该 Cookie，界面会返回 401；而随意改写请求来源（Origin）会破坏提示词缓存所需的稳定前缀。
 
-本项目同时解决了这三项核心问题：
+本项目同时解决这三个问题：
 
-- **透明会话签名**：桥接服务读取本地密钥，生成 HMAC-SHA256（版本 1）Cookie，并在其过期前自动续期。移动端浏览器永远不会接触到底层密钥。
-- **真实产品的触控优化**：仅注入视口（viewport）元数据与极简样式表。不替换原生界面，也不向文档中注入外置 JavaScript。
-- **网络层严密隔离**：套接字仅绑定至 VPN 虚拟网络接口，且仅接受来自该私有网络的客户端连接。
+- **透明会话签名。** 桥接服务读取本地密钥，生成 HMAC-SHA256 Cookie（版本 1），并在过期前续期。移动端浏览器永远不会看到该密钥。
+- **真实产品之上的触控层。** 注入视口元数据、样式表和一小段客户端脚本。界面不会被替换：脚本只添加触控操作（命令坞、代码按键、主题同步、审批中继、通知中继）。它与页面同源同权限运行，因此应视为信任边界的一部分。
+- **网络隔离。** 套接字只绑定 VPN 接口，并且只接受来自同一私有网络的客户端。
 
 ---
 
 ## 架构
 
 ```text
-手机（ZeroTier / Tailscale 零信任私有网络）
+手机（ZeroTier / Tailscale 网络）
         |
         v
-bridge.mjs  ——独占绑定至 VPN 私有 IP——
-   |-- /                      反向代理至 DeepSeek Harness + 移动端触控适配
-   |-- /offline               Harness 尚未响应时的等待页面（集成离线阅读器）
-   |-- /dsh-companion/status  连接发现与链路健康检查
-   |-- /dsh-companion/sync    对话转储至本地磁盘
+bridge.mjs  ——独占绑定到 VPN IP——
+   |-- /                        代理至 DeepSeek Harness + 触控层
+   |-- /offline                 待机页面与离线编辑式阅读器
+   |-- /dsh-companion/status    链路发现与健康检查
+   |-- /dsh-companion/sync      将会话转储到磁盘
+   |-- /dsh-companion/chats     已同步会话索引
+   |-- /dsh-companion/pc-events Server-Sent Events：“一轮刚刚结束”
+   |-- /dsh-companion/pair-*    设备配对与审批
         |
         v
-127.0.0.1:52710  DeepSeek Harness
+127.0.0.1:<Harness 端口>  DeepSeek Harness
 ```
 
 模块结构：
 
 ```text
 companion/
-├── bridge.mjs              服务启动、路由分发、套接字与访问控制策略
-├── offline.html            与产品原生美学一致的待机页面（内置离线阅读器）
-├── manifest.webmanifest    渐进式 Web 应用（PWA）安装清单
-├── icon.svg
-├── android_src/
-│   └── MainActivity.java   原生 Android 客户端：加固 WebView、状态胶囊、自动重连
-├── test/
-│   ├── verify_bridge.mjs      路由、注入、来源校验、框架与边界测试
-│   ├── verify_sync_ws.mjs     内容无害化与 WebSocket 握手验证
-│   └── verify_access_key.mjs  共享访问密钥认证校验
+├── bridge.mjs                 启动、路由、套接字与访问控制策略
+├── package.json               版本的唯一来源、`npm start` / `npm test`
+├── offline.html               待机屏幕外壳
+├── offline.css                基础布局、主题与标签页
+├── offline-reader.css         编辑式阅读器与会话详情
+├── offline-satellite.css      卫星区块
+├── offline-core.js            共享状态、连接状态、导航
+├── offline-reader.js          离线阅读器、列表、详情、阅读模式
+├── offline-satellite.js       卫星交接（发送、分块、完成）
 ├── src/
-│   ├── config.mjs          统一集中管理配置参数与阈值限制
-│   ├── log.mjs             带毫秒级时间戳的高性能日志记录
-│   ├── network.mjs         VPN 接口发现、客户端授权与 Harness 端口探测
-│   ├── crypto.mjs          安全密钥管理、HMAC v1 Cookie、访问密钥与常量时间比对
-│   ├── http.mjs            HTTP 请求头净化、限制请求体大小与受信任来源验证
-│   ├── proxy.mjs           HTTP 反向代理与 WebSocket 隧道通信
-│   ├── mobile.mjs          视口注入与触摸交互优化
-│   ├── sync.mjs            对话记录的原子化持久化存储
-│   ├── static.mjs          带 ETag 缓存验证的本地静态资源托管
-│   └── ratelimit.mjs       基于每客户端令牌桶算法的访问限流
-└── synced_chats/           导出的对话记录（.md 与 .json 格式）
+│   ├── config.mjs             集中配置与上限
+│   ├── log.mjs                带时间戳的日志记录器
+│   ├── network.mjs            VPN 发现、授权、Harness 端口
+│   ├── crypto.mjs             密钥、HMAC v1 Cookie、访问密钥、轮换
+│   ├── http.mjs               请求头净化、限制请求体、受信任来源
+│   ├── routes.mjs             路由分发（状态、数据、控制）
+│   ├── routes-pairing.mjs     配对、审批、面板交接
+│   ├── panel.mjs              本地审批面板（仅回环）
+│   ├── pairing.mjs            待处理请求与配对码
+│   ├── pairing-views.mjs      面板 HTML
+│   ├── devices.mjs            设备注册表、TTL、撤销
+│   ├── registry.mjs           原子且崩溃安全的 JSON 注册表
+│   ├── proxy.mjs              HTTP 代理
+│   ├── proxy-ws.mjs           WebSocket 隧道
+│   ├── mobile.mjs             注入入口（viewport + 客户端脚本）
+│   ├── mobile-client*.mjs     注入的客户端（按职责拆分）
+│   ├── mobile-styles.mjs      注入的样式表
+│   ├── pc-events.mjs          会话轮次监视器 -> SSE 通知
+│   ├── sync.mjs               会话的原子持久化
+│   ├── static.mjs             带 ETag 的本地资源
+│   ├── system-stats.mjs       CPU、内存与温度遥测
+│   ├── qr.mjs / visual-lab.mjs QR 与可视化测试台的辅助模块
+│   └── ratelimit.mjs          每客户端令牌桶
+├── android_src/               原生客户端（纯 Java，无 AndroidX）
+│   ├── MainActivity.java      生命周期与编排
+│   ├── CompanionWebViewClient.java, CompanionChromeClient.java
+│   ├── CleartextPolicy.java   阻止发往非私有主机的明文流量
+│   ├── PcRegistryStore.java, PcEntry.java   多电脑注册表
+│   ├── SettingsScreen.java, HubSheet.java, PcDialogs.java, QrDialogs.java
+│   ├── UpdateInstaller.java, KillSwitchUi.java, BiometricGate.java
+│   ├── PcEventsService.java   用于电脑通知的前台服务
+│   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
+│   ├── KeyStoreVault.java     使用 Android Keystore 加密存储的密钥
+│   └── …                      发现、遥测、卫星、WOL、小组件
+├── test/
+│   ├── verify_*.mjs           十个验证套件（136 项检查）
+│   ├── _harness.mjs           共享客户端
+│   └── run-all.mjs            `npm test`
+└── synced_chats/              已持久化的会话（.md 与 .json）
 ```
 
 ---
 
-## 安装指南
+## 安装
 
-### 电脑端
+### 方法 1：借助 AI 助手自动安装（推荐）
+
+如果你在电脑上使用 AI 智能体或编程助手（DeepSeek Harness、Cursor、Claude Code、Copilot 等），请将下面的提示词粘贴到对话中。助手会完成克隆、配置后台启动、验证桥接服务，并给出手机端的连接步骤。
+
+> 完整指南：[AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
+
+```text
+请充当这台电脑上的技术安装助手。
+你的目标是安装、启用、验证并完整配置“DSH Mobile Companion”（一个安全的伴随桥接服务，可通过 ZeroTier 或 Tailscale 私有网络在移动端访问 DeepSeek Harness），并向我提供清晰、不使用专业术语的说明，以便我连接手机。
+
+请自主地按顺序执行以下步骤：
+1. 检查“%USERPROFILE%\.dsh”，并定位 Node.js（在 PATH 中，或位于“%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe”）。
+2. 如果当前不在该目录中，请克隆：git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
+3. 使用“install-autostart.bat”配置静默自启动，并使用“run-hidden.vbs”启动服务。
+4. 请求 http://127.0.0.1:57420/dsh-companion/status，确认桥接服务返回 200，并报告 DSH 状态。
+5. 提供简洁、不使用专业术语的摘要，包含：我手机使用的 URL（http://<VPN_IP>:57420）、GitHub Releases 中的 APK 下载链接，以及如何从本地面板授权我的手机。
+```
+
+### 方法 2：手动安装
+
+#### 电脑
 
 ```bash
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-1. 配置访问密钥（强烈推荐，详见下文）。
-2. 使用 `install-autostart.bat` 安装开机自启（在 Windows 启动时注册静默计划任务）。
-3. 桥接服务会自动探测 ZeroTier 或 Tailscale 网络接口并绑定。若自动探测失败，请通过环境变量 `DSH_BIND_HOST` 指定私有 IP。
+需要 Node.js 20 或更新版本，且没有 npm 依赖。
 
-### 手机端
+1. 设置访问密钥（强烈推荐；见下文）。
+2. 使用 `install-autostart.bat` 安装自动启动（Windows 登录时运行的静默任务）。
+3. 桥接服务会自动检测 ZeroTier 或 Tailscale 接口并绑定到它。如果检测失败，请将 `DSH_BIND_HOST` 设置为你的私有 IP。
 
-提供两种完全等效的使用方式：
+#### 手机
 
-- **原生应用：** 从 *Releases* 页面下载安装 `DSH-Companion.apk`。提供网络自动重连、堡垒节点选择器以及沉浸式全屏体验。安装包体积小于 160 KB，不包含任何第三方库依赖：仅包含客户端纯净代码、应用图标与定制主题。
-- **免安装浏览器访问：** 在手机浏览器中直接访问 `http://<VPN_IP>:57420` 并选择“添加到主屏幕”。
+两种等效方式：
 
-`/m` 路由会返回永久重定向（301）至 `/`：旧版的精简卫星模式已被废弃，全面由真实产品的完整界面取代。
+- **原生应用：** 从 *Releases* 区域安装 `DSH-Companion.apk`。多电脑选择器、自动重连、前台通知服务、生物识别锁。约 210 KB，零第三方依赖：纯净、可复现的 Java，一个资源图标和主题。
+- **无需安装任何东西：** 在浏览器中打开 `http://<VPN_IP>:57420`，选择“添加到主屏幕”。
+
+`/m` 会永久重定向到 `/`：旧的卫星模式已退役，改用真实界面。
 
 ---
 
 ## 环境变量
 
-| 变量 | 默认值 | 用途 |
+| 变量 | 默认值 | 作用 |
 | --- | --- | --- |
-| `DSH_BIND_HOST` | 自动检测 | 强制绑定特定的私有 VPN IP |
-| `DSH_TARGET_PORT` | `52710` | DeepSeek Harness 服务端口 |
+| `DSH_BIND_HOST` | 自动检测 | 强制指定私有绑定 IP |
+| `DSH_TARGET_PORT` | 自动检测 | DeepSeek Harness 端口 |
 | `DSH_LISTEN_PORT` | `57420` | 桥接服务监听端口 |
-| `DSH_HOME` | `%USERPROFILE%\.dsh` | 凭据及访问密钥存放目录 |
-| `DSH_BROWSER_SECRET` | — | 直接传入会话密钥，免去读取 YAML 配置文件 |
-| `DSH_ACCESS_KEY` | 自动生成 | 共享访问密钥；优先覆盖文件中的密钥 |
-| `DSH_ACCESS_DISABLE` | — | 设为 `1` 禁用密钥验证（仅限绑定回环接口 loopback 时） |
-| `DSH_COMPANION_TOKEN` | 空 | 用于 `/dsh-companion/sync` 的附加安全令牌 |
-| `DSH_ALLOW_CIDR` | 空 | 额外允许访问的子网列表（逗号分隔 CIDR） |
+| `DSH_PANEL_PORT` | `57421` | 本地审批面板端口 |
+| `DSH_HOME` | `%USERPROFILE%\.dsh` | 凭据、密钥与注册表目录 |
+| `DSH_BROWSER_SECRET` | — | 直接提供密钥，跳过读取 YAML |
+| `DSH_ACCESS_KEY` | 自动生成 | 共享密钥；覆盖基于文件的密钥 |
+| `DSH_ACCESS_DISABLE` | — | `1` 禁用访问密钥，**仅允许在绑定回环时使用** |
+| `DSH_COMPANION_TOKEN` | 空 | 用于 `/dsh-companion/sync` 的附加令牌 |
+| `DSH_ALLOW_CIDR` | 空 | 额外授权的子网，逗号分隔 |
+| `DSH_DEVICE_TTL_DAYS` | `30` | 设备会话有效期；过期设备会被拒绝并清除 |
+| `DSH_DEVICE_REFRESH_HOURS` | `24` | 使用时效期续期的间隔 |
+| `DSH_PENDING_TTL_MIN` | `15` | 配对请求等待审批的分钟数 |
+| `DSH_ENABLE_TERMINAL` | — | `1` 启用远程终端（默认关闭，仅回环） |
 
-### 电脑端一次性配对批准
+### 从电脑进行一次性批准
 
-无需在手机上手动输入复杂的访问密钥：
+1. 在手机上打开应用：它会显示“请在电脑上确认”。
+2. 在电脑上运行 `panel.bat`（或打开桥接服务打印的 URL）。面板**严格监听 127.0.0.1**。
+3. 设备会带着代码和地址出现。点击**批准**。
+4. 手机随即连接，之后不再询问。
 
-1. 在手机上打开应用，屏幕提示“请在电脑上确认”（Confirma en la computadora）。
-2. 在电脑浏览器打开 `http://<VPN_IP>:57420/pair`。
-3. 界面会显示发起配对请求的设备及其 IP 地址。点击 **授权 (Autorizar)**。
-4. 手机端将自动无感登入，之后不再需要重复验证。
+设备会话持续 **30 天，并在使用时续期**：每次在 24 小时后打开应用，计数器都会重置。过期设备不再被接受，并会从注册表中移除。
 
-会话有效期为 **30 天，且随使用自动续期**：每次在间隔 24 小时后打开应用，有效期倒计时便重置回 30 天。只要每月至少使用一次，会话将永久有效。
+面板入口是一个**一次性票据**，它有有效期，兑换后即失效；作为交换，浏览器会获得一个 `HttpOnly`、`SameSite=Strict` 的会话 Cookie，其标识符只存在于内存中。可分享的 URL 中不会携带令牌，也不会向保存永久凭据的文件写入任何内容。
 
-配对管理面板 **仅监听在 127.0.0.1**，并要求独立的管理员凭据，因此无法通过 VPN 或局域网外部机器访问。面板中清晰列出所有已授权的设备，并支持单独撤销特定设备的访问权。
+已授权设备存放在 `%USERPROFILE%\.dsh\companion-devices.json`。面板支持逐个撤销和**全部撤销**。在手机端，**终止开关**会撤销所有设备、关闭 WebSocket 隧道，**并轮换访问密钥**。详见 [DISPOSITIVOS.md](DISPOSITIVOS.md)。
 
-已授权设备数据持久化存储在 `%USERPROFILE%\.dsh\companion-devices.json`。面板提供 **全部撤销 (Revocar todos)** 按钮。详细机制请参阅 [DISPOSITIVOS.md](DISPOSITIVOS.md)。
+手动访问密钥仍可作为标准浏览器访问的后备方式使用，存放于 `%USERPROFILE%\.dsh\companion-access-key`。原生应用会使用 Android Keystore 对其加密保存。
 
-传统的手动访问密钥依然保留在 `%USERPROFILE%\.dsh\companion-access-key` 中，作为普通移动浏览器登录的备选凭据。原生 App 无需使用该密钥。
-
-**客观安全限制：** HTTP Basic 认证在网络传输中采用 Base64 编码密钥，本身不具备传输加密性。该设计之所以能够保障安全，是因为 ZeroTier 和 Tailscale 在传输层提供了强制的端到端隧道加密。若在公开或共享的 ZeroTier 网络中，恶意成员可能会尝试在数据链路层（二层）截获数据包；因此标准的安全防御实践是保持私有网络的手动审批授权模式。
+**现实限制：** HTTP Basic 以 Base64 传输密钥，本身没有传输层加密。只有在 ZeroTier 和 Tailscale 对全部流量进行端到端加密的前提下，这种做法才可以接受。在共享或公开的 ZeroTier 网络中，恶意节点可能尝试二层拦截；请通过手动节点授权让网络严格保持私有。
 
 ---
 
-## 路由端点
+## 路由
 
-- `GET /` — DeepSeek Harness Web GUI，当客户端为移动设备时自动注入触控适配。
-- `GET /offline` — Harness 正在启动时的等待页面，集成支持预加载会话的离线阅读器（Lector Editorial Offline）。
-- `GET /dsh-companion/status` — 返回 `{ service, version, status, dshOnline, targetPort, time }`，绝不暴露主机名或底层平台信息。
-- `POST /dsh-companion/sync` — 将会话历史以 Markdown 和 JSON 格式保存至 `synced_chats/`。
-- `GET /dsh-companion/chats` — 获取已同步会话的时间倒序列表，供离线阅读使用。
-- `GET /dsh-companion/chat/:id` — 获取指定会话的完整内容（默认返回结构化 JSON，支持 `?format=md` 获取纯 Markdown）。
-- `POST /dsh-companion/action` — 在后台远程响应工具调用授权与沙盒权限确认（如 `danger-full-access`）。
-- `GET /companion.webmanifest` — PWA 应用安装清单。
+- `GET /` — DeepSeek Harness Web GUI；当客户端是手机时会应用触控层。
+- `GET /offline` — Harness 启动期间的待机页面，以及离线编辑式阅读器。
+- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`。匿名调用者只会得到这一最小结构；设备列表与遥测需要授权。
+- `POST /dsh-companion/sync` — 将会话以 Markdown 和 JSON 保存到 `synced_chats/`。
+- `GET /dsh-companion/chats` — 已同步会话的索引。
+- `GET /dsh-companion/chat/:id` — 会话内容（JSON，或带 `?format=md` 时返回 Markdown）。
+- `GET /dsh-companion/pc-events` — Server-Sent Events 流，在电脑上某一轮结束时发出 `response-finished`。
+- `POST /dsh-companion/pc-events/test` — 发出合成事件；“从 PC 测试”按钮会使用它。
+- `GET /dsh-companion/pair-state` — 等待界面使用的轮询端点。
+- `GET /dsh-companion/pair-events` — 等待界面使用的审批流。
+- `POST /dsh-companion/open-panel` — 打开本地面板窗口（仅回环）。
+- `POST /dsh-companion/retry` — 清除拒绝并重新请求访问。
+- `POST /dsh-companion/kill-switch` — 撤销所有设备、关闭隧道并轮换访问密钥。
+- `POST /dsh-companion/terminal` — 远程 shell，**除非 `DSH_ENABLE_TERMINAL=1` 否则禁用**，且仅回环。
+- `POST /dsh-companion/action` — 工具审批中继。返回 `501`：审批存在于 GUI 的 DOM 中，桥接服务不会伪造它们。
+- `GET /companion.webmanifest` — PWA 清单。
+
+---
+
+## 移动客户端功能
+
+- **命令坞与代码按键。** 一行输入框快捷方式，以及一行仅在键盘打开时出现的代码符号。空间足够时显示在输入卡片下方，否则显示在上方。两行都可以在设置中开关。
+- **Enter 行为。** 默认情况下 Enter 插入换行；“Enter 发送”会反转该行为。它通过 `execCommand` 针对 Lexical 实现，这是输入框唯一接受的写入方式。
+- **PC 通知。** 启用前台服务后，电脑上某一轮结束时，手机就会收到通知，**即使应用已关闭**。桥接服务监视会话日志，并在 `turn/end` 记录上触发：无论模型或工具暂停多久，每一轮都只发一条通知。
+- **前台通知渠道、关键渠道和审批渠道。** 关键通知（终止开关结果、访问被撤销）始终显示，绕过“仅在隐藏时”的过滤。
+- **生物识别门禁**、支持扫码和手动输入的多电脑选择器、Wake-on-LAN、遥测胶囊、卫星交接、系统小组件。
 
 ---
 
 ## 安全模型
 
-**访问控制**
+**访问**
 
-- 所有路由端点（包括状态发现）均强制通过 HTTP Basic 校验共享密钥；采用常量时间算法进行比对以抵御时序攻击，并具备针对单 IP 的请求频次限制。
-- 严密的客户端准入控制：仅允许本地回环（loopback）、绑定网络接口所在的子网（**基于真实网络掩码计算**）或显式声明的 CIDR。
-- 请求头 `Host` 必须与桥接服务监听地址严格一致，彻底杜绝 DNS 重绑定（DNS Rebinding）攻击。
-- 严格拒绝 `Origin: null`、空来源以及 `Sec-Fetch-Site` 不为 `same-origin`/`none` 的请求。
-- 拒绝同时携带 `Content-Length` 与 `Transfer-Encoding` 的请求（防御 HTTP 请求走私攻击）。
-- 客户端访问密钥与鉴权令牌在进行反向代理前被彻底剥离，绝不透传给后端 Harness 服务。
-- WebSocket 隧道遵循完全一致的来源校验标准、CRLF 字符过滤净化机制与优雅切断流程。
+- 所有路由均通过 HTTP Basic 校验共享密钥，使用常量时间比较，并按 IP 限流。
+- 严格的客户端授权：回环、绑定接口所在子网（**使用真实子网掩码**）或显式声明的 CIDR。
+- 设备身份是**会话 Cookie 令牌**，而不是来源 IP：继承地址的设备不会继承会话。
+- 针对桥接服务地址校验 `Host`（DNS 重绑定），拒绝 `Origin: null`、空来源以及意外的 `Sec-Fetch-Site`。
+- 立即拒绝同时出现 `Content-Length` 和 `Transfer-Encoding` 的请求（请求走私）。
+- 访问密钥和客户端令牌在代理到后端之前会被剥离。
+- `DSH_ACCESS_DISABLE=1` 在桥接服务未绑定回环时拒绝启动。
+- 访问密钥会被终止开关**轮换**；所有已配对的设备都必须重新批准。
 
-**凭据安全**
+**凭据**
 
-- 会话密钥仅在启动时读取一次，不计入任何日志，且绝不向客户端传输。在服务初始化时即验证其有效性：若缺失，进程立即报错退出，而非让请求无限挂起。
-- 自动生成与 DeepSeek Harness 官方完全一致的 HMAC-SHA256（版本 1）Cookie，具备 12 小时有效期并在到期前提前自动续期。
-- 若后端返回 401 状态码，桥接服务会重新加载密钥文件并自动重试一次：即使 `.credentials.yaml` 发生轮换，也无需重启桥接服务即可平滑恢复。
+- 会话密钥只读取一次，绝不写入日志，也绝不发送给客户端；如果缺失，进程会立即失败。
+- 与 Harness 签发的完全一致的 HMAC-SHA256 版本 1 Cookie，有效期 12 小时，并主动续期。
+- 后端返回 401 时，桥接服务会重新加载密钥并重试一次，因此 `.credentials.yaml` 轮换无需重启。
+- 访问密钥绝不会完整写入日志：只记录最后四个字符。
+- 面板没有永久令牌：一次性票据加内存中的会话 Cookie。
+- 在 Android 上，存储的密钥使用 **Android Keystore 中的 AES-256-GCM** 加密，旧明文值会自动迁移。
 
-**数据与存储安全**
+**数据与存储**
 
-- 同步的对话记录以原子写入（atomic write）方式落盘，文件名由严格受控的安全标识符派生，并执行严格的路径沙盒限定校验（防御目录穿越漏洞）。
-- 所有对话内容在序列化前均经过转义处理：恶意可执行 HTML 绝不会扩散至本地文件或索引视图中。
-- 对 HTTP 请求体体积、单会话消息总数及单条消息长度均设有显式的硬性上限。
-- 限流器（Rate Limiter）设有严格的内存占用上限：恶意攻击者无法通过伪造大量随机请求键来耗尽系统内存。
+- 会话以原子方式写入，标识符经过净化，并严格限制路径以防止目录穿越。
+- 内容在序列化前会被转义：可执行 HTML 不会泄漏到导出文件或索引中。
+- 请求体大小、消息数量以及单条消息长度都有明确上限。
+- 内存限流器带有上限。
 
-**原生应用安全（Android）**
+**原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 4.4.1，`versionCode` 22，`minSdk` 26，`targetSdk` 35。
-- 体积小于 240 KB，完全不依赖 AndroidX 或 Kotlin：`classes.dex` 均为纯净、可重现构建的原生 Java 代码。
-- **动态多电脑支持：** 支持无限添加与切换计算机节点，具备智能选择与安全删除机制。
-- **后台交互式通知：** 支持直接在 Android 系统通知栏中批准或拒绝工具调用以及 `danger-full-access` 沙盒权限，无需打断当前工作流打开应用主界面。
-- **离线阅读器：** 即使电脑端完全关机，也能在手机端浏览已同步的历史会话，内置专为章节与长篇叙事优化的出版级优雅排版字体。
-- **严谨工业级控制台设计：** 界面完全摒弃不成熟的卡通表情符号，采用清晰的控制台信息层级结构，并搭载官方 DeepSeek / GitHub Dark 高清深色调色板。
-- 彻底禁用本地文件系统访问（Local file access），严密拦截混合内容（Mixed Content），关闭一切弹出窗口与远程调试接口。
-- 麦克风音频采集权限仅严格授予受信任堡垒节点的完全一致源（协议、主机与端口号）；对任何其他来源一律默认拒绝。
-- 页面导航跳转严格限制在堡垒节点源内；外部超链接一律调起系统原生选择器在外部独立浏览器中打开。
-- TLS 证书校验错误一律直接中断连接，绝无任何宽容例外。
-- 页面加载中止（`ERR_ABORTED`）不会被错误视作网络故障，彻底杜绝异常条件下的无限重载死循环。
-- 当应用退至后台时自动暂停连接重试逻辑，并在前台唤醒时引入带抖动的指数退避（Backoff + Jitter）算法以平抑瞬时重连风暴。
+- `DSH-Companion.apk` — 版本 **4.5.10**、`versionCode` 37、`minSdk` 26、`targetSdk` 35。
+- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 210 KB。
+- **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
+- 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
+- 麦克风访问仅限堡垒节点的精确来源（协议、主机和端口）。
+- 导航限制在堡垒节点来源内；外部链接交给系统选择器处理。
+- TLS 错误立即取消导航。
+- `ERR_ABORTED` 与传输中断被区分开来，从而消除了无限重载循环。
+- `onRenderProcessGone` 会重建视图，而不是让 Android 杀死应用。
+- 应用进入后台时暂停重连，并采用带抖动的指数退避。
+- 审批通知会从锁屏隐藏（`VISIBILITY_SECRET`），设备锁定时批准操作拒绝执行。
 
 ---
 
 ## 测试
 
 ```bash
-node test/verify_bridge.mjs
-node test/verify_sync_ws.mjs
-node test/verify_access_key.mjs   # 运行时需预先声明 DSH_ACCESS_KEY
+npm test
 ```
 
-测试集全面覆盖服务发现、移动端触控注入、对 `?dshc=off` 参数的遵循、跨域请求拦截、请求走私防御、请求体边界限制、内容无害化净化、WebSocket 握手流程以及严格访问控制。
+十个套件、**136 项检查**，覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
+
+套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
 ---
 
-## 诚实的设计边界
+## 坦诚的局限
 
-本架构专为**个人私有使用**打造：单用户、专属硬件设备、私有虚拟局域网。本项目并非多租户多用户云服务。
+本设计面向**个人使用**：一位操作者、其可信设备和私有网络。它不是多租户服务。
 
-- 桥接服务授予对运行该进程的 Windows 账户下 DeepSeek Harness 会话的完全访问权限。不存在用户或设备间的数据隔离沙盒。
-- 同一用户的多台手机共享同一个 Harness 会话，但每台设备均在控制面板中独立授权并可随时单点撤销。
-- 系统不包含用户账户或角色权限（RBAC）体系：持有已授权设备的物理使用者即为会话拥有者。
-- 授权管理面板仅展示近期接入活动记录，并非不可篡改的安全审计日志：支持一键清空记录。
-- 任何公共或不受控的共享 ZeroTier 网络都会直接瓦解网络防火墙边界。请务必在 my.zerotier.com 上将其维持为需手动审批准入的私有网络。
-- 宿主电脑的 Windows 本地管理员拥有最高权限，能够直接读取会话凭据与聊天记录。这是 Windows 系统的固有安全边界模型，而非桥接服务的逻辑缺陷。
-- 同步保存的会话记录以明文形式存储于 `synced_chats/` 目录下。在 Windows 环境下，POSIX 的 `0600` 文件权限并不等同于严格的 ACL 保护：底层真实的权限隔离依赖于 Windows 用户配置文件的 ACL。如果是多人共享使用的电脑，请启用 BitLocker 等整盘加密技术。
-- 私网内部流量采用 HTTP 明文传输。该方案在安全架构上是完全合理的，因为 ZeroTier 与 Tailscale 在底层传输协议中已提供高强度的端到端加密；切勿将此服务端口直接暴露至私有网络之外的公网环境。
-- 网络层的客户端准入校验基于源 IP 地址。它无法防御已经黑入并控制了该私网内部其他设备的恶意攻击者：针对此类高对抗威胁模型，请务必启用 `DSH_ACCESS_KEY` 共享密钥保护。
+- 桥接服务授予对底层 Windows 用户账户的 DeepSeek Harness 会话的完全访问权限。不存在按设备的权限隔离。
+- 没有用户账户或 RBAC：任何持有已授权设备的人都能控制会话。
+- 配对面板会记录近期活动以便运维观察，但它不是不可篡改的审计台账，一键即可清空。
+- 公开或共享的 ZeroTier 网络会使私有边界失效。请在 my.zerotier.com 上通过手动节点授权保持网络私有。
+- 主机上的本地管理员可以检查凭据和会话日志。这是 Windows 的安全模型，而不是桥接服务的架构缺陷。
+- 已同步的会话以明文存储在 `synced_chats/` 中。在 Windows 上，POSIX 的 `0600` 不会转换为严格的 ACL：实际保护依赖用户配置文件的 ACL。在共享硬件上请使用 BitLocker。
+- 桥接服务在 VPN 隧道内使用明文 HTTP。只要 ZeroTier 或 Tailscale 端到端加密传输，这就是可靠的；切勿将桥接服务端口暴露到 VPN 之外。
+- Android 的网络安全配置无法表达 IP 段，因此“仅私有”的明文规则在应用代码中强制执行（见 `CleartextPolicy`）。已经位于你 VPN 内部的攻击者仍然可以读取该流量：加密依靠的是隧道。
+- 完成通知依赖 DeepSeek Harness 将会话日志写入 `turn/end` 记录。如果未来的 Harness 版本更改该格式，通知将不再到达（应用内测试按钮会告诉你哪一半失败）。
 
 ---
 
 ## 社区项目声明
 
-> **声明：** DSH Mobile Companion 是由社区主导开发的开源移动辅助客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全远程访问 DeepSeek Harness。本项目并非 DeepSeek 官方产品，亦未与 DeepSeek 存在关联、赞助或背书关系。文档中提及的所有品牌名称及商标均归其各自所有者所有。
+> **声明：** DSH Mobile Companion 是由社区开发的开源伴随移动客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全地远程访问 DeepSeek Harness。它不是 DeepSeek 的官方产品，也与 DeepSeek 不存在隶属、赞助或背书关系。文中提及的所有商标和徽标均归其各自所有者所有。
 
 ## 许可证
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0 协议。个人、教育及非商业用途免费授权使用。未经明确书面许可，严禁擅自进行二次分发或商业牟利。  
-版权所有与著作权人：Ismael Muñoz Reyes · Tinta y Nodos。详见 [LICENSE](LICENSE)。
+BSL 1.1 / PolyForm Noncommercial 1.0.0。个人、教育和非商业用途免费。未经明确授权，禁止商业再分发和商业利用。
+
+著作权与版权归属：Ismael Muñoz Reyes · Tinta y Nodos。详见 [LICENSE](LICENSE)。

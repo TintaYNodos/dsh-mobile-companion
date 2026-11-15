@@ -10,7 +10,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { config } from "./config.mjs";
 import { log, warn } from "./log.mjs";
-import { readBody, sendText, timingSafeEqualText } from "./http.mjs";
+import { readBody, sendText } from "./http.mjs";
 import {
   approvalPage,
   notLocalPage,
@@ -35,31 +35,113 @@ const urlFile = path.join(config.dshHome, "companion-panel-url.txt");
 const PANEL_COOKIE = "dsh-panel";
 
 /**
- * Credencial propia del panel. No depende del enlace de red: aunque alguien
- * alcance el puerto, sin este valor no puede autorizar nada.
+ * Credencial propia del panel.
+ *
+ * Ya no hay un token maestro que viaje en la URL: la entrada al panel es un
+ * boleto de un solo uso que caduca y muere al canjearse, y se entrega una
+ * cookie de sesion HttpOnly con un identificador aleatorio que solo existe en
+ * memoria. El archivo `companion-panel-token` (permisos de propietario) guarda
+ * el boleto de arranque para que panel.bat pueda abrir el panel; tambien es de
+ * un solo uso: al canjearse se reescribe con uno nuevo.
  */
-function resolvePanelToken() {
-  const fromEnv = String(process.env.DSH_PANEL_TOKEN || "").trim();
-  if (fromEnv) return fromEnv;
+const TICKET_TTL_MS = 2 * 60 * 1000;
+const BOOTSTRAP_TTL_MS = 10 * 60 * 1000;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
-  try {
-    const stored = fs.readFileSync(tokenPath, "utf8").trim();
-    if (stored.length >= 16) return stored;
-  } catch {
-    // Se genera a continuacion.
+const tickets = new Map();
+const sessions = new Map();
+let bootstrapToken = "";
+let bootstrapExpiresAt = 0;
+
+const pruneExpired = (map, now) => {
+  for (const [key, expiresAt] of map) {
+    if (expiresAt <= now) map.delete(key);
   }
+};
 
-  const generated = crypto.randomBytes(18).toString("base64url");
+const randomToken = () => crypto.randomBytes(24).toString("base64url");
+
+const issueTicket = (ttlMs) => {
+  const now = Date.now();
+  pruneExpired(tickets, now);
+  const ticket = randomToken();
+  tickets.set(ticket, now + ttlMs);
+  return ticket;
+};
+
+const writeBootstrapFile = () => {
   try {
     fs.mkdirSync(config.dshHome, { recursive: true });
-    fs.writeFileSync(tokenPath, `${generated}\n`, { encoding: "utf8", mode: 0o600 });
+    fs.writeFileSync(tokenPath, `${bootstrapToken}\n`, { encoding: "utf8", mode: 0o600 });
   } catch {
-    // Sin persistencia, el token vale para esta ejecucion.
+    // Sin persistencia, el panel se abre desde el puente (openPanelWindow).
   }
-  return generated;
-}
+};
 
-const panelToken = resolvePanelToken();
+const rotateBootstrapToken = () => {
+  bootstrapToken = issueTicket(BOOTSTRAP_TTL_MS);
+  bootstrapExpiresAt = tickets.get(bootstrapToken) || Date.now() + BOOTSTRAP_TTL_MS;
+  writeBootstrapFile();
+};
+
+/**
+ * Canjea un boleto: si es valido se destruye y devuelve "ok". El boleto de
+ * arranque se regenera siempre (haya caducado o no) para que el archivo quede
+ * con una credencial viva de un solo uso.
+ */
+const redeemTicket = (value) => {
+  if (typeof value !== "string" || value.length < 16) return "invalid";
+  const now = Date.now();
+
+  if (value === bootstrapToken) {
+    const expired = now > bootstrapExpiresAt;
+    tickets.delete(value);
+    rotateBootstrapToken();
+    return expired ? "expired" : "ok";
+  }
+
+  const expiresAt = tickets.get(value);
+  if (expiresAt === undefined) return "invalid";
+  tickets.delete(value);
+  return expiresAt > now ? "ok" : "expired";
+};
+
+const createSession = () => {
+  const now = Date.now();
+  pruneExpired(sessions, now);
+  const id = randomToken();
+  sessions.set(id, now + SESSION_TTL_MS);
+  return id;
+};
+
+const sessionValid = (id) => {
+  if (!id) return false;
+  const expiresAt = sessions.get(id);
+  if (expiresAt === undefined) return false;
+  if (expiresAt <= Date.now()) {
+    sessions.delete(id);
+    return false;
+  }
+  return true;
+};
+
+// Boleto de arranque: DSH_PANEL_TOKEN (si existe) se adopta como boleto
+// inicial de un solo uso; en cualquier caso se escribe en el archivo 0600.
+const armBootstrapToken = () => {
+  const fromEnv = String(process.env.DSH_PANEL_TOKEN || "").trim();
+  if (fromEnv.length >= 16) {
+    bootstrapToken = fromEnv;
+    bootstrapExpiresAt = Date.now() + BOOTSTRAP_TTL_MS;
+    tickets.set(bootstrapToken, bootstrapExpiresAt);
+  } else {
+    rotateBootstrapToken();
+    return;
+  }
+  writeBootstrapFile();
+};
+
+armBootstrapToken();
+
 let activePort = config.panelPort;
 
 let lastPanelPing = 0;
@@ -104,14 +186,10 @@ const readPanelCookie = (req) => {
   return null;
 };
 
-const matchesToken = (value) =>
-  typeof value === "string" && value.length > 0 && timingSafeEqualText(value, panelToken);
+const isAuthorized = (req) => sessionValid(readPanelCookie(req));
 
-const isAuthorized = (req, url) =>
-  matchesToken(url.searchParams.get("t")) || matchesToken(readPanelCookie(req));
-
-const panelCookie = () =>
-  `${PANEL_COOKIE}=${panelToken}; Path=/; HttpOnly; SameSite=Strict; Max-Age=604800`;
+const panelCookie = (sessionId) =>
+  `${PANEL_COOKIE}=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
 
 const html = (res, body, status = 200, extraHeaders = {}) => {
   const buffer = Buffer.from(body, "utf8");
@@ -196,15 +274,21 @@ const handler = async (req, res) => {
 
   if (url.pathname === "/pair" && req.method === "GET") {
     recordPanelPing();
-    if (!isAuthorized(req, url)) {
-      if (url.searchParams.has("t")) html(res, recoveryPage(), 403);
-      else html(res, panelCredentialPage());
+    const ticket = url.searchParams.get("t");
+
+    // El boleto de entrada se canjea UNA vez por una cookie de sesion; ya no se
+    // acepta el token maestro en la URL ni se conserva tras el canje.
+    if (ticket !== null) {
+      if (redeemTicket(ticket) !== "ok") {
+        html(res, recoveryPage(), 403);
+        return;
+      }
+      redirect(res, "/pair", { "Set-Cookie": panelCookie(createSession()) });
       return;
     }
 
-    // El token del URL se cambia por cookie para no dejarlo en el historial.
-    if (url.searchParams.has("t")) {
-      redirect(res, "/pair", { "Set-Cookie": panelCookie() });
+    if (!isAuthorized(req)) {
+      html(res, panelCredentialPage());
       return;
     }
 
@@ -215,7 +299,7 @@ const handler = async (req, res) => {
 
   if (url.pathname === "/pair/state" && req.method === "GET") {
     recordPanelPing();
-    if (!isAuthorized(req, url)) {
+    if (!isAuthorized(req)) {
       json(res, 401, { error: "Credencial del panel invalida" });
       return;
     }
@@ -224,7 +308,7 @@ const handler = async (req, res) => {
   }
 
   if (url.pathname === "/pair/events" && req.method === "GET") {
-    if (!isAuthorized(req, url)) {
+    if (!isAuthorized(req)) {
       sendText(res, 401, "No autorizado");
       return;
     }
@@ -245,7 +329,7 @@ const handler = async (req, res) => {
   }
 
   if (url.pathname.startsWith("/pair/") && req.method === "POST") {
-    if (!isAuthorized(req, url)) {
+    if (!isAuthorized(req)) {
       sendText(res, 403, "Credencial del panel invalida");
       return;
     }
@@ -301,12 +385,18 @@ const handler = async (req, res) => {
 
 let panelServer = null;
 
-const publishUrl = () => {
+/**
+ * El panel ya no se publica con el token en un archivo de texto: cualquiera
+ * con acceso de lectura al hogar del usuario podria usarlo (y acababa en el
+ * historial del navegador). Se borra el archivo heredado para no dejar
+ * credenciales viejas en disco. panel.bat sigue funcionando porque usa el
+ * boleto de un solo uso de `companion-panel-token`.
+ */
+const discardPublishedUrl = () => {
   try {
-    fs.mkdirSync(config.dshHome, { recursive: true });
-    fs.writeFileSync(urlFile, `${panelUrl()}\n`, { encoding: "utf8", mode: 0o600 });
+    if (fs.existsSync(urlFile)) fs.unlinkSync(urlFile);
   } catch {
-    // Sin archivo, panel.bat recurre al puerto por defecto.
+    // Si no se puede borrar, el token ya no es valido de todas formas.
   }
 };
 
@@ -346,12 +436,15 @@ export function startPanel() {
   server.once("listening", () => {
     panelServer = server;
     log("panel", `Panel local en http://127.0.0.1:${activePort}/pair`);
-    publishUrl();
+    discardPublishedUrl();
   });
 
   server.listen(activePort, "127.0.0.1");
   return server;
 }
 
-export const panelUrl = () => `http://127.0.0.1:${activePort}/pair?t=${panelToken}`;
-export const panelTokenValue = () => panelToken;
+/**
+ * URL de apertura del panel con un boleto de un solo uso (caduca en 2 minutos).
+ * Solo se entrega al navegador del propio equipo a traves de openPanelWindow.
+ */
+export const panelUrl = () => `http://127.0.0.1:${activePort}/pair?t=${issueTicket(TICKET_TTL_MS)}`;

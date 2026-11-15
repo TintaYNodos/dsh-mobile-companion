@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Politica de trafico en claro del cliente DSH Companion.
+
+    LIMITACION REAL DE ANDROID: la configuracion de seguridad de red solo
+    permite reglas por nombre de host, no por rango de direcciones. No existe
+    forma de expresar "10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 127.0.0.1"
+    ni las direcciones CGNAT de Tailscale (100.64.0.0/10) como dominios: el
+    sistema compara el host de la URL contra una lista de nombres y no aplica
+    mascaras de subred. Si se pusiera base-config cleartextTrafficPermitted en
+    false, el bunker privado por http:// a una IP literal dejaria de funcionar
+    (ERR_CLEARTEXT_NOT_PERMITTED) y la app quedaria inutilizable.
+
+    Por eso el base-config mantiene el trafico en claro necesario para el
+    bunker en la red privada, y se PROHIBE explicitamente en los servicios
+    publicos que consume la app (actualizaciones de GitHub y API de DeepSeek):
+    esos ya usan HTTPS y no deben poder degradarse a http://.
+
+    Si en el futuro el bunker sirve TLS, basta cambiar el base-config a
+    cleartextTrafficPermitted="false" y anadir el dominio o la IP del equipo.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">deepseek.com</domain>
+        <domain includeSubdomains="true">github.com</domain>
+        <domain includeSubdomains="true">githubusercontent.com</domain>
+        <domain includeSubdomains="true">githubassets.com</domain>
+    </domain-config>
+</network-security-config>

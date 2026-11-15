@@ -4,6 +4,18 @@
  * See LICENSE file in repository root for full terms.
  */
 export const MOBILE_STYLES = `
+/*
+ * Regla de esta hoja: NO se redefine la geometría de los componentes de DSH.
+ *
+ * DSH coloca sus menús, listas y paneles con CSS Anchor Positioning y CSS
+ * Modules (por ejemplo ModelSelect.module.css declara
+ * "position: fixed; position-anchor: ...; bottom: calc(anchor(top) + 8px)").
+ * Cualquier "position/inset/overflow" con !important sobre un comodín de clase
+ * parcial (del estilo "toda clase que contenga menu") anula ese cálculo y deja
+ * el menú clavado en la parte superior de la pantalla, descolgado de su botón.
+ * Aquí solo se corrige lo que es propio del móvil: área táctil, desbordes y las
+ * vistas propias del Companion (temas Ink y modo libro).
+ */
 :root {
   --dshc-safe-top: env(safe-area-inset-top, 0px);
   --dshc-safe-right: env(safe-area-inset-right, 0px);
@@ -11,101 +23,56 @@ export const MOBILE_STYLES = `
   --dshc-safe-left: env(safe-area-inset-left, 0px);
 }
 
-html, body {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 100dvh !important;
-  margin: 0 !important;
-  padding: 0 !important;
+/* "clip" recorta el desborde lateral sin crear un contenedor de scroll: con
+   "hidden" se rompen position:sticky y la compensación de scroll de anchor(). */
+html {
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   touch-action: manipulation;
-  overflow-x: hidden;
 }
 
 *, *::before, *::after {
   -webkit-tap-highlight-color: transparent;
-  box-sizing: border-box;
-}
-
-[class*="_frame"], main, #root, #app {
-  width: 100% !important;
-  max-width: 100% !important;
-  height: 100% !important;
-}
-
-[class*="chat"], [class*="conversation"], article, .message {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-form:has(textarea), [class*="composer"] {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-form:has(textarea) [class*="actionRow"],
-form:has(textarea) [class*="toolbar"],
-form:has(textarea) [class*="footer"],
-[class*="composer"] [class*="actionRow"],
-[class*="composer"] [class*="toolbar"],
-[class*="composer"] [class*="footer"] {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  align-items: center !important;
-  gap: 6px !important;
-}
-
-[role="menu"], [data-anchored], [data-context-menu], [class*="_list_"], [class*="_surface_"], [class*="_scrollable_"] {
-  max-height: min(48dvh, calc(100dvh - 160px)) !important;
-  max-height: min(48vh, calc(100vh - 160px)) !important;
-  max-width: calc(100vw - 16px) !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-  -webkit-overflow-scrolling: touch !important;
-  z-index: 10000 !important;
-}
-
-[data-trigger-menu], [class*="pc3rQa_menu"] {
-  position: absolute !important;
-  bottom: calc(100% + 4px) !important;
-  left: 0 !important;
-  right: 0 !important;
-  max-height: min(42dvh, calc(100dvh - 160px)) !important;
-  max-height: min(42vh, calc(100vh - 160px)) !important;
-  overflow: hidden !important;
-  border-radius: 12px !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important;
-  z-index: 1000 !important;
-}
-
-[data-trigger-menu] [class*="pc3rQa_viewport"], [class*="pc3rQa_menu"] [class*="pc3rQa_viewport"] {
-  max-height: inherit !important;
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important;
-  -webkit-overflow-scrolling: touch !important;
 }
 
 button, [role="button"], a, input, select, textarea {
   touch-action: manipulation;
 }
 
-img, video, canvas, svg {
+/* Contención del overscroll en los scrollers internos de DSH. :where() deja la
+   especificidad en cero y solo añade una propiedad: no altera geometría. */
+:where([class*="_groups"], [class*="_list"], [class*="_paneBody"], [class*="_scrollable_"]) {
+  overscroll-behavior: contain;
+}
+
+/* Solo el contenido de los mensajes se limita al ancho disponible. No se toca
+   img/svg global: los iconos de DSH se dimensionan por atributo y un
+   "height: auto" los colapsa. */
+article img,
+[class*="markdown"] img,
+[class*="message"] img,
+[class*="attachment"] img {
   max-width: 100%;
   height: auto;
 }
 
-::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  display: none;
+/* Objetivo táctil mínimo en filas de menú desplegable. No mueve el menú: solo
+   garantiza 44px de alto por fila, que es el mínimo recomendado con el dedo. */
+@media (pointer: coarse) {
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  [role="option"] {
+    min-height: 44px;
+  }
 }
-* {
-  scrollbar-width: none;
-}
-html, body {
-  -webkit-overflow-scrolling: touch;
-}
+
 body:not([data-ds-dark-theme]),
 html[data-theme="light"],
 html.light,
@@ -124,45 +91,199 @@ body[data-ds-dark-theme] {
   color: var(--dsw-alias-label-primary, #e6edf3);
 }
 
-/* Modo Tablet, Plegables y Pantallas Grandes (>= 600px y >= 768px) */
+/* Modo Tablet, Plegables y Pantallas Grandes (>= 600px y >= 768px).
+   Solo se limita el ancho del contenido; el compositor de DSH se mide solo y
+   no se redimensiona desde aquí. */
 @media (min-width: 600px) {
-  [class*="_frame"], main, #root, #app {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-  }
-
-  [class*="chat"], [class*="conversation"], article, .message,
-  form:has(textarea), [class*="composer"] {
+  [class*="chat"], [class*="conversation"], article, .message {
     max-width: min(880px, 92vw) !important;
     margin-left: auto !important;
     margin-right: auto !important;
   }
-
-  [role="menu"], [data-anchored], [data-context-menu], [class*="_list_"], [class*="_surface_"] {
-    max-width: 480px !important;
-    border-radius: 14px !important;
-  }
 }
 
 @media (min-width: 768px) {
-  [class*="chat"], [class*="conversation"], article, .message,
-  form:has(textarea), [class*="composer"] {
+  [class*="chat"], [class*="conversation"], article, .message {
     max-width: min(960px, 90vw) !important;
-  }
-
-  /* Distribución de barra de acciones en tablet */
-  form:has(textarea) [class*="actionRow"],
-  [class*="composer"] [class*="actionRow"] {
-    justify-content: space-between !important;
   }
 }
 
+/* Modo Apaisado / Horizontal en Smartphones con Altura Reducida.
+   No se fuerza geometría: DSH ya convierte sus paneles en drawer y cualquier
+   override de position/inset los deja inalcanzables. Solo se contiene el
+   overscroll, que en 360dp de alto arrastra la página completa. */
+@media (orientation: landscape) and (max-height: 520px) {
+  :where([class*="_groups"], [class*="_paneBody"]) {
+    overscroll-behavior: contain;
+  }
+}
+
+/* Movimiento reducido: se acortan las transiciones, pero se conservan las
+   animaciones (los indicadores de "generando" son información, no adorno). */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: .001ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: .001ms !important;
   }
+}
+
+/* Modo Libro / E-Reader */
+.ereader-mode {
+  --ereader-bg: #F4ECD8;
+  --ereader-ink: #2C2416;
+  --ereader-line: #E2D7BE;
+  --ereader-dim: #60513B;
+  --ereader-user-bg: #EAE0C8;
+}
+
+.ereader-mode.ereader-dark,
+.ereader-mode[data-reader-theme="dark"],
+body[data-ds-dark-theme] .ereader-mode:not([data-reader-theme="sepia"]) {
+  --ereader-bg: #1A1815;
+  --ereader-ink: #D4C5A9;
+  --ereader-line: #2E2A23;
+  --ereader-dim: #9C8E76;
+  --ereader-user-bg: #24211C;
+}
+
+.ereader-mode,
+.ereader-mode .editorial-doc,
+.ereader-mode .editorial-body,
+.ereader-mode [class*="chat"],
+.ereader-mode [class*="conversation"],
+.ereader-mode article,
+.ereader-mode .editorial-text {
+  font-family: Georgia, Merriweather, serif !important;
+  line-height: 1.65 !important;
+  text-align: justify !important;
+  hyphens: auto !important;
+  background-color: var(--ereader-bg, #F4ECD8) !important;
+  color: var(--ereader-ink, #2C2416) !important;
+}
+
+.ereader-mode p,
+.ereader-mode .editorial-text p {
+  font-family: Georgia, Merriweather, serif !important;
+  line-height: 1.65 !important;
+  text-align: justify !important;
+  hyphens: auto !important;
+  color: var(--ereader-ink, #2C2416) !important;
+  margin-bottom: 1.35em !important;
+}
+
+.ereader-mode .editorial-title,
+.ereader-mode h1,
+.ereader-mode h2,
+.ereader-mode h3 {
+  font-family: Georgia, Merriweather, serif !important;
+  color: var(--ereader-ink, #2C2416) !important;
+}
+
+.ereader-mode blockquote {
+  border-left-color: var(--ereader-dim, #60513B) !important;
+  color: var(--ereader-dim, #60513B) !important;
+}
+
+/* Tema Ink: Ink OLED Dark & Ink Warm Paper Light */
+body[data-ds-theme="ink-oled"],
+html.ink-oled,
+html.ink-oled body,
+body.ink-oled,
+[data-ds-theme="ink-oled"] {
+  color-scheme: dark !important;
+  --dsw-alias-bg-base: #050505 !important;
+  --dsw-alias-bg-surface: #111111 !important;
+  --dsw-alias-bg-subtle: #111111 !important;
+  --dsw-alias-border-default: #222222 !important;
+  --dsw-alias-border-subtle: #222222 !important;
+  --dsw-alias-label-primary: #E2E8F0 !important;
+  --dsw-alias-label-secondary: #94A3B8 !important;
+  --dsw-alias-accent: #388BFD !important;
+  --ink-bg: #050505;
+  --ink-surface: #111111;
+  --ink-border: #222222;
+  --ink-text: #E2E8F0;
+  --ink-accent: #388BFD;
+  background-color: #050505 !important;
+  color: #E2E8F0 !important;
+}
+
+body[data-ds-theme="ink-oled"] [class*="_surface_"],
+body[data-ds-theme="ink-oled"] [class*="card"],
+body[data-ds-theme="ink-oled"] [class*="panel"],
+body[data-ds-theme="ink-oled"] article,
+body[data-ds-theme="ink-oled"] form:has(textarea),
+body[data-ds-theme="ink-oled"] [class*="composer"],
+body[data-ds-theme="ink-oled"] [role="menu"],
+body[data-ds-theme="ink-oled"] [data-anchored],
+html.ink-oled [class*="_surface_"],
+html.ink-oled [class*="card"],
+html.ink-oled [class*="panel"],
+html.ink-oled article,
+html.ink-oled form:has(textarea),
+html.ink-oled [class*="composer"],
+html.ink-oled [role="menu"],
+html.ink-oled [data-anchored] {
+  background-color: #111111 !important;
+  border: 1px solid #222222 !important;
+  color: #E2E8F0 !important;
+}
+
+body[data-ds-theme="ink-oled"] *,
+html.ink-oled * {
+  border-color: #222222;
+}
+
+body[data-ds-theme="ink-oled"] a,
+body[data-ds-theme="ink-oled"] [class*="accent"],
+html.ink-oled a,
+html.ink-oled [class*="accent"] {
+  color: #388BFD !important;
+}
+
+body[data-ds-theme="ink-paper"],
+html.ink-paper,
+html.ink-paper body,
+body.ink-paper,
+[data-ds-theme="ink-paper"] {
+  color-scheme: light !important;
+  --dsw-alias-bg-base: #F9F8F6 !important;
+  --dsw-alias-bg-surface: #FFFFFF !important;
+  --dsw-alias-bg-subtle: #FFFFFF !important;
+  --dsw-alias-border-default: #E5E2DC !important;
+  --dsw-alias-border-subtle: #E5E2DC !important;
+  --dsw-alias-label-primary: #1A1A1A !important;
+  --dsw-alias-label-secondary: #555555 !important;
+  --paper-bg: #F9F8F6;
+  --paper-card: #FFFFFF;
+  --paper-border: #E5E2DC;
+  --paper-text: #1A1A1A;
+  background-color: #F9F8F6 !important;
+  color: #1A1A1A !important;
+}
+
+body[data-ds-theme="ink-paper"] [class*="_surface_"],
+body[data-ds-theme="ink-paper"] [class*="card"],
+body[data-ds-theme="ink-paper"] [class*="panel"],
+body[data-ds-theme="ink-paper"] article,
+body[data-ds-theme="ink-paper"] form:has(textarea),
+body[data-ds-theme="ink-paper"] [class*="composer"],
+body[data-ds-theme="ink-paper"] [role="menu"],
+body[data-ds-theme="ink-paper"] [data-anchored],
+html.ink-paper [class*="_surface_"],
+html.ink-paper [class*="card"],
+html.ink-paper [class*="panel"],
+html.ink-paper article,
+html.ink-paper form:has(textarea),
+html.ink-paper [class*="composer"],
+html.ink-paper [role="menu"],
+html.ink-paper [data-anchored] {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E5E2DC !important;
+  color: #1A1A1A !important;
+}
+
+body[data-ds-theme="ink-paper"] *,
+html.ink-paper * {
+  border-color: #E5E2DC;
 }
 `.trim();

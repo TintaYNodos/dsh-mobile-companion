@@ -22,15 +22,18 @@ export function terminateAllWsConnections() {
 }
 
 export function handleWsProxy(req, socket, head, { targetPort, originAllowed }) {
-  activeSockets.add(socket);
-  socket.pause();
-  socket.setNoDelay(true);
-  socket.setKeepAlive(true, 15_000);
-
   if (!originAllowed) {
     socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
     return;
   }
+
+  // Se registra solo lo que se acepta: antes el socket rechazado quedaba
+  // retenido en el Set porque el listener que lo retiraba no llegaba a
+  // registrarse, y terminateAllWsConnections() contaba sockets muertos.
+  activeSockets.add(socket);
+  socket.pause();
+  socket.setNoDelay(true);
+  socket.setKeepAlive(true, 15_000);
 
   const method = String(req.method || "GET").replace(/[^A-Z]/g, "") || "GET";
   const path = String(req.url || "/").replace(/[\r\n]/g, "");
@@ -88,6 +91,7 @@ export function handleWsProxy(req, socket, head, { targetPort, originAllowed }) 
     target.setTimeout(0);
     target.setKeepAlive(true, 15_000);
     target.setNoDelay(true);
+    log("ws", `conectado al backend ${config.targetHost}:${targetPort}`);
 
     handshakeTimer = setTimeout(() => {
       if (destroyed || closing) return;
@@ -97,8 +101,10 @@ export function handleWsProxy(req, socket, head, { targetPort, originAllowed }) 
       softClose();
     }, 15_000);
     handshakeTimer.unref?.();
-    target.once("data", () => {
+    target.once("data", (chunk) => {
       if (handshakeTimer) clearTimeout(handshakeTimer);
+      const firstLine = String(chunk).split("\r\n")[0] || "";
+      log("ws", `respuesta del backend: ${firstLine.slice(0, 90)}`);
     });
 
     let outgoing;

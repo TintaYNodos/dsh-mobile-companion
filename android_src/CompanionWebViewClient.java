@@ -1,0 +1,203 @@
+/*
+ * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
+ * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * See LICENSE file in repository root for full terms.
+ */
+package com.tintaynodos.dshcompanion;
+
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
+import android.os.Build;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.ScrollView;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.List;
+
+import android.webkit.HttpAuthHandler;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebViewClient;
+
+import static com.tintaynodos.dshcompanion.PrefKeys.*;
+
+/**
+ * WebViewClient: navegacion, errores, autenticacion y muerte del render.
+ */
+class CompanionWebViewClient extends WebViewClient {
+
+    private final MainActivity a;
+
+    CompanionWebViewClient(MainActivity a) {
+        this.a = a;
+    }
+
+    @Override
+    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+        if (request == null || !request.isForMainFrame()) return false;
+        Uri uri = request.getUrl();
+        String scheme = uri.getScheme();
+        if (scheme != null && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            if (UrlTools.isSameBunker(a, uri)) return false;
+            UrlTools.openExternally(a, uri);
+            return true;
+        }
+        if ("mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme)) {
+            UrlTools.openExternally(a, uri);
+        }
+        return true;
+    }
+
+    @Override
+    public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+        a.pageLoading = true;
+        a.mainFrameFailed = false;
+        WebBridge.applyThemeToWeb(a);
+        WebBridge.applyEnterBehaviorToWeb(a);
+        WebBridge.applyOutboxInterceptorToWeb(a);
+    }
+
+    @Override
+    public void onPageFinished(WebView view, String url) {
+        a.pageLoading = false;
+        // onPageFinished se invoca también sobre la página de error y
+        // después de onReceivedError: sin esta guarda se anularía el
+        // reintento recién programado y el punto se pondría en verde.
+        if (a.mainFrameFailed) return;
+        if (url == null) return;
+        Uri parsed = Uri.parse(url);
+        if (!UrlTools.isSameBunker(a, parsed)) return;
+
+        // La pantalla de espera es del mismo origen que la app: si se
+        // marcara "en linea" el indicador mentiria mientras se aprueba.
+        CharSequence title = view.getTitle();
+        if (title != null && (title.toString().toLowerCase().contains("esperando")
+                || title.toString().toLowerCase().contains("pendiente"))) {
+            ConnectionController.markRetrying(a);
+            BannerUi.showBanner(a, "Esperando aprobación en la computadora.");
+            ConnectionController.scheduleReconnect(a, 1500);
+            return;
+        }
+
+        ConnectionController.markOnline(a);
+        ActionDispatcher.checkAndDispatchPendingAction(a);
+        WebBridge.applyThemeToWeb(a);
+        WebBridge.applyEnterBehaviorToWeb(a);
+        WebBridge.applyOutboxInterceptorToWeb(a);
+        WebBridge.injectSharedTextIfReady(a);
+    }
+
+    @Override
+    public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+        if (request == null || !request.isForMainFrame()) return;
+        if (!UrlTools.isTransientNetworkError(error)) return;
+        a.pageLoading = false;
+        a.mainFrameFailed = true;
+        ConnectionController.markFailed(a);
+    }
+
+    @Override
+    public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                    android.webkit.WebResourceResponse response) {
+        if (request == null || !request.isForMainFrame()) return;
+        if (response == null || response.getStatusCode() < 500) return;
+        a.pageLoading = false;
+        a.mainFrameFailed = true;
+        ConnectionController.markFailed(a);
+    }
+
+    /**
+     * El proceso de render de la WebView puede morir (memoria, GPU). Sin
+     * manejarlo, Android cierra la app entera; aqui se descarta la vista
+     * muerta y se reconstruye la sesion.
+     */
+    @Override
+    public boolean onRenderProcessGone(WebView view,
+                                       android.webkit.RenderProcessGoneDetail detail) {
+        boolean crashed = detail != null && detail.didCrash();
+        android.util.Log.w("DshWebView", "render process " + (crashed ? "crashed" : "killed by system"));
+        try {
+            if (a.root != null && view != null) a.root.removeView(view);
+            if (view != null) view.destroy();
+        } catch (Throwable ignored) {}
+        a.webView = null;
+        if (crashed) {
+            Toast.makeText(a, "La vista se reinició tras un fallo interno", Toast.LENGTH_LONG).show();
+        }
+        // Devuelve true para indicar que ya gestionamos la caida.
+        a.ui.postDelayed(() -> a.recreate(), 150);
+        return true;
+    }
+
+    @Override
+    public void onReceivedHttpAuthRequest(WebView view, HttpAuthHandler handler,
+                                          String host, String realm) {
+        // La clave del puente solo se entrega al host del búnker activo:
+        // un subrecurso de un tercero que responda 401 no debe recibirla.
+        String bunkerHost = Uri.parse(a.activeUrl).getHost();
+        if (bunkerHost == null || host == null || !host.equalsIgnoreCase(bunkerHost)) {
+            handler.cancel();
+            return;
+        }
+        PcEntry pc = PcRegistryStore.getActivePc(a);
+        String key = (pc != null && pc.accessKey != null && !pc.accessKey.trim().isEmpty())
+                ? pc.accessKey.trim()
+                : a.prefs.getString(KEY_ACCESS_KEY, "");
+        if (key == null || key.trim().isEmpty()) {
+            handler.cancel();
+            ConnectionController.promptAccessKey(a);
+            return;
+        }
+        handler.proceed("dsh", key.trim());
+    }
+
+    /**
+     * Bloquea los subrecursos en claro que no vayan al búnker ni a la red
+     * privada. La WebView no tiene una política por rango de IP, así que se
+     * corta aquí antes de descargar nada.
+     */
+    @Override
+    public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view,
+                                                                    WebResourceRequest request) {
+        try {
+            String url = request != null && request.getUrl() != null ? request.getUrl().toString() : null;
+            String bunkerHost = Uri.parse(a.activeUrl).getHost();
+            if (url != null && !CleartextPolicy.allows(url, bunkerHost)) {
+                android.util.Log.w("DshWebView", "bloqueado tráfico en claro: " + url);
+                java.util.Map<String, String> headers = new java.util.HashMap<>();
+                headers.put("Content-Type", "text/plain; charset=utf-8");
+                headers.put("Cache-Control", "no-store");
+                return new android.webkit.WebResourceResponse(
+                        "text/plain", "utf-8", 403, "Bloqueado",
+                        headers, new java.io.ByteArrayInputStream(
+                        "Bloqueado: tráfico en claro hacia un host no privado.".getBytes("UTF-8")));
+            }
+        } catch (Throwable ignored) {
+            // Ante un fallo de la política, se deja pasar la petición normal:
+            // romper la carga de la app por un error de parseo sería peor.
+        }
+        return null;
+    }
+
+    @Override
+    public void onReceivedSslError(WebView view, SslErrorHandler handler, android.net.http.SslError error) {
+        handler.cancel();
+    }
+}

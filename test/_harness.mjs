@@ -6,7 +6,7 @@ import path from "node:path";
  * Utilidades compartidas por las pruebas.
  * El host y el puerto se toman del entorno para no depender de una IP concreta.
  */
-export const HOST = process.env.DSH_TEST_HOST || "10.173.252.87";
+export const HOST = process.env.DSH_TEST_HOST || "127.0.0.1";
 export const PORT = Number(process.env.DSH_TEST_PORT || 57420);
 
 /** Clave de acceso efectiva: variable de entorno o archivo generado por el puente. */

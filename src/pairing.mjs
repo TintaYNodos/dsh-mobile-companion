@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
  */
-import { escapeHtml, page, brand, approvalPage as renderApproval, stateStamp } from "./pairing-views.mjs";
+import { escapeHtml, page, brand, approvalPage as renderApproval, stateStamp, generateQrSvg } from "./pairing-views.mjs";
+import { findVpnAddress } from "./network.mjs";
+import { config } from "./config.mjs";
 
-export { stateStamp };
+export { stateStamp, generateQrSvg };
 
 export const when = (value) => {
   const parsed = new Date(value);
@@ -195,5 +197,7 @@ export const notLocalPage = () =>
   );
 
 export function approvalPage(data = {}) {
-  return renderApproval(data, { describeAgent, when, ago, isoOf });
+  const vpn = findVpnAddress();
+  const bunkerUrl = data.bunkerUrl || `http://${vpn?.address || config.bindHost || "127.0.0.1"}:${config.listenPort}`;
+  return renderApproval({ ...data, bunkerUrl }, { describeAgent, when, ago, isoOf });
 }

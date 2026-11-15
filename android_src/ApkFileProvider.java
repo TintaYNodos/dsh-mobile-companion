@@ -15,6 +15,7 @@ import android.provider.OpenableColumns;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 /**
  * Proveedor de archivos local ligero para entregar el APK descargado
@@ -38,7 +39,18 @@ public class ApkFileProvider extends ContentProvider {
         String filename = uri.getLastPathSegment();
         if (filename == null) throw new FileNotFoundException("Nombre de archivo inválido");
 
-        File file = resolveFile(filename);
+        File baseDir = getBaseDir();
+        if (baseDir == null) throw new FileNotFoundException("Directorio no disponible");
+
+        File file = new File(baseDir, filename);
+        try {
+            if (!file.getCanonicalPath().startsWith(baseDir.getCanonicalPath())) {
+                throw new SecurityException("Acceso a ruta no autorizada");
+            }
+        } catch (IOException e) {
+            throw new SecurityException("Acceso a ruta no autorizada");
+        }
+
         if (!file.exists()) {
             throw new FileNotFoundException("Archivo no encontrado: " + file.getAbsolutePath());
         }
@@ -60,10 +72,14 @@ public class ApkFileProvider extends ContentProvider {
         return cursor;
     }
 
-    private File resolveFile(String filename) {
+    private File getBaseDir() {
         File dir = getContext() != null ? getContext().getExternalCacheDir() : null;
         if (dir == null && getContext() != null) dir = getContext().getCacheDir();
-        return new File(dir, filename);
+        return dir;
+    }
+
+    private File resolveFile(String filename) {
+        return new File(getBaseDir(), filename);
     }
 
     @Override

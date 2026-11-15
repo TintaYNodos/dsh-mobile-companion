@@ -36,13 +36,22 @@ const check = (name, ok, detail = "") => {
 const unauth = await call("/dsh-companion/kill-switch", { method: "POST" });
 check("kill-switch sin autorizacion rechazado", unauth.status === 403, `status=${unauth.status}`);
 
-// 2. Con accessKey autorizada funciona
-const key = accessKey();
-const authed = await call("/dsh-companion/kill-switch", {
-  method: "POST",
-  headers: authHeader(key),
-});
-check("kill-switch con accessKey aceptado", authed.status === 200 && authed.body.includes('"ok":true'), authed.body);
+// 2. La ejecucion real es DESTRUCTIVA: revoca los dispositivos de la instancia
+//    viva y rota la clave de acceso (deja fuera al telefono emparejado). Por eso
+//    solo corre cuando se pide de forma explicita.
+if (process.env.DSH_TEST_DESTRUCTIVE !== "1") {
+  console.log("OMITIDO  kill-switch real: revoca dispositivos y rota la clave. Usa DSH_TEST_DESTRUCTIVE=1 para ejecutarlo.");
+} else {
+  const key = accessKey();
+  const authed = await call("/dsh-companion/kill-switch", {
+    method: "POST",
+    headers: authHeader(key),
+  });
+  check("kill-switch con accessKey aceptado", authed.status === 200 && authed.body.includes('"ok":true'), authed.body);
+  // Tras girar la clave, la anterior deja de autorizar.
+  const stale = await call("/dsh-companion/status", { headers: authHeader(key) });
+  check("la clave anterior deja de servir tras el kill switch", stale.body.includes('"status":"pairing"') || stale.status === 403, `status=${stale.status}`);
+}
 
 console.log(`\nRESULTADO: ${checks.filter(Boolean).length}/${checks.length}`);
 if (checks.some((c) => !c)) process.exitCode = 1;

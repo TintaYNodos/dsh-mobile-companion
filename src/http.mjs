@@ -196,7 +196,4 @@ export const isDocumentRequest = (req) => {
   return String(req.headers.accept || "").includes("text/html");
 };
 
-export const isMobileClient = (req) => {
-  if (String(req.headers["sec-ch-ua-mobile"] || "") === "?1") return true;
-  return /android|iphone|ipad|ipod|mobile|harmonyos/i.test(String(req.headers["user-agent"] || ""));
-};
+

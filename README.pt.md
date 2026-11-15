@@ -2,25 +2,27 @@
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **[Português (Brasil)](README.pt.md)** · [Français](README.fr.md) · [Deutsch](README.de.md)
 
-> 🌐 **Aviso de Idioma:** Este documento foi traduzido para tornar o DSH Mobile Companion acessível a desenvolvedores de todo o mundo. Correções linguísticas e Pull Requests da comunidade são muito bem-vindos. O documento canônico de referência original é em [Espanhol (México)](README.es.md).
+> 🌐 **Aviso de Idioma:** Este documento foi traduzido para tornar o DSH Mobile Companion acessível a desenvolvedores internacionais. Correções linguísticas da comunidade, melhorias de redação e pull requests são muito bem-vindos. O documento canônico de referência está em [Espanhol (México)](README.es.md).
 
-Acesso móvel ao DeepSeek Harness através de uma rede privada ZeroTier ou Tailscale, sem abrir portas e sem quebrar o prompt caching.
+Acesso móvel ao DeepSeek Harness através de uma rede privada ZeroTier ou Tailscale, sem abrir portas e sem quebrar o cache de prompts (prompt caching).
 
-O aplicativo móvel não reimplementa a interface: exibe a própria Web GUI do DeepSeek Harness e aplica um ajuste tátil. O que você vê no celular é o mesmo produto em execução no computador.
+O aplicativo móvel não reimplementa a interface: ele renderiza a própria Web GUI do DeepSeek Harness e adiciona uma camada de toque. O que você vê no celular é o mesmo produto em execução no seu computador.
 
 Edição endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
+
+Versão atual: **4.5.10** (`versionCode` 37).
 
 ---
 
 ## O que resolve
 
-O DeepSeek Harness escuta em `127.0.0.1` e protege suas sessões com um cookie HMAC derivado de `.credentials.yaml`. Por isso não basta abrir a porta nem usar um túnel genérico: sem esse cookie a interface responde 401 e, se a origem da requisição for reescrita de forma descuidada, perde-se o prefixo estável que sustenta o prompt caching.
+O DeepSeek Harness escuta em `127.0.0.1` e protege suas sessões com um cookie HMAC derivado de `.credentials.yaml`. Por isso abrir uma porta ou usar um túnel genérico não basta: sem esse cookie a interface responde 401 e, se a origem da requisição for reescrita sem cuidado, o prefixo estável exigido pelo cache de prompts se quebra.
 
-Este projeto resolve as três coisas ao mesmo tempo:
+Este projeto resolve os três problemas de uma vez:
 
-- **Assinatura de sessão transparente.** A ponte lê o segredo local, gera o cookie HMAC-SHA256 (versão 1) e o renova antes de expirar. O navegador móvel nunca vê o segredo.
-- **Ajuste tátil no produto real.** Metadados de viewport e uma folha de estilos mínima são injetados. A interface não é substituída nem é injetado JavaScript no documento.
-- **Isolamento de rede.** O socket se vincula exclusivamente à interface da VPN e aceita apenas clientes dessa mesma rede privada.
+- **Assinatura de sessão transparente.** A ponte lê o segredo local, gera o cookie HMAC-SHA256 (versão 1) e o renova antes do vencimento. O navegador móvel nunca vê o segredo.
+- **Camada de toque sobre o produto real.** Metadados de viewport, uma folha de estilos e um pequeno script de cliente são injetados. A interface não é substituída: o script apenas adiciona recursos de toque (barra de comandos, teclas de código, sincronização de tema, retransmissão de aprovações e de notificações). Ele roda com a mesma origem e os mesmos privilégios da página, portanto deve ser tratado como parte da fronteira de confiança.
+- **Isolamento de rede.** O socket se vincula exclusivamente à interface da VPN e só aceita clientes originados nessa mesma rede privada.
 
 ---
 
@@ -31,191 +33,268 @@ Celular (rede ZeroTier / Tailscale)
         |
         v
 bridge.mjs  —vinculação exclusiva ao IP da VPN—
-   |-- /                      proxy para DeepSeek Harness + ajuste móvel
-   |-- /offline               página de espera quando o Harness ainda não responde
-   |-- /dsh-companion/status  descoberta e integridade do link
-   |-- /dsh-companion/sync    gravação de conversas em disco
+   |-- /                        proxy para o DeepSeek Harness + camada de toque
+   |-- /offline                 página de espera e leitor editorial offline
+   |-- /dsh-companion/status    descoberta do link e verificação de integridade
+   |-- /dsh-companion/sync      despejo de conversas em disco
+   |-- /dsh-companion/chats     índice de conversas sincronizadas
+   |-- /dsh-companion/pc-events Server-Sent Events: "um turno acabou de terminar"
+   |-- /dsh-companion/pair-*    emparelhamento e aprovação de dispositivos
         |
         v
-127.0.0.1:52710  DeepSeek Harness
+127.0.0.1:<porta do Harness>  DeepSeek Harness
 ```
 
 Módulos:
 
 ```text
 companion/
-├── bridge.mjs              inicialização, roteamento, políticas de socket e acesso
-├── offline.html            tela de espera com a estética do produto
-├── manifest.webmanifest    instalação como aplicativo web
-├── icon.svg
-├── android_src/
-│   └── MainActivity.java   cliente nativo: WebView blindada, pílula de status, reconexão
-├── test/
-│   ├── verify_bridge.mjs      rotas, injeção, origem, framing, limites
-│   ├── verify_sync_ws.mjs     neutralização de conteúdo e handshake WebSocket
-│   └── verify_access_key.mjs  controle de acesso com chave compartilhada
+├── bridge.mjs                 inicialização, roteamento, políticas de socket e de acesso
+├── package.json               fonte única da versão, `npm start` / `npm test`
+├── offline.html               estrutura da tela de espera
+├── offline.css                layout base, temas e abas
+├── offline-reader.css         leitor editorial e detalhe da conversa
+├── offline-satellite.css      seção satélite
+├── offline-core.js            estado compartilhado, status de conexão, navegação
+├── offline-reader.js          leitor offline, lista, detalhe, modos de leitura
+├── offline-satellite.js       repasse satélite (envio, fragmentos, conclusão)
 ├── src/
-│   ├── config.mjs          configuração e limites centralizados
-│   ├── log.mjs             logs com registro de data/hora (timestamp)
-│   ├── network.mjs         descoberta de VPN, autorização, porta do Harness
-│   ├── crypto.mjs          segredo, cookie HMAC v1, chave de acesso, comparação constante
-│   ├── http.mjs            sanitização de cabeçalhos, corpo limitado, origem confiável
-│   ├── proxy.mjs           proxy HTTP e túnel WebSocket
-│   ├── mobile.mjs          injeção de viewport e ajustes táteis
-│   ├── sync.mjs            persistência atômica de conversas
-│   ├── static.mjs          recursos estáticos locais com ETag
-│   └── ratelimit.mjs       token bucket por cliente
-└── synced_chats/           conversas exportadas (.md e .json)
+│   ├── config.mjs             configuração e limites centralizados
+│   ├── log.mjs                registrador com carimbo de data/hora
+│   ├── network.mjs            descoberta de VPN, autorização, porta do Harness
+│   ├── crypto.mjs             segredo, cookie HMAC v1, chave de acesso, rotação
+│   ├── http.mjs               sanitização de cabeçalhos, corpo limitado, origem confiável
+│   ├── routes.mjs             despacho de rotas (estado, dados, controle)
+│   ├── routes-pairing.mjs     emparelhamento, aprovação, repasse ao painel
+│   ├── panel.mjs              painel local de aprovação (somente loopback)
+│   ├── pairing.mjs            solicitações pendentes e códigos
+│   ├── pairing-views.mjs      HTML do painel
+│   ├── devices.mjs            registro de dispositivos, TTL, revogação
+│   ├── registry.mjs           registro JSON atômico e à prova de falhas
+│   ├── proxy.mjs              proxy HTTP
+│   ├── proxy-ws.mjs           túnel WebSocket
+│   ├── mobile.mjs             ponto de entrada da injeção (viewport + script de cliente)
+│   ├── mobile-client*.mjs     cliente injetado, dividido por responsabilidade
+│   ├── mobile-styles.mjs      folha de estilos injetada
+│   ├── pc-events.mjs          observador de turnos da sessão -> notificações SSE
+│   ├── sync.mjs               persistência atômica de conversas
+│   ├── static.mjs             recursos locais com ETag
+│   ├── system-stats.mjs       telemetria de CPU, memória e temperatura
+│   ├── qr.mjs / visual-lab.mjs utilitários para os harnesses de QR e visual
+│   └── ratelimit.mjs          token bucket por cliente
+├── android_src/               cliente nativo (Java puro, sem AndroidX)
+│   ├── MainActivity.java      ciclo de vida e orquestração
+│   ├── CompanionWebViewClient.java, CompanionChromeClient.java
+│   ├── CleartextPolicy.java   bloqueia texto claro para hosts não privados
+│   ├── PcRegistryStore.java, PcEntry.java   registro multipc
+│   ├── SettingsScreen.java, HubSheet.java, PcDialogs.java, QrDialogs.java
+│   ├── UpdateInstaller.java, KillSwitchUi.java, BiometricGate.java
+│   ├── PcEventsService.java   serviço em primeiro plano para notificações do PC
+│   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
+│   ├── KeyStoreVault.java    criptografia com Android Keystore para chaves armazenadas
+│   └── …                     descoberta, telemetria, satélite, WOL, widget
+├── test/
+│   ├── verify_*.mjs           dez suítes de verificação (136 verificações)
+│   ├── _harness.mjs           cliente compartilhado
+│   └── run-all.mjs            `npm test`
+└── synced_chats/              conversas persistidas (.md e .json)
 ```
 
 ---
 
 ## Instalação
 
-### Computador
+### Método 1: configuração automatizada com seu assistente de IA (recomendado)
+
+Se você usa um agente de IA ou assistente de programação na sua máquina (DeepSeek Harness, Cursor, Claude Code, Copilot etc.), cole o prompt abaixo no seu chat. O assistente vai clonar, configurar a inicialização em segundo plano, verificar a ponte e entregar os passos de conexão móvel.
+
+> Guia completo: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
+
+```text
+Atue como assistente técnico de configuração nesta máquina.
+Seu objetivo é instalar, ativar, verificar e configurar completamente o "DSH Mobile Companion" (uma ponte complementar segura que fornece acesso móvel ao DeepSeek Harness por uma rede privada ZeroTier ou Tailscale) e me fornecer instruções claras, sem jargão, para conectar meu celular.
+
+Siga estes passos de forma autônoma e em ordem:
+1. Verifique "%USERPROFILE%\.dsh" e localize o Node.js (no PATH ou em "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
+2. Se ainda não estiver dentro do diretório, clone: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
+3. Configure a inicialização silenciosa com "install-autostart.bat" e inicie o serviço com "run-hidden.vbs".
+4. Consulte http://127.0.0.1:57420/dsh-companion/status para verificar se a ponte responde 200 e relatar o status do DSH.
+5. Forneça um resumo simples, sem jargão, com: a URL para meu celular (http://<VPN_IP>:57420), o link de download do APK em GitHub Releases e como autorizar meu celular pelo painel local.
+```
+
+### Método 2: instalação manual
+
+#### Computador
 
 ```bash
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-1. Defina uma chave de acesso (altamente recomendado, veja abaixo).
-2. Instale a inicialização automática com `install-autostart.bat` (registra uma tarefa silenciosa ao iniciar o Windows).
-3. A ponte detecta automaticamente a interface do ZeroTier ou Tailscale e se vincula a ela. Se a detecção falhar, defina `DSH_BIND_HOST` com o IP privado.
+Node.js 20 ou mais recente, sem dependências de npm.
 
-### Celular
+1. Defina uma chave de acesso (fortemente recomendado; veja abaixo).
+2. Instale a inicialização automática com `install-autostart.bat` (tarefa silenciosa ao fazer logon no Windows).
+3. A ponte detecta a interface ZeroTier ou Tailscale e se vincula a ela. Se a detecção falhar, defina `DSH_BIND_HOST` com seu IP privado.
 
-Duas formas equivalentes:
+#### Celular
 
-- **Aplicativo nativo:** instale o `DSH-Companion.apk` a partir da seção de *Releases*. Oferece reconexão automática, seletor de bunker e tela cheia. Pesa menos de 160 KB e não inclui bibliotecas de terceiros: código Java puro e reproduzível, ícone e tema.
-- **Sem instalar nada:** abra `http://<IP_VPN>:57420` no navegador e use "Adicionar à tela inicial".
+Dois métodos equivalentes:
 
-`/m` responde com um redirecionamento permanente para `/`: o modo satélite anterior foi descontinuado em favor da interface real.
+- **Aplicativo nativo:** instale o `DSH-Companion.apk` a partir da seção *Releases*. Seletor multipc, reconexão automática, serviço de notificação em primeiro plano e bloqueio biométrico. Cerca de 210 KB sem dependências de terceiros: Java puro e reproduzível, um ícone de recurso e o tema.
+- **Sem instalar nada:** abra `http://<VPN_IP>:57420` no navegador e escolha "Adicionar à tela inicial".
+
+`/m` responde com um redirecionamento permanente para `/`: o antigo modo satélite foi aposentado em favor da interface real.
 
 ---
 
-## Variáveis de Ambiente
+## Variáveis de ambiente
 
-| Variável | Valor Padrão | Uso |
+| Variável | Padrão | Efeito |
 | --- | --- | --- |
 | `DSH_BIND_HOST` | autodetectado | Força o IP privado de vinculação |
-| `DSH_TARGET_PORT` | `52710` | Porta do DeepSeek Harness |
-| `DSH_LISTEN_PORT` | `57420` | Porta da ponte |
-| `DSH_HOME` | `%USERPROFILE%\.dsh` | Diretório de credenciais e chave |
-| `DSH_BROWSER_SECRET` | — | Segredo direto, evita ler o YAML |
-| `DSH_ACCESS_KEY` | autogerada | Chave compartilhada; sobrescreve a do arquivo |
-| `DSH_ACCESS_DISABLE` | — | `1` desativa a chave (apenas com loopback) |
-| `DSH_COMPANION_TOKEN` | vazio | Token adicional para `/dsh-companion/sync` |
+| `DSH_TARGET_PORT` | autodetectado | Porta do DeepSeek Harness |
+| `DSH_LISTEN_PORT` | `57420` | Porta de escuta da ponte |
+| `DSH_PANEL_PORT` | `57421` | Porta do painel local de aprovação |
+| `DSH_HOME` | `%USERPROFILE%\.dsh` | Diretório de credenciais, chave e registro |
+| `DSH_BROWSER_SECRET` | — | Segredo fornecido diretamente; dispensa a leitura do YAML |
+| `DSH_ACCESS_KEY` | autogerada | Chave compartilhada; substitui a chave baseada em arquivo |
+| `DSH_ACCESS_DISABLE` | — | `1` desativa a chave de acesso, **permitido somente com vinculação a loopback** |
+| `DSH_COMPANION_TOKEN` | vazio | Token extra para `/dsh-companion/sync` |
 | `DSH_ALLOW_CIDR` | vazio | Sub-redes adicionais autorizadas, separadas por vírgula |
+| `DSH_DEVICE_TTL_DAYS` | `30` | Tempo de vida da sessão do dispositivo; dispositivos expirados são rejeitados e removidos |
+| `DSH_DEVICE_REFRESH_HOURS` | `24` | Com que frequência o tempo de vida é renovado pelo uso |
+| `DSH_PENDING_TTL_MIN` | `15` | Minutos que uma solicitação de emparelhamento aguarda aprovação |
+| `DSH_ENABLE_TERMINAL` | — | `1` habilita o terminal remoto (desligado por padrão, somente loopback) |
 
-### Aprovação pelo computador, uma única vez
+### Aprovação única pelo computador
 
-Nenhuma chave precisa ser digitada.
+1. Abra o app no celular: ele mostra "Confirme no computador".
+2. No PC, execute `panel.bat` (ou abra a URL que a ponte imprime). O painel escuta **estritamente em 127.0.0.1**.
+3. O dispositivo aparece com seu código e endereço. Pressione **Autorizar**.
+4. O celular se conecta e não pergunta novamente.
 
-1. Abra o app no celular. Ele exibe "Confirme no computador".
-2. No computador, abra `http://<IP_VPN>:57420/pair`.
-3. O dispositivo aparece listado com seu endereço IP. Clique em **Autorizar**.
-4. O celular conecta automaticamente e não pergunta novamente.
+A sessão do dispositivo dura **30 dias e é renovada pelo uso**: cada vez que o app é aberto após 24 horas, o contador reinicia. Dispositivos expirados não são mais aceitos e são removidos do registro.
 
-A sessão dura **30 dias e se renova com o uso**: cada vez que você abre o app após 24 horas, o contador volta para 30. Se usado pelo menos uma vez por mês, nunca expira.
+O acesso ao painel é um **tíquete de uso único** que expira e morre ao ser resgatado; em troca, o navegador recebe um cookie de sessão `HttpOnly`, `SameSite=Strict` cujo identificador existe apenas na memória. Nenhum token trafega em uma URL que você possa compartilhar e nada é gravado em um arquivo com a credencial permanente.
 
-O painel escuta **apenas em 127.0.0.1** e exige sua própria credencial, portanto não é acessível a partir da VPN nem de outra máquina. Ele exibe os dispositivos autorizados com um botão para revogar cada um.
+Os dispositivos autorizados ficam em `%USERPROFILE%\.dsh\companion-devices.json`. O painel oferece revogação individual e **Revogar todos**. No celular, o **Interruptor de segurança** revoga todos os dispositivos, fecha os túneis WebSocket **e rotaciona a chave de acesso**. Detalhes em [DISPOSITIVOS.md](DISPOSITIVOS.md).
 
-Os dispositivos são armazenados em `%USERPROFILE%\.dsh\companion-devices.json`. Há um botão **Revogar todos** no painel. Detalhes em [DISPOSITIVOS.md](DISPOSITIVOS.md).
+A chave de acesso manual continua disponível como contingência para acesso por navegador padrão, armazenada em `%USERPROFILE%\.dsh\companion-access-key`. O aplicativo nativo a mantém criptografada com o Android Keystore.
 
-A chave manual continua existindo como contingência para acesso via navegador em `%USERPROFILE%\.dsh\companion-access-key`. O aplicativo nativo não precisa dela.
-
-**Limitação prática:** O HTTP Basic envia a chave em Base64, sem criptografia própria. Isso é aceitável apenas porque o ZeroTier e o Tailscale criptografam o transporte de ponta a ponta. Em uma rede ZeroTier compartilhada ou pública, um membro hostil pode tentar interceptação em camada 2; a defesa adequada é manter a rede estritamente privada com autorização manual.
+**Limitação prática:** o HTTP Basic transmite a chave em Base64 sem criptografia de transporte própria. Isso só é aceitável porque ZeroTier e Tailscale criptografam todo o trânsito de ponta a ponta. Em uma rede ZeroTier compartilhada ou pública, um membro hostil da rede pode tentar interceptação na camada 2; mantenha a rede estritamente privada com autorização manual de nós.
 
 ---
 
 ## Rotas
 
-- `GET /` — Web GUI do DeepSeek Harness, com ajuste móvel aplicado quando o cliente é um celular.
-- `GET /offline` — página de espera enquanto o Harness é iniciado, com Leitor Editorial Offline de sessões pré-carregadas.
-- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`.
-- `POST /dsh-companion/sync` — salva uma conversa em `synced_chats/` nos formatos Markdown e JSON.
-- `GET /dsh-companion/chats` — lista cronológica de sessões sincronizadas para leitura offline.
-- `GET /dsh-companion/chat/:id` — entrega o conteúdo de uma sessão (JSON estruturado ou Markdown com `?format=md`).
-- `POST /dsh-companion/action` — resolução remota de autorizações de ferramentas e permissões de sandbox em segundo plano.
-- `GET /companion.webmanifest` — manifesto de instalação PWA.
+- `GET /` — Web GUI do DeepSeek Harness, com a camada de toque aplicada quando o cliente é um celular.
+- `GET /offline` — página de espera enquanto o Harness inicia, além do leitor editorial offline.
+- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`. Chamadas anônimas recebem essa forma mínima; a lista de dispositivos e a telemetria exigem autorização.
+- `POST /dsh-companion/sync` — salva uma conversa em `synced_chats/` como Markdown e JSON.
+- `GET /dsh-companion/chats` — índice das conversas sincronizadas.
+- `GET /dsh-companion/chat/:id` — conteúdo da conversa (JSON, ou Markdown com `?format=md`).
+- `GET /dsh-companion/pc-events` — fluxo de Server-Sent Events que emite `response-finished` quando um turno termina no computador.
+- `POST /dsh-companion/pc-events/test` — emite um evento sintético; usado pelo botão "Testar do PC".
+- `GET /dsh-companion/pair-state` — endpoint de polling usado pela tela de espera.
+- `GET /dsh-companion/pair-events` — fluxo de aprovação para a tela de espera.
+- `POST /dsh-companion/open-panel` — abre a janela do painel local (somente loopback).
+- `POST /dsh-companion/retry` — limpa uma rejeição e solicita acesso novamente.
+- `POST /dsh-companion/kill-switch` — revoga todos os dispositivos, fecha os túneis e rotaciona a chave de acesso.
+- `POST /dsh-companion/terminal` — shell remoto, **desativado a menos que `DSH_ENABLE_TERMINAL=1`** e somente loopback.
+- `POST /dsh-companion/action` — retransmissão de aprovações de ferramentas. Retorna `501`: as aprovações vivem no DOM da GUI; a ponte não as falsifica.
+- `GET /companion.webmanifest` — manifesto PWA.
 
 ---
 
-## Modelo de Segurança
+## Recursos do cliente móvel
+
+- **Barra de comandos e teclas de código.** Uma linha de atalhos do compositor e uma linha de símbolos de código que aparecem apenas enquanto o teclado está aberto, abaixo do cartão do compositor quando cabe e acima dele caso contrário. As duas linhas podem ser alternadas nas Configurações.
+- **Comportamento do Enter.** Por padrão, Enter insere uma quebra de linha; "Enter envia" inverte isso. Implementado sobre o Lexical com `execCommand`, que é a única escrita que o compositor aceita.
+- **Notificações do PC.** Com o serviço em primeiro plano ativado, o celular recebe uma notificação quando um turno termina no computador **mesmo com o app fechado**. A ponte observa o log da sessão e dispara no registro `turn/end`: exatamente uma notificação por turno, não importa por quanto tempo o modelo ou uma ferramenta fique em pausa.
+- **Canal de notificação em primeiro plano, canal crítico e canal de aprovações.** Avisos críticos (resultado do interruptor de segurança, acesso revogado) sempre aparecem, ignorando o filtro "somente quando oculto".
+- **Bloqueio biométrico**, seletor multipc com QR e entrada manual, wake-on-LAN, pílula de telemetria, repasse satélite, widget do sistema.
+
+---
+
+## Modelo de segurança
 
 **Acesso**
 
-- Chave compartilhada obrigatória via HTTP Basic em todas as rotas, incluindo descoberta; validada em tempo constante e com limite de tentativas por IP.
-- Autorização estrita de cliente: loopback local, a sub-rede da interface de vinculação **com sua máscara real**, ou CIDRs explicitamente declarados.
-- O cabeçalho `Host` deve coincidir com o da ponte: neutraliza ataques de DNS rebinding.
-- Rejeição de `Origin: null`, origem vazia e valores de `Sec-Fetch-Site` diferentes de `same-origin`/`none`.
-- Rejeição imediata de requisições contendo `Content-Length` e `Transfer-Encoding` simultâneos (proteção contra request smuggling).
-- A chave de acesso e o token do cliente nunca são repassados ao backend: são removidos antes do proxy.
-- Túnel WebSocket sujeito aos mesmos critérios de validação de origem, sanitização de CRLF e encerramento seguro.
+- Chave compartilhada via HTTP Basic em todas as rotas, comparação em tempo constante e limite de requisições por IP.
+- Autorização estrita de clientes: loopback, a sub-rede da interface de vinculação **com sua máscara de rede real**, ou os CIDRs declarados explicitamente.
+- A identidade do dispositivo é o **token do cookie de sessão**, não o IP de origem: um dispositivo que herda um endereço não herda a sessão.
+- Validação de `Host` contra o endereço da ponte (DNS rebinding), rejeição de `Origin: null`, de origem vazia e de `Sec-Fetch-Site` inesperado.
+- Rejeição imediata de `Content-Length` + `Transfer-Encoding` (contrabando de requisições).
+- Chaves de acesso e tokens de cliente são removidos antes de passar pelo proxy para o backend.
+- `DSH_ACCESS_DISABLE=1` se recusa a iniciar a menos que a ponte esteja vinculada a loopback.
+- A chave de acesso é **rotacionada** pelo interruptor de segurança; tudo o que já estava emparelhado precisa ser aprovado novamente.
 
 **Credenciais**
 
-- O segredo da sessão é lido uma única vez, nunca é registrado em log e nunca trafega para o cliente. Validado na inicialização: se ausente, o processo encerra imediatamente em vez de deixar requisições pendentes.
-- Cookie HMAC-SHA256 versão 1, idêntico ao emitido pelo DeepSeek Harness, com 12 horas de validade e renovação antecipada.
-- Se o backend responder 401, a ponte recarrega o segredo e tenta novamente uma vez: sobrevive à rotação de `.credentials.yaml` sem necessidade de reinicialização.
+- O segredo da sessão é lido uma única vez, nunca é registrado e nunca é enviado ao cliente; o processo falha imediatamente se ele estiver ausente.
+- Cookie HMAC-SHA256 versão 1 idêntico ao emitido pelo Harness, com 12 horas de validade e renovação antecipada.
+- Em um 401 do backend, a ponte recarrega o segredo e tenta novamente uma vez, de modo que rotacionar `.credentials.yaml` não exige reinício.
+- A chave de acesso nunca é impressa por inteiro no log: apenas seus últimos quatro caracteres.
+- O painel não tem token permanente: tíquete de uso único mais cookie de sessão em memória.
+- No Android, as chaves armazenadas são criptografadas com **AES-256-GCM no Android Keystore**, com migração automática de valores antigos em texto claro.
 
 **Dados e armazenamento**
 
-- Conversas sincronizadas são gravadas de forma atômica, com nomes derivados de identificadores controlados e verificação rigorosa de confinamento de caminho contra directory traversal.
-- Todo o conteúdo é escapado antes da serialização: nenhum HTML executável é propagado para arquivos ou índices.
-- Limites explícitos para tamanho de payload, contagem de mensagens e comprimento por mensagem.
-- O rate limiting possui teto de memória: não pode ser inflado com chaves únicas.
+- As conversas são gravadas de forma atômica, com identificadores sanitizados e confinamento estrito de caminho contra travessia de diretórios.
+- O conteúdo é escapado antes da serialização: nenhum HTML executável vaza para os arquivos exportados ou índices.
+- Limites explícitos de tamanho de corpo, contagem de mensagens e teto de comprimento por mensagem.
+- Limitação de taxa em memória com teto limitado.
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão 4.4.1, `versionCode` 22, `minSdk` 26, `targetSdk` 35.
-- Pesa menos de 240 KB, sem AndroidX nem Kotlin: o `classes.dex` é código Java puro e reproduzível.
-- **Suporte Multi-PC Dinâmico:** Adicione e alterne entre computadores ilimitados com seletor inteligente e remoção segura.
-- **Ações em notificações em segundo plano:** Permite autorizar ou negar ferramentas e solicitações de permissão `danger-full-access` diretamente da barra de notificações do Android sem abrir a janela do app.
-- **Leitor editorial offline:** Permite ler sessões sincronizadas no celular com tipografia literária otimizada para capítulos e narrativa, mesmo com o computador desligado.
-- **Design sóbrio de engenharia:** Interface livre de emojis infantis, com hierarquia visual de console e paleta escura oficial DeepSeek / GitHub Dark.
-- Acesso a arquivos locais desabilitado, conteúdo misto bloqueado, popups e depuração remota desativados.
-- Permissão de microfone concedida estritamente à origem exata do bunker (esquema, host e porta); qualquer outra origem é negada.
-- Navegação restrita à origem do bunker; links externos são abertos através do seletor nativo do sistema operacional.
-- Erros de TLS cancelados sem exceção.
-- Abortos de navegação (`ERR_ABORTED`) não são confundidos com quedas de rede: previne loops infinitos de recarregamento.
-- As tentativas de reconexão são pausadas em segundo plano e limitadas com backoff exponencial e jitter.
+- `DSH-Companion.apk` — versão **4.5.10**, `versionCode` 37, `minSdk` 26, `targetSdk` 35.
+- Sem AndroidX e sem Kotlin: bytecode Java puro, cerca de 210 KB.
+- **Texto claro bloqueado fora da rede privada**: o `CleartextPolicy` rejeita qualquer requisição que não seja HTTPS ou que não aponte para o bunker configurado ou para um endereço privado/loopback, e a configuração de segurança de rede proíbe texto claro para os serviços públicos com os quais o app fala (GitHub, DeepSeek). Isso é aplicado acima da WebView, porque a configuração de segurança de rede do Android não consegue expressar "somente faixas de IP privadas".
+- Acesso a arquivos locais desativado, conteúdo misto bloqueado, pop-ups e depuração remota desativados.
+- Acesso ao microfone restrito à origem exata do bunker (esquema, host e porta).
+- Navegação confinada à origem do bunker; links externos são delegados ao seletor do sistema.
+- Erros de TLS cancelam a navegação imediatamente.
+- `ERR_ABORTED` é distinguido de quedas de transporte, o que elimina o loop infinito de recarregamento.
+- `onRenderProcessGone` reconstrói a visualização em vez de deixar o Android encerrar o app.
+- A reconexão é pausada em segundo plano e aplica backoff exponencial com jitter.
+- As notificações de aprovação ficam ocultas na tela de bloqueio (`VISIBILITY_SECRET`) e a ação de aprovar se recusa a executar enquanto o dispositivo está bloqueado.
 
 ---
 
 ## Testes
 
 ```bash
-node test/verify_bridge.mjs
-node test/verify_sync_ws.mjs
-node test/verify_access_key.mjs   # requer DSH_ACCESS_KEY definida na inicialização
+npm test
 ```
 
-Cobrem descoberta, injeção móvel, conformidade com `?dshc=off`, rejeição de cross-origin, defesas contra request smuggling, limites de payload, neutralização de conteúdo, handshake WebSocket e controle de acesso.
+Dez suítes, **136 verificações**, cobrindo descoberta, injeção móvel, `?dshc=off`, rejeição de origem cruzada, defesas contra contrabando de requisições, limites de corpo, sanitização de conteúdo, integridade do handshake WebSocket, segurança contra corrupção do registro, controle de acesso, repasse satélite, TTL do registro de dispositivos, fluxo do painel e o interruptor de segurança.
+
+A suíte conversa com uma **ponte em execução** (não é um mock): inicie a ponte primeiro. A execução real do interruptor de segurança é destrutiva — revoga dispositivos e rotaciona a chave —, por isso é opcional com `DSH_TEST_DESTRUCTIVE=1`.
 
 ---
 
-## Limitações Transparentes
+## Limitações honestas
 
-Esta arquitetura foi projetada para **uso pessoal**: uma pessoa, seus dispositivos de confiança e sua rede privada. Não é um serviço multiusuário.
+Este design foi pensado para **uso pessoal**: um operador, seus dispositivos confiáveis e sua rede privada. Não é um serviço multilocatário.
 
-- A ponte concede acesso completo à sessão do DeepSeek Harness da conta do Windows em execução. Não há isolamento por usuário ou por dispositivo.
-- Dois celulares do mesmo usuário compartilham a mesma sessão subjacente, embora cada dispositivo seja autorizado e revogado separadamente pelo painel.
-- Não existem contas ou funções (roles): quem possui um dispositivo autorizado tem o controle da sessão.
-- O painel de autorização registra a atividade recente, mas não é um log de auditoria permanente: pode ser limpo com um botão.
-- Uma rede ZeroTier pública ou compartilhada anula o perímetro de segurança de rede. Mantenha-a privada com autorização manual em my.zerotier.com.
-- Um administrador local no computador host pode ler credenciais e conversas. Esse é o modelo de segurança do Windows, não uma falha da ponte.
-- As conversas sincronizadas são salvas em texto simples em `synced_chats/`. No Windows, o modo `0600` não impõe uma ACL restrita: a proteção real é a ACL do perfil de usuário. Criptografe o disco com BitLocker se o computador for compartilhado.
-- O tráfego trafega como HTTP sobre a VPN. Isso é seguro porque o ZeroTier e o Tailscale criptografam o transporte de ponta a ponta; nunca exponha a ponte fora da VPN.
-- A autorização de rede baseia-se no endereço IP de origem. Ela não resiste a um invasor que já controle uma máquina nessa mesma rede privada: para esse cenário existe a `DSH_ACCESS_KEY`.
+- A ponte concede acesso total à sessão do DeepSeek Harness da conta do Windows subjacente. Não há separação de privilégios por dispositivo.
+- Não há contas de usuário nem RBAC: qualquer um que tenha um dispositivo autorizado controla a sessão.
+- O painel de emparelhamento registra a atividade recente para visibilidade operacional, mas não é um livro de auditoria imutável e pode ser limpo com um botão.
+- Uma rede ZeroTier pública ou compartilhada anula o perímetro privado. Mantenha as redes privadas com autorização manual de nós em my.zerotier.com.
+- Um administrador local no host pode inspecionar credenciais e logs de conversas. Esse é o modelo de segurança do Windows, não uma falha de arquitetura da ponte.
+- As conversas sincronizadas são armazenadas em texto claro dentro de `synced_chats/`. No Windows, o modo POSIX `0600` não se traduz em ACLs estritas: a proteção efetiva é a ACL do perfil de usuário. Use BitLocker em hardware compartilhado.
+- A ponte fala HTTP em texto claro dentro do túnel da VPN. Isso é adequado enquanto ZeroTier ou Tailscale criptografam o trânsito de ponta a ponta; nunca exponha a porta da ponte fora da VPN.
+- A configuração de segurança de rede do Android não consegue expressar faixas de IP, então a regra de "somente privado" para texto claro é aplicada no código do app (veja `CleartextPolicy`). Um atacante que já esteja dentro da sua VPN ainda consegue ler esse tráfego: a criptografia é o túnel.
+- A notificação de conclusão depende de o DeepSeek Harness gravar o registro `turn/end` no log da sessão. Se uma versão futura do Harness mudar esse formato, o aviso deixa de chegar (o botão de teste no app informa qual metade falhou).
 
 ---
 
-## Aviso de Projeto Comunitário
+## Aviso de projeto comunitário
 
-> **Aviso:** O DSH Mobile Companion é um cliente móvel complementar de código aberto desenvolvido pela comunidade para facilitar o acesso remoto seguro ao DeepSeek Harness através de redes privadas (ZeroTier / Tailscale). Não é um produto oficial da DeepSeek, nem é afiliado, patrocinado ou endossado pela DeepSeek. Todas as marcas registradas e logotipos de referência pertencem aos seus respectivos proprietários.
+> **Aviso:** O DSH Mobile Companion é um cliente móvel complementar de código aberto desenvolvido pela comunidade para facilitar o acesso remoto seguro ao DeepSeek Harness através de redes privadas (ZeroTier / Tailscale). Não é um produto oficial da DeepSeek, nem é afiliado, patrocinado ou endossado pela DeepSeek. Todas as marcas registradas e logotipos mencionados pertencem aos seus respectivos proprietários.
 
 ## Licença
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0. Gratuito para uso individual, educacional e não comercial. Redistribuição e exploração comercial são estritamente proibidas sem autorização expressa.
+BSL 1.1 / PolyForm Noncommercial 1.0.0. Gratuito para uso individual, educacional e não comercial. Redistribuição comercial e exploração comercial são proibidas sem autorização expressa.
+
 Autoria e titularidade de direitos: Ismael Muñoz Reyes · Tinta y Nodos. Consulte [LICENSE](LICENSE).

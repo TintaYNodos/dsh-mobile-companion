@@ -27,6 +27,9 @@ public final class NotificationHelper {
     public static final String CHANNEL_APPROVALS = "dsh_channel_approvals";
     public static final String CHANNEL_TASKS = "dsh_channel_tasks";
     public static final String CHANNEL_CONNECTION = "dsh_channel_connection";
+    public static final String CHANNEL_PC = "dsh_channel_pc";
+    public static final String CHANNEL_SERVICE = "dsh_channel_service";
+    public static final String CHANNEL_CRITICAL = "dsh_channel_critical";
 
     public static final String ACTION_APPROVE = "com.tintaynodos.dshcompanion.ACTION_APPROVE";
     public static final String ACTION_REJECT = "com.tintaynodos.dshcompanion.ACTION_REJECT";
@@ -41,6 +44,10 @@ public final class NotificationHelper {
 
     public static final int NOTIFICATION_ID_DISCONNECTION = 9001;
     public static final int NOTIFICATION_ID_TASK = 8001;
+    public static final int NOTIFICATION_ID_FEEDBACK = 10099;
+    public static final int NOTIFICATION_ID_PC_SERVICE = 7001;
+    public static final int NOTIFICATION_ID_PC_RESPONSE = 7002;
+    public static final int NOTIFICATION_ID_CRITICAL = 7003;
 
     private static final long[] VIBRATE_APPROVAL = new long[]{0, 250, 150, 250};
     private static final long[] VIBRATE_DISCONNECT = new long[]{0, 400, 200, 400};
@@ -48,46 +55,9 @@ public final class NotificationHelper {
     private NotificationHelper() {
     }
 
+    /** Los canales viven en NotificationChannels; aqui se delega por compatibilidad. */
     public static void initChannels(Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm == null) return;
-
-        // Canal 1: Aprobaciones y peticiones (Alta prioridad, sonido y vibracion)
-        NotificationChannel chApprovals = new NotificationChannel(
-                CHANNEL_APPROVALS,
-                "Peticiones y Aprobaciones",
-                NotificationManager.IMPORTANCE_HIGH
-        );
-        chApprovals.setDescription("Peticiones de herramientas y permisos que requieren Aceptar o Rechazar");
-        chApprovals.enableVibration(true);
-        chApprovals.setVibrationPattern(VIBRATE_APPROVAL);
-        chApprovals.enableLights(true);
-        chApprovals.setLightColor(Color.parseColor("#0EA5E9"));
-        chApprovals.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-        nm.createNotificationChannel(chApprovals);
-
-        // Canal 2: Tareas y respuestas finalizadas
-        NotificationChannel chTasks = new NotificationChannel(
-                CHANNEL_TASKS,
-                "Tareas y Respuestas",
-                NotificationManager.IMPORTANCE_DEFAULT
-        );
-        chTasks.setDescription("Avisos cuando Harness finaliza una respuesta o un trabajo");
-        chTasks.enableVibration(true);
-        chTasks.setVibrationPattern(new long[]{0, 180});
-        nm.createNotificationChannel(chTasks);
-
-        // Canal 3: Desconexion prolongada (>10 min)
-        NotificationChannel chConn = new NotificationChannel(
-                CHANNEL_CONNECTION,
-                "Estado de Conexión",
-                NotificationManager.IMPORTANCE_HIGH
-        );
-        chConn.setDescription("Avisos si se pierde la conexion con la computadora por mas de 10 minutos");
-        chConn.enableVibration(true);
-        chConn.setVibrationPattern(VIBRATE_DISCONNECT);
-        nm.createNotificationChannel(chConn);
+        NotificationChannels.create(context);
     }
 
     private static int notificationIdForKey(String key) {
@@ -164,7 +134,7 @@ public final class NotificationHelper {
                 .setStyle(new Notification.BigTextStyle().bigText(fullText))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setVisibility(Notification.VISIBILITY_SECRET)
                 .setColor(Color.parseColor("#0EA5E9"))
                 .addAction(new Notification.Action.Builder(0, "Aceptar", approvePending).build())
                 .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
@@ -231,7 +201,7 @@ public final class NotificationHelper {
                 .setStyle(new Notification.BigTextStyle().bigText("Código en pantalla: " + code + "\n" + summary))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setVisibility(Notification.VISIBILITY_SECRET)
                 .setColor(Color.parseColor("#0EA5E9"))
                 .addAction(new Notification.Action.Builder(0, "Autorizar", approvePending).build())
                 .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
@@ -390,6 +360,53 @@ public final class NotificationHelper {
         nm.notify(notifId, builder.build());
     }
 
+    public static void notifyActionFeedback(Context context, boolean isApprove, String target, boolean success) {
+        if (context == null) return;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        Intent openIntent = new Intent(context, MainActivity.class);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent openPending = PendingIntent.getActivity(
+                context, NOTIFICATION_ID_FEEDBACK, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        String title;
+        String text;
+        int color;
+
+        if (success) {
+            title = isApprove ? "Autorización aplicada con éxito" : "Petición rechazada";
+            text = isApprove ? ("Se autorizó la ejecución de " + (target != null ? target : ""))
+                             : ("Se rechazó la ejecución de " + (target != null ? target : ""));
+            color = Color.parseColor("#10B981");
+        } else {
+            title = "Error al transmitir decisión";
+            text = "No se pudo comunicar con el búnker";
+            color = Color.parseColor("#EF4444");
+        }
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_APPROVALS);
+        } else {
+            builder = new Notification.Builder(context);
+            builder.setPriority(Notification.PRIORITY_HIGH);
+        }
+
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setContentIntent(openPending)
+                .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setColor(color);
+
+        nm.notify(NOTIFICATION_ID_FEEDBACK, builder.build());
+    }
+
     public static void cancelApproval(Context context, String key) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
@@ -400,5 +417,34 @@ public final class NotificationHelper {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         nm.cancel(NOTIFICATION_ID_DISCONNECTION);
+    }
+
+    /**
+     * Avisos criticos (kill switch, revocaciones): se muestran siempre, aunque
+     * la aplicacion este en primer plano, porque son confirmaciones de una
+     * accion de seguridad que el usuario debe ver.
+     */
+    public static void notifyCritical(Context context, String title, String text) {
+        if (context == null) return;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_CRITICAL);
+        } else {
+            builder = new Notification.Builder(context);
+            builder.setPriority(Notification.PRIORITY_MAX);
+        }
+
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setColor(Color.parseColor("#EF4444"));
+
+        nm.notify(NOTIFICATION_ID_CRITICAL, builder.build());
     }
 }

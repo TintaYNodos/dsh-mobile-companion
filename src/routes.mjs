@@ -1,64 +1,24 @@
 /*
- * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
+ * Copyright (c) 2026 Tinta y Nodos / Ismael MuÃ±oz Reyes. All rights reserved.
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
  */
+import { spawn } from "node:child_process";
 import { config } from "./config.mjs";
 import { isClientAuthorized, normalizeAddress, resolveTargetPort, probePort } from "./network.mjs";
-import { accessKeyEnabled, hasValidAccessKey, isCompanionRequestTrusted } from "./crypto.mjs";
+import { hasValidAccessKey, isCompanionRequestTrusted } from "./crypto.mjs";
 import {
-  approveRequest,
-  claimApprovedDevice,
-  clearDenied,
-  deviceCookieHeader,
-  findPairedDevice,
-  isDenied,
-  onDeviceApproved,
   pendingRequests,
-  readCookie,
-  rejectRequest,
   requestAccess,
-  revokeAll,
-  touchDevice,
 } from "./devices.mjs";
-import { log } from "./log.mjs";
-import { rejectedPage, waitingPage } from "./pairing.mjs";
-import { hasAmbiguousFraming, isDocumentRequest, isJsonRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { hasAmbiguousFraming, isJsonRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { handlePairingRoutes, handlePendingApprovalGate, resolveDevice } from "./routes-pairing.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
-import { terminateAllWsConnections } from "./proxy-ws.mjs";
-import { handleSync, handleListChats, handleGetChat } from "./sync.mjs";
+import { handleSync, handleListChats, handleGetChat, handleAbsorbSatellite } from "./sync.mjs";
 import { hasStaticRoute, serveStatic } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
-import { collectSystemStats } from "./system-stats.mjs";
-import { panelUrl } from "./panel.mjs";
-
-const waitingClients = new Set();
-
-onDeviceApproved(() => {
-  for (const client of waitingClients) {
-    try {
-      client.write(`data: ${JSON.stringify({ approved: true })}\n\n`);
-    } catch {
-      waitingClients.delete(client);
-    }
-  }
-  waitingClients.clear();
-});
-
-export const resolveDevice = (req, res, remoteAddress) => {
-  const paired = findPairedDevice(req);
-  if (paired) {
-    const cookieId = readCookie(req);
-    if (!cookieId || cookieId !== paired.id) {
-      res.setHeader("Set-Cookie", deviceCookieHeader(paired.id));
-    }
-    return paired;
-  }
-
-  const claimed = claimApprovedDevice(remoteAddress);
-  if (claimed) res.setHeader("Set-Cookie", deviceCookieHeader(claimed.id));
-  return claimed;
-};
+import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
+import { emitTestEvent, handlePcEvents, startPcWatcher } from "./pc-events.mjs";
 
 export const wantsMobileShell = (req, url) => {
   if (url.searchParams.get("dshc") === "off") return false;
@@ -115,16 +75,7 @@ export async function dispatchRequest(req, res, context) {
 
   const { pathname } = url;
 
-  if (pathname === "/pair" || pathname.startsWith("/pair/")) {
-    const clientIp = normalizeAddress(remoteAddress);
-    if (clientIp.startsWith("127.")) {
-      res.writeHead(302, { Location: panelUrl() });
-      res.end();
-      return;
-    }
-    sendText(res, 403, `El panel solo esta disponible en http://127.0.0.1:${config.panelPort}/pair`);
-    return;
-  }
+  if (await handlePairingRoutes(req, res, { url, pathname, remoteAddress, context })) return;
 
   if (!isSameOriginRequest(req, allowedOrigins, allowedHosts)) {
     sendText(res, 403, "Origen no autorizado");
@@ -139,14 +90,29 @@ export async function dispatchRequest(req, res, context) {
 
     const device = resolveDevice(req, res, remoteAddress);
     const authorized = Boolean(device) || hasValidAccessKey(req);
+    const now = Date.now();
 
     if (!authorized) {
+      // Sin autorizacion no se calcula nada caro: buildStatusPayload() lanza
+      // collectSystemStats() (PowerShell cada pocos segundos) y era un DoS
+      // trivial desde la LAN con solo pedir /status en bucle.
       const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
       if (created) openPanelWindow();
+      sendJson(res, 200, {
+        service: "dsh-companion",
+        version: config.version,
+        apkVersion: config.apkVersion || config.version,
+        apkVersionCode: config.apkVersionCode || 0,
+        status: "pairing",
+        dshOnline: false,
+        targetPort: null,
+        time: now,
+      });
+      return;
     }
 
     const payload = await buildStatusPayload();
-    sendJson(res, 200, authorized ? payload : { ...payload, status: "pairing", dshOnline: false, targetPort: null, systemStats: null });
+    sendJson(res, 200, payload);
     return;
   }
 
@@ -160,70 +126,28 @@ export async function dispatchRequest(req, res, context) {
       sendJson(res, 403, { error: "Acceso no autorizado" });
       return;
     }
-    sendJson(res, 200, collectSystemStats());
+    const current = collectSystemStats();
+    sendJson(res, 200, { ok: true, stats: { ...current, history: telemetryHistory } });
     return;
   }
 
-  if (pathname === "/dsh-companion/pair-state" && req.method === "GET") {
-    if (!consumeAllowance(`state:${remoteAddress}`, { capacity: 120, refillPerSecond: 2 })) {
-      sendJson(res, 429, { approved: false });
+  if (pathname === "/dsh-companion/terminal" && req.method === "POST") {
+    // Shell remoto: cualquier dispositivo emparejado obtendria control total de
+    // la PC. Se deja como funcion opcional explicita y apagada por defecto;
+    // ademas solo se permite desde el propio equipo (loopback).
+    if (!config.enableTerminal) {
+      sendJson(res, 501, {
+        ok: false,
+        error: "terminal_disabled",
+        detail: "La terminal remota está desactivada. Actívala con DSH_ENABLE_TERMINAL=1.",
+      });
       return;
     }
-    const device = resolveDevice(req, res, remoteAddress);
-    const approved = Boolean(device);
-
-    if (!approved) {
-      if (isDenied(remoteAddress)) {
-        sendJson(res, 200, { approved: false, rejected: true, pending: false });
-        return;
-      }
-      requestAccess(remoteAddress, req.headers["user-agent"]);
-    }
-
-    sendJson(res, 200, { approved, rejected: false, pending: !approved });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/pair-events" && req.method === "GET") {
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-store",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no",
-    });
-    res.write(`data: ${JSON.stringify({ connected: true })}\n\n`);
-    waitingClients.add(res);
-
-    req.on("close", () => {
-      waitingClients.delete(res);
-    });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/open-panel" && req.method === "POST") {
-    if (!consumeAllowance(`open:${remoteAddress}`, { capacity: 3, refillPerSecond: 0.05 })) {
-      sendJson(res, 429, { ok: false, error: "Espera un momento" });
+    if (!normalizeAddress(remoteAddress).startsWith("127.")) {
+      sendJson(res, 403, { ok: false, error: "La terminal solo está disponible desde la computadora" });
       return;
     }
-    const hasRequest = !isDenied(remoteAddress) && !findPairedDevice(req);
-    sendJson(res, 200, { ok: hasRequest ? openPanelWindow({ force: true }) : false });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/retry" && req.method === "POST") {
-    if (!consumeAllowance(`retry:${remoteAddress}`, { capacity: 3, refillPerSecond: 0.05 })) {
-      sendJson(res, 429, { ok: false });
-      return;
-    }
-    clearDenied(remoteAddress);
-    const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
-    if (created) openPanelWindow({ force: true });
-    sendJson(res, 200, { ok: true });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/kill-switch" && req.method === "POST") {
-    if (!consumeAllowance(`kill:${remoteAddress}`, { capacity: 5, refillPerSecond: 0.1 })) {
+    if (!consumeAllowance(`terminal:${remoteAddress}`, { capacity: 20, refillPerSecond: 2 })) {
       sendJson(res, 429, { ok: false, error: "Demasiadas peticiones" });
       return;
     }
@@ -232,88 +156,116 @@ export async function dispatchRequest(req, res, context) {
       sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
       return;
     }
-    const revokedCount = revokeAll();
-    if (revokedCount < 0) {
-      sendJson(res, 500, { ok: false, error: "Fallo al persistir registro de revocacion" });
-      return;
-    }
-    const wsClosed = terminateAllWsConnections();
-    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados`);
-    sendJson(res, 200, { ok: true, revoked: revokedCount, message: "Todos los dispositivos han sido revocados" });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/rechazado" && req.method === "GET") {
-    const body = Buffer.from(rejectedPage(), "utf8");
-    res.writeHead(200, {
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Length": body.length,
-      "Cache-Control": "no-store",
-    });
-    res.end(body);
-    return;
-  }
-
-  if ((pathname === "/dsh-companion/action" || pathname === "/dsh-companion/notification-action") && req.method === "POST") {
-    const device = resolveDevice(req, res, remoteAddress);
-    if (!device && !hasValidAccessKey(req)) {
-      sendJson(res, 401, { error: "No autorizado" });
-      return;
-    }
     let body;
     try {
-      body = JSON.parse((await readBody(req, 4096)).toString("utf8"));
+      body = JSON.parse((await readBody(req, 65536)).toString("utf8"));
     } catch {
-      sendJson(res, 400, { error: "JSON invalido" });
+      sendJson(res, 400, { ok: false, error: "JSON invalido" });
       return;
     }
-    const { action, id, requestId } = body;
-    const targetId = id || requestId;
-    if (action === "approve_device") {
-      const ok = approveRequest(targetId);
-      sendJson(res, 200, { ok: Boolean(ok) });
+    const command = typeof body?.command === "string" ? body.command.trim() : "";
+    if (!command) {
+      sendJson(res, 400, { ok: false, error: "Comando vacio o no especificado" });
       return;
     }
-    if (action === "reject_device") {
-      const ok = rejectRequest(targetId);
-      sendJson(res, 200, { ok: Boolean(ok) });
-      return;
-    }
-    if (action === "allow" || action === "reject" || action === "approve") {
-      sendJson(res, 200, { ok: true, action, id: targetId });
-      return;
-    }
-    sendJson(res, 400, { error: "Accion desconocida" });
+
+    const MAX_OUTPUT = 32 * 1024;
+    const sanitizeAndCap = (val) => {
+      if (typeof val !== "string") val = String(val ?? "");
+      val = val.replace(/\0/g, "");
+      const buf = Buffer.from(val, "utf8");
+      if (buf.length <= MAX_OUTPUT) return val;
+      return buf.subarray(0, MAX_OUTPUT).toString("utf8");
+    };
+
+    const isWin = process.platform === "win32";
+    const shell = isWin ? "powershell.exe" : "bash";
+    const args = isWin ? ["-NoProfile", "-Command", command] : ["-c", command];
+
+    const result = await new Promise((resolve) => {
+      let stdoutChunks = [];
+      let stderrChunks = [];
+      let totalStdoutBytes = 0;
+      let totalStderrBytes = 0;
+      let settled = false;
+
+      const child = spawn(shell, args, {
+        windowsHide: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try {
+          child.kill("SIGKILL");
+        } catch {}
+        resolve({
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: Buffer.concat(stderrChunks).toString("utf8") || "Tiempo de espera agotado",
+          status: 124,
+        });
+      }, 10000);
+
+      child.stdout.on("data", (chunk) => {
+        if (totalStdoutBytes < 1024 * 1024) {
+          stdoutChunks.push(chunk);
+          totalStdoutBytes += chunk.length;
+        }
+      });
+
+      child.stderr.on("data", (chunk) => {
+        if (totalStderrBytes < 1024 * 1024) {
+          stderrChunks.push(chunk);
+          totalStderrBytes += chunk.length;
+        }
+      });
+
+      child.on("error", (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve({
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: err?.message || String(err),
+          status: 1,
+        });
+      });
+
+      child.on("close", (code) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve({
+          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
+          stderr: Buffer.concat(stderrChunks).toString("utf8"),
+          status: code !== null ? code : 0,
+        });
+      });
+    });
+
+    const exitCode = result.status !== null && result.status !== undefined
+      ? result.status
+      : 0;
+
+    const stdout = sanitizeAndCap(result.stdout || "");
+    const stderr = sanitizeAndCap(result.stderr || "");
+
+    sendJson(res, 200, {
+      ok: true,
+      stdout,
+      stderr,
+      exitCode,
+    });
     return;
   }
 
-  if (accessKeyEnabled() && !hasValidAccessKey(req)) {
-    const device = resolveDevice(req, res, remoteAddress);
-
-    if (!device) {
-      const { entry: pending, created, denied } = requestAccess(remoteAddress, req.headers["user-agent"]);
-      if (created) openPanelWindow();
-
-      if (isDocumentRequest(req)) {
-        const pageBody = denied
-          ? rejectedPage()
-          : waitingPage({ code: pending?.code || "", hostLabel: `${bindHost}:${config.listenPort}` });
-        const body = Buffer.from(pageBody, "utf8");
-        res.writeHead(200, {
-          "Content-Type": "text/html; charset=utf-8",
-          "Content-Length": body.length,
-          "Cache-Control": "no-store",
-        });
-        res.end(body);
-        return;
-      }
-
-      sendJson(res, 403, { error: "Acceso pendiente de aprobacion", id: pending?.id ?? "" });
-      return;
-    }
-
-    if (touchDevice(device)) res.setHeader("Set-Cookie", deviceCookieHeader(device.id));
+  if (pathname === "/simulator") {
+    serveStatic(pathname, req, res);
+    return;
   }
+
+  if (await handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context })) return;
 
   if (pathname === "/" || pathname === "/index.html") {
     const targetPort = await resolveTargetPort();
@@ -339,11 +291,70 @@ export async function dispatchRequest(req, res, context) {
       req.resume();
       return;
     }
-    if (!isCompanionRequestTrusted(req)) {
-      sendJson(res, 401, { error: "Token de companion ausente o invalido" });
-      return;
+    // `isCompanionRequestTrusted` es fail-closed: sin DSH_COMPANION_TOKEN ya
+    // no autoriza por si solo. Se conservan las dos puertas verificables:
+    //   - con token configurado, la sincronizacion sigue exigiendo ESE token;
+    //   - sin token configurado, exige cookie de dispositivo o clave de acceso
+    //     (nunca la mera pertenencia a la red privada).
+    if (config.companionToken) {
+      if (!isCompanionRequestTrusted(req)) {
+        sendJson(res, 401, { error: "Token de companion ausente o invalido" });
+        return;
+      }
+    } else {
+      const syncDevice = resolveDevice(req, res, remoteAddress);
+      if (!syncDevice && !hasValidAccessKey(req)) {
+        sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
+        return;
+      }
     }
     await handleSync(req, res, remoteAddress);
+    return;
+  }
+
+  if (pathname === "/dsh-companion/absorb-satellite") {
+    if (req.method !== "POST") {
+      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "POST" });
+      return;
+    }
+    if (!isJsonRequest(req)) {
+      sendJson(res, 415, { error: "Se requiere Content-Type application/json" });
+      req.resume();
+      return;
+    }
+    const device = resolveDevice(req, res, remoteAddress);
+    if (!device && !hasValidAccessKey(req) && !isCompanionRequestTrusted(req)) {
+      sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
+      return;
+    }
+    await handleAbsorbSatellite(req, res, remoteAddress);
+    return;
+  }
+
+  if (pathname === "/dsh-companion/pc-events" && (req.method === "GET" || req.method === "HEAD")) {
+    if (!consumeAllowance(`pc-events:${remoteAddress}`, { capacity: 20, refillPerSecond: 0.2 })) {
+      sendJson(res, 429, { error: "Demasiadas conexiones" });
+      return;
+    }
+    const device = resolveDevice(req, res, remoteAddress);
+    if (!device && !hasValidAccessKey(req)) {
+      sendJson(res, 403, { error: "Acceso no autorizado" });
+      return;
+    }
+    startPcWatcher();
+    handlePcEvents(req, res);
+    return;
+  }
+
+  if (pathname === "/dsh-companion/pc-events/test" && req.method === "POST") {
+    const device = resolveDevice(req, res, remoteAddress);
+    if (!device && !hasValidAccessKey(req)) {
+      sendJson(res, 403, { error: "Acceso no autorizado" });
+      return;
+    }
+    startPcWatcher();
+    const listeners = emitTestEvent();
+    sendJson(res, 200, { ok: true, listeners });
     return;
   }
 

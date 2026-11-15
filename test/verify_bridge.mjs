@@ -131,7 +131,9 @@ const wrongChatsMethod = await request("/dsh-companion/chats", { method: "POST" 
 check("chats POST 405", wrongChatsMethod.status === 405);
 
 // 15. asset del backend proxificado
-const css = await request("/assets/index-lh_YM6sT.css");
+const cssMatch = mobile.body.match(/href="(\.?\/assets\/[^"]+\.css)"/);
+const cssPath = cssMatch ? cssMatch[1].replace(/^\./, "") : "/assets/vendor-DV2921Zo.css";
+const css = await request(cssPath);
 check("asset CSS proxificado", css.status === 200 && css.body.length > 1000, `${css.body.length} bytes`);
 
 // 16. cabeceras de seguridad

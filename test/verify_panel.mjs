@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const BRIDGE = { host: process.env.DSH_TEST_HOST || "10.173.252.87", port: Number(process.env.DSH_TEST_PORT || 57420) };
+const BRIDGE = { host: process.env.DSH_TEST_HOST || "127.0.0.1", port: Number(process.env.DSH_TEST_PORT || 57420) };
 const PANEL = { host: "127.0.0.1", port: Number(process.env.DSH_PANEL_PORT || 57421) };
 
 const token = (() => {

@@ -2,142 +2,217 @@
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
-> 🌐 **Sprachhinweis:** Dieses Dokument wurde übersetzt, um DSH Mobile Companion für Entwickler weltweit zugänglich zu machen. Sprachkorrekturen und Pull Requests aus der Community sind herzlich willkommen. Das kanonische Originaldokument ist auf [Spanisch (Mexiko)](README.es.md).
+> 🌐 **Sprachhinweis:** Dieses Dokument wurde übersetzt, um DSH Mobile Companion für internationale Entwickler zugänglich zu machen. Korrekturen der Gemeinschaft an Sprache und Formulierungen sowie Pull Requests sind herzlich willkommen. Das kanonische Referenzdokument ist auf [Español (México)](README.es.md).
 
-Mobiler Zugriff auf DeepSeek Harness über ein privates, verschlüsseltes ZeroTier- oder Tailscale-Netzwerk, ohne Portfreigaben und ohne das Prompt-Caching zu beeinträchtigen.
+Mobiler Zugriff auf DeepSeek Harness über ein privates ZeroTier- oder Tailscale-Netzwerk, ohne Ports zu öffnen und ohne das Prompt-Caching zu beeinträchtigen.
 
-Die mobile Anwendung reimplementiert die Benutzeroberfläche nicht: Sie fungiert als Reverse Proxy, zeigt die originale Web-GUI von DeepSeek Harness an und wendet touch-optimierte Anpassungen darauf an. Was Sie auf dem Smartphone sehen, ist exakt dasselbe Produkt, das auf dem Computer ausgeführt wird.
+Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene Web-GUI von DeepSeek Harness und fügt eine Touch-Schicht hinzu. Was Sie auf Ihrem Telefon sehen, ist dasselbe Produkt, das auf Ihrem Computer läuft.
 
-Gehärtete Edition (*hardened*) von Ismael Muñoz Reyes für Tinta y Nodos.
+Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
+
+Aktuelle Version: **4.5.10** (`versionCode` 37).
 
 ---
 
-## Was dieses Projekt löst
+## Was es löst
 
-DeepSeek Harness lauscht auf `127.0.0.1` und sichert seine Sitzungen mit einem aus `.credentials.yaml` abgeleiteten HMAC-Cookie ab. Daher genügt weder eine einfache Portfreigabe noch ein generischer Tunnel: Ohne dieses Cookie antwortet die Schnittstelle mit HTTP 401, und wird der Origin des Requests unbedacht umgeschrieben, geht das stabile Präfix verloren, auf dem das Prompt-Caching aufbaut.
+DeepSeek Harness lauscht auf `127.0.0.1` und schützt seine Sitzungen mit einem aus `.credentials.yaml` abgeleiteten HMAC-Cookie. Deshalb genügt es nicht, einen Port zu öffnen oder einen generischen Tunnel zu verwenden: Ohne dieses Cookie antwortet die Oberfläche mit 401, und ein unbedachtes Umschreiben der Origins der Anfragen zerstört das stabile Präfix, das für das Prompt-Caching erforderlich ist.
 
-Dieses Projekt löst alle drei Problemstellungen zugleich:
+Dieses Projekt löst alle drei Probleme gleichzeitig:
 
-- **Transparente Sitzungssignierung.** Die Bridge liest das lokale Secret aus, generiert das HMAC-SHA256-Cookie (Version 1) und erneuert es vor Ablauf der Gültigkeit. Der mobile Browser bekommt das Secret niemals zu Gesicht.
-- **Touch-Anpassung direkt auf dem echten Produkt.** Viewport-Metadaten und ein minimales Stylesheet werden injiziert. Weder wird die Schnittstelle ersetzt, noch wird JavaScript in das Dokument eingeschleust.
-- **Netzwerkabriegelung.** Der Socket bindet ausschließlich an die Schnittstelle des VPNs und akzeptiert nur Clients aus demselben privaten Netzwerk.
+- **Transparentes Signieren der Sitzung.** Die Bridge liest das lokale Geheimnis, erzeugt das HMAC-SHA256-Cookie (Version 1) und erneuert es vor Ablauf. Der mobile Browser sieht das Geheimnis nie.
+- **Touch-Schicht auf dem echten Produkt.** Viewport-Metadaten, ein Stylesheet und ein kleines Client-Skript werden injiziert. Die Oberfläche wird nicht ersetzt: Das Skript ergänzt lediglich Touch-Elemente (Befehls-Dock, Code-Tasten, Theme-Synchronisierung, Freigabe-Relais, Benachrichtigungs-Relais). Es läuft mit derselben Origin und denselben Rechten wie die Seite, behandeln Sie es also als Teil der Vertrauensgrenze.
+- **Netzwerkisolation.** Der Socket bindet ausschließlich an die VPN-Schnittstelle und akzeptiert nur Clients, die aus demselben privaten Netzwerk stammen.
 
 ---
 
 ## Architektur
 
 ```text
-Smartphone (ZeroTier- / Tailscale-Netzwerk)
+Telefon (ZeroTier-/Tailscale-Netzwerk)
         |
         v
-bridge.mjs  —exklusive Bindung an die VPN-IP—
-   |-- /                      Proxy zu DeepSeek Harness + mobile Anpassung
-   |-- /offline               Warteseite, solange Harness noch nicht antwortet
-   |-- /dsh-companion/status  Discovery und Verbindungsstatus
-   |-- /dsh-companion/sync    Speicherung von Konversationen auf Datenträger
+bridge.mjs  —exklusives Binden an die VPN-IP—
+   |-- /                        Proxy zu DeepSeek Harness + Touch-Schicht
+   |-- /offline                 Bereitschaftsseite und Offline-Leser für redaktionelle Inhalte
+   |-- /dsh-companion/status    Link-Erkennung und Zustandsprüfung
+   |-- /dsh-companion/sync      Konversations-Dump auf die Festplatte
+   |-- /dsh-companion/chats     Index der synchronisierten Konversationen
+   |-- /dsh-companion/pc-events Server-Sent Events: „ein Turn ist gerade zu Ende gegangen“
+   |-- /dsh-companion/pair-*    Geräte-Pairing und Freigabe
         |
         v
-127.0.0.1:52710  DeepSeek Harness
+127.0.0.1:<Harness-Port>  DeepSeek Harness
 ```
 
 Module:
 
 ```text
 companion/
-├── bridge.mjs              Start, Routing, Socket- und Zugriffspolicies
-├── offline.html            Warteseite im Design des Produkts
-├── manifest.webmanifest    Installation als Web-App (PWA)
-├── icon.svg
-├── android_src/
-│   └── MainActivity.java   nativer Client: gehärtete WebView, Bunker-Pille, Wiederverbindung
-├── test/
-│   ├── verify_bridge.mjs      Routen, Injektion, Origin, Framing, Grenzwerte
-│   ├── verify_sync_ws.mjs     Inhaltsneutralisierung und WebSocket-Handshake
-│   └── verify_access_key.mjs  Zugriffskontrolle mit Shared Key
+├── bridge.mjs                 Start, Routing, Socket- und Zugriffsrichtlinien
+├── package.json               einzige Quelle der Version, `npm start` / `npm test`
+├── offline.html               Hülle des Bereitschaftsbildschirms
+├── offline.css                Basislayout, Themes und Tabs
+├── offline-reader.css         redaktioneller Leser und Konversationsdetail
+├── offline-satellite.css      Satellitenbereich
+├── offline-core.js            gemeinsamer Zustand, Verbindungsstatus, Navigation
+├── offline-reader.js          Offline-Leser, Liste, Detail, Lesemodi
+├── offline-satellite.js       Satelliten-Übergabe (Senden, Chunks, Abschluss)
 ├── src/
-│   ├── config.mjs          zentrale Konfiguration und Grenzwerte
-│   ├── log.mjs             zeitgestempeltes Logging
-│   ├── network.mjs         VPN-Erkennung, Netzwerkautorisierung, Harness-Port
-│   ├── crypto.mjs          Secret, HMAC-v1-Cookie, Zugriffsschlüssel, Constant-Time-Vergleich
-│   ├── http.mjs            Header-Bereinigung, begrenzter Body, vertrauenswürdiger Origin
-│   ├── proxy.mjs           HTTP-Proxy und WebSocket-Tunnel
-│   ├── mobile.mjs          Viewport-Injektion und Touch-Anpassungen
-│   ├── sync.mjs            atomare Persistenz von Konversationen
-│   ├── static.mjs          lokale Assets mit ETag
-│   └── ratelimit.mjs       Token-Bucket pro Client
-└── synced_chats/           gespeicherte Konversationen (.md und .json)
+│   ├── config.mjs             zentrale Konfiguration und Limits
+│   ├── log.mjs                Logger mit Zeitstempeln
+│   ├── network.mjs            VPN-Erkennung, Autorisierung, Harness-Port
+│   ├── crypto.mjs             Geheimnis, HMAC-v1-Cookie, Zugriffsschlüssel, Rotation
+│   ├── http.mjs               Header-Bereinigung, begrenzter Body, vertrauenswürdige Origin
+│   ├── routes.mjs             Routen-Dispatch (Status, Daten, Steuerung)
+│   ├── routes-pairing.mjs     Pairing, Freigabe, Panel-Übergabe
+│   ├── panel.mjs              lokales Freigabe-Panel (nur Loopback)
+│   ├── pairing.mjs            ausstehende Anfragen und Codes
+│   ├── pairing-views.mjs      HTML des Panels
+│   ├── devices.mjs            Geräteregister, TTL, Widerruf
+│   ├── registry.mjs           atomares, absturzsicheres JSON-Register
+│   ├── proxy.mjs              HTTP-Proxy
+│   ├── proxy-ws.mjs           WebSocket-Tunnel
+│   ├── mobile.mjs             Injektionseinstieg (Viewport + Client-Skript)
+│   ├── mobile-client*.mjs     injizierter Client, nach Verantwortlichkeit aufgeteilt
+│   ├── mobile-styles.mjs      injiziertes Stylesheet
+│   ├── pc-events.mjs          Watcher für Sitzungs-Turns -> SSE-Benachrichtigungen
+│   ├── sync.mjs               atomare Persistenz der Konversationen
+│   ├── static.mjs             lokale Assets mit ETag
+│   ├── system-stats.mjs       Telemetrie für CPU, Speicher und Temperatur
+│   ├── qr.mjs / visual-lab.mjs Helfer für die QR- und Visual-Harnesses
+│   └── ratelimit.mjs          Token-Bucket pro Client
+├── android_src/               nativer Client (reines Java, kein AndroidX)
+│   ├── MainActivity.java      Lebenszyklus und Orchestrierung
+│   ├── CompanionWebViewClient.java, CompanionChromeClient.java
+│   ├── CleartextPolicy.java   blockiert Cleartext zu nicht-privaten Hosts
+│   ├── PcRegistryStore.java, PcEntry.java   Multi-PC-Register
+│   ├── SettingsScreen.java, HubSheet.java, PcDialogs.java, QrDialogs.java
+│   ├── UpdateInstaller.java, KillSwitchUi.java, BiometricGate.java
+│   ├── PcEventsService.java   Vordergrunddienst für PC-Benachrichtigungen
+│   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
+│   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
+│   └── …                     Erkennung, Telemetrie, Satellit, WOL, Widget
+├── test/
+│   ├── verify_*.mjs           zehn Verifikations-Suites (136 Prüfungen)
+│   ├── _harness.mjs           gemeinsamer Client
+│   └── run-all.mjs            `npm test`
+└── synced_chats/              persistierte Konversationen (.md und .json)
 ```
 
 ---
 
 ## Installation
 
-### Computer
+### Methode 1: automatisierte Einrichtung mit Ihrem KI-Assistenten (empfohlen)
+
+Wenn Sie einen KI-Agenten oder Programmierassistenten auf Ihrem Rechner verwenden (DeepSeek Harness, Cursor, Claude Code, Copilot usw.), fügen Sie den folgenden Prompt in Ihren Chat ein. Der Assistent klont das Repository, konfiguriert den Hintergrundstart, überprüft die Bridge und übergibt Ihnen die Schritte zur mobilen Verbindung.
+
+> Vollständige Anleitung: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
+
+```text
+Handle als technischer Einrichtungsassistent auf diesem Rechner.
+Dein Ziel ist es, „DSH Mobile Companion“ zu installieren, zu aktivieren, zu überprüfen und vollständig zu konfigurieren (eine sichere Companion-Bridge für mobilen Zugriff auf DeepSeek Harness über ein privates ZeroTier- oder Tailscale-Netzwerk), und mir klare, jargonfreie Anweisungen zur Verbindung meines Telefons zu geben.
+
+Führe die folgenden Schritte autonom und in der angegebenen Reihenfolge aus:
+1. Prüfe "%USERPROFILE%\.dsh" und lokalisiere Node.js (in PATH oder unter "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
+2. Falls du nicht bereits im Verzeichnis bist, klone: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
+3. Konfiguriere den stillen Autostart mit "install-autostart.bat" und starte den Dienst mit "run-hidden.vbs".
+4. Frage http://127.0.0.1:57420/dsh-companion/status ab, um zu prüfen, dass die Bridge mit 200 antwortet, und melde den DSH-Status.
+5. Gib eine einfache, jargonfreie Zusammenfassung mit: der URL für mein Telefon (http://<VPN_IP>:57420), dem APK-Download-Link in den GitHub Releases und der Vorgehensweise, mein Telefon über das lokale Panel zu autorisieren.
+```
+
+### Methode 2: manuelle Installation
+
+#### Computer
 
 ```bash
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-1. Legen Sie einen Zugriffsschlüssel fest (dringend empfohlen, siehe unten).
-2. Installieren Sie den Autostart über `install-autostart.bat` (registriert eine stille Aufgabe beim Windows-Start).
-3. Die Bridge erkennt die ZeroTier- oder Tailscale-Schnittstelle automatisch und bindet daran. Falls die Erkennung fehlschlägt, setzen Sie `DSH_BIND_HOST` auf die private IP-Adresse.
+Node.js 20 oder neuer, keine npm-Abhängigkeiten.
 
-### Smartphone
+1. Legen Sie einen Zugriffsschlüssel fest (dringend empfohlen; siehe unten).
+2. Installieren Sie den automatischen Start mit `install-autostart.bat` (stiller Task bei der Windows-Anmeldung).
+3. Die Bridge erkennt die ZeroTier- oder Tailscale-Schnittstelle und bindet daran. Wenn die Erkennung fehlschlägt, setzen Sie `DSH_BIND_HOST` auf Ihre private IP.
 
-Zwei gleichwertige Wege:
+#### Telefon
 
-- **Native App:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Bietet automatische Wiederverbindung, Bunker-Auswahl und Vollbildmodus. Ist 140 KB groß und enthält keinerlei Drittanbieter-Bibliotheken: lediglich der Client, sein Icon und sein Theme.
-- **Ohne Installation:** Öffnen Sie `http://<VPN_IP>:57420` im Browser und wählen Sie „Zum Startbildschirm hinzufügen“.
+Zwei gleichwertige Methoden:
 
-`/m` antwortet mit einer permanenten Weiterleitung auf `/`: Der frühere Satellitenmodus wurde zugunsten der echten Benutzeroberfläche entfernt.
+- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 210 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
+- **Ohne Installation:** Öffnen Sie `http://<VPN_IP>:57420` in Ihrem Browser und wählen Sie „Zum Startbildschirm hinzufügen“.
+
+`/m` antwortet mit einer permanenten Weiterleitung auf `/`: Der alte Satellitenmodus wurde zugunsten der echten Oberfläche eingestellt.
 
 ---
 
 ## Umgebungsvariablen
 
-| Variable | Standardwert | Verwendung |
+| Variable | Standard | Wirkung |
 | --- | --- | --- |
-| `DSH_BIND_HOST` | automatisch erkannt | Erzwingt die private IP zur Bindung |
-| `DSH_TARGET_PORT` | `52710` | Port von DeepSeek Harness |
-| `DSH_LISTEN_PORT` | `57420` | Port der Bridge |
-| `DSH_HOME` | `%USERPROFILE%\.dsh` | Verzeichnis für Anmeldeinformationen und Schlüssel |
-| `DSH_BROWSER_SECRET` | — | Direktes Secret, umgeht das Lesen der YAML-Datei |
-| `DSH_ACCESS_KEY` | automatisch generiert | Shared Key; überschreibt den Wert aus der Datei |
-| `DSH_ACCESS_DISABLE` | — | `1` deaktiviert den Schlüssel (nur bei Loopback-Bindung) |
-| `DSH_COMPANION_TOKEN` | leer | Zusätzlicher Token für `/dsh-companion/sync` |
-| `DSH_ALLOW_CIDR` | leer | Zusätzliche autorisierte Subnetze, kommagetrennt |
+| `DSH_BIND_HOST` | automatisch erkannt | Erzwingt die private Bind-IP |
+| `DSH_TARGET_PORT` | automatisch erkannt | Port von DeepSeek Harness |
+| `DSH_LISTEN_PORT` | `57420` | Listen-Port der Bridge |
+| `DSH_PANEL_PORT` | `57421` | Port des lokalen Freigabe-Panels |
+| `DSH_HOME` | `%USERPROFILE%\.dsh` | Verzeichnis für Anmeldedaten, Schlüssel und Register |
+| `DSH_BROWSER_SECRET` | — | Direkt angegebenes Geheimnis, überspringt das Lesen der YAML |
+| `DSH_ACCESS_KEY` | automatisch generiert | Gemeinsamer Schlüssel; überschreibt den dateibasierten Schlüssel |
+| `DSH_ACCESS_DISABLE` | — | `1` deaktiviert den Zugriffsschlüssel, **nur erlaubt, wenn an Loopback gebunden** |
+| `DSH_COMPANION_TOKEN` | leer | Zusätzliches Token für `/dsh-companion/sync` |
+| `DSH_ALLOW_CIDR` | leer | Zusätzlich autorisierte Subnetze, durch Kommas getrennt |
+| `DSH_DEVICE_TTL_DAYS` | `30` | Lebensdauer der Gerätesitzung; abgelaufene Geräte werden abgelehnt und entfernt |
+| `DSH_DEVICE_REFRESH_HOURS` | `24` | Wie oft die Lebensdauer bei Nutzung erneuert wird |
+| `DSH_PENDING_TTL_MIN` | `15` | Minuten, die eine Pairing-Anfrage auf Freigabe wartet |
+| `DSH_ENABLE_TERMINAL` | — | `1` aktiviert das Remote-Terminal (standardmäßig aus, nur Loopback) |
 
-### Einmalige Bestätigung am Computer
+### Einmalige Freigabe vom Computer
 
-Keine Eingabe eines Schlüssels erforderlich.
+1. Öffnen Sie die App auf Ihrem Telefon: Sie zeigt „Auf Ihrem Computer bestätigen“ an.
+2. Führen Sie auf Ihrem PC `panel.bat` aus (oder öffnen Sie die URL, die die Bridge ausgibt). Das Panel lauscht **ausschließlich auf 127.0.0.1**.
+3. Das Gerät erscheint mit seinem Code und seiner Adresse. Drücken Sie **Autorisieren**.
+4. Das Telefon verbindet sich und fragt nicht erneut.
 
-1. Sie öffnen die App auf dem Smartphone. Es erscheint „Am Computer bestätigen“.
-2. Auf dem PC öffnen Sie `http://<VPN_IP>:57420/pair`.
-3. Das Gerät wird mit seiner Adresse aufgeführt. Klicken Sie auf **Autorisieren**.
-4. Das Smartphone verbindet sich von selbst und fragt nicht mehr nach.
+Die Gerätesitzung dauert **30 Tage und wird bei Nutzung erneuert**: Jedes Mal, wenn die App nach 24 Stunden geöffnet wird, wird der Zähler zurückgesetzt. Abgelaufene Geräte werden nicht mehr akzeptiert und aus dem Register entfernt.
 
-Die Sitzung ist **30 Tage gültig und verlängert sich bei Nutzung**: Jedes Mal, wenn Sie die App nach 24 Stunden erneut öffnen, wird der Zähler wieder auf 30 gesetzt. Bei einer Nutzung mindestens einmal im Monat läuft sie nie ab.
+Der Zugang zum Panel ist ein **Einmal-Ticket**, das abläuft und beim Einlösen ungültig wird; im Gegenzug erhält der Browser ein `HttpOnly`-Sitzungscookie mit `SameSite=Strict`, dessen Kennung nur im Speicher existiert. Kein Token reist in einer URL, die Sie teilen können, und nichts wird in eine Datei mit dem dauerhaften Anmeldedatum geschrieben.
 
-Das Dashboard lauscht **ausschließlich auf 127.0.0.1** und verlangt eigene Zugangsdaten, ist also weder über das VPN noch von anderen Rechnern aus erreichbar. Es listet autorisierte Geräte mit einer Schaltfläche zum Widerrufen der Freigabe auf.
+Autorisierte Geräte liegen in `%USERPROFILE%\.dsh\companion-devices.json`. Das Panel bietet individuellen Widerruf und **Alle widerrufen**. In der Telefon-App widerruft der **Kill-Switch** jedes Gerät, schließt die WebSocket-Tunnel **und rotiert den Zugriffsschlüssel**. Details in [DISPOSITIVOS.md](DISPOSITIVOS.md).
 
-Die Geräte werden in `%USERPROFILE%\.dsh\companion-devices.json` abgelegt. Im Dashboard gibt es die Schaltfläche **Alle widerrufen**. Details in [DISPOSITIVOS.md](DISPOSITIVOS.md).
+Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit einem Standardbrowser verfügbar und wird unter `%USERPROFILE%\.dsh\companion-access-key` gespeichert. Die native App hält ihn mit dem Android Keystore verschlüsselt.
 
-Der manuelle Schlüssel verbleibt als Fallback für den Browserzugriff in `%USERPROFILE%\.dsh\companion-access-key`. Die App benötigt ihn nicht.
-
-**Reale Einschränkung:** HTTP Basic überträgt den Schlüssel unverschlüsselt in Base64. Dies ist nur deshalb vertretbar, weil ZeroTier und Tailscale den Transport verschlüsseln. In einem geteilten oder öffentlichen ZeroTier-Netzwerk könnte ein böswilliges Mitglied versuchen, den Datenverkehr auf Layer 2 abzufangen; der wirksame Schutz besteht darin, das Netzwerk privat zu halten und Beitritte manuell zu autorisieren.
+**Praktische Einschränkung:** HTTP Basic überträgt den Schlüssel in Base64 ohne eigene Verschlüsselung auf der Transportschicht. Das ist nur akzeptabel, weil ZeroTier und Tailscale den gesamten Transport Ende-zu-Ende verschlüsseln. In einem geteilten oder öffentlichen ZeroTier-Netzwerk könnte ein gegnerischer Peer eine Abfangattacke auf Schicht 2 versuchen; halten Sie das Netzwerk strikt privat, indem Sie Knoten manuell autorisieren.
 
 ---
 
 ## Routen
 
-- `GET /` — Web-GUI von DeepSeek Harness, mit angewandter Touch-Optimierung für Mobilgeräte.
-- `GET /offline` — Warteseite während des Starts von Harness, inklusive redaktionellem Offline-Reader für vorgeladene Sitzungen.
-- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`.
-- `POST /dsh-companion/sync` — speichert eine Konversation in `synced_chats/` im Markdown- und JSON-Format.
-- `GET /dsh-companion/chats` — chronologische Liste synchronisierter Sitzungen für den Offline-Reader.
-- `GET /dsh-companion/chat/:id` — liefert den Inhalt einer Sitzung aus (strukturiertes JSON oder Markdown mit `?format=md`).
-- `POST /dsh-companion/action` — Remote-Bestätigung von Tool-Autorisierungen und Sandbox-Berechtigungen im Hintergrund.
-- `GET /companion.webmanifest` — Web-App-Manifest (PWA-Installation).
+- `GET /` — Web-GUI von DeepSeek Harness, mit angewendeter Touch-Schicht, wenn der Client ein Telefon ist.
+- `GET /offline` — Bereitschaftsseite, während Harness startet, plus der Offline-Leser für redaktionelle Inhalte.
+- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`. Anonyme Aufrufer erhalten diese minimale Form; Geräteliste und Telemetrie erfordern Autorisierung.
+- `POST /dsh-companion/sync` — speichert eine Konversation in `synced_chats/` als Markdown und JSON.
+- `GET /dsh-companion/chats` — Index der synchronisierten Konversationen.
+- `GET /dsh-companion/chat/:id` — Inhalt der Konversation (JSON oder Markdown mit `?format=md`).
+- `GET /dsh-companion/pc-events` — Server-Sent-Events-Stream, der `response-finished` ausgibt, wenn ein Turn auf dem Computer endet.
+- `POST /dsh-companion/pc-events/test` — gibt ein synthetisches Ereignis aus; wird von der Schaltfläche „Vom PC testen“ verwendet.
+- `GET /dsh-companion/pair-state` — Polling-Endpunkt, den der Wartebildschirm verwendet.
+- `GET /dsh-companion/pair-events` — Freigabe-Stream für den Wartebildschirm.
+- `POST /dsh-companion/open-panel` — öffnet das lokale Panel-Fenster (nur Loopback).
+- `POST /dsh-companion/retry` — löscht eine Ablehnung und fordert erneut Zugriff an.
+- `POST /dsh-companion/kill-switch` — widerruft jedes Gerät, schließt Tunnel und rotiert den Zugriffsschlüssel.
+- `POST /dsh-companion/terminal` — Remote-Shell, **deaktiviert, sofern nicht `DSH_ENABLE_TERMINAL=1`**, und nur Loopback.
+- `POST /dsh-companion/action` — Relais für Werkzeug-Freigaben. Gibt `501` zurück: Freigaben leben im DOM der GUI, die Bridge täuscht sie nicht vor.
+- `GET /companion.webmanifest` — PWA-Manifest.
+
+---
+
+## Funktionen des mobilen Clients
+
+- **Befehls-Dock und Code-Tasten.** Eine Reihe von Schnellzugriffen für die Eingabe und eine Reihe von Codesymbolen, die nur erscheinen, solange die Tastatur offen ist: unterhalb der Eingabekarte, wenn es passt, andernfalls darüber. Beide Reihen lassen sich in den Einstellungen ein- und ausschalten.
+- **Verhalten der Eingabetaste.** Standardmäßig fügt die Eingabetaste einen Zeilenumbruch ein; „Eingabe sendet“ kehrt das um. Implementiert gegen Lexical mit `execCommand`, dem einzigen Schreibvorgang, den die Eingabe akzeptiert.
+- **PC-Benachrichtigungen.** Mit aktiviertem Vordergrunddienst erhält das Telefon eine Benachrichtigung, wenn auf dem Computer ein Turn endet, **sogar bei geschlossener App**. Die Bridge beobachtet das Sitzungsprotokoll und reagiert auf den `turn/end`-Eintrag: genau eine Benachrichtigung pro Turn, egal wie lange das Modell oder ein Werkzeug pausiert.
+- **Vordergrund-Benachrichtigungskanal, kritischer Kanal und Freigabekanal.** Kritische Hinweise (Ergebnis des Kill-Switch, widerrufener Zugriff) erscheinen immer und umgehen den Filter „nur wenn verborgen“.
+- **Biometrische Sperre**, Multi-PC-Auswahl mit QR und manueller Eingabe, Wake-on-LAN, Telemetrie-Pille, Satelliten-Übergabe, System-Widget.
 
 ---
 
@@ -145,75 +220,81 @@ Der manuelle Schlüssel verbleibt als Fallback für den Browserzugriff in `%USER
 
 **Zugriff**
 
-- Verbindlicher Shared Key via HTTP Basic auf allen Routen, einschließlich Discovery; Constant-Time-Vergleich und Ratenbegrenzung pro IP.
-- Strikte Client-Autorisierung: Loopback, das Subnetz der Bind-Schnittstelle **mit seiner realen Netzmaske** oder deklarierte CIDR-Blöcke.
-- Der `Host`-Header muss mit dem der Bridge übereinstimmen: verhindert DNS-Rebinding.
-- Abweisung von `Origin: null`, leerem Origin und `Sec-Fetch-Site`-Werten abweichend von `same-origin`/`none`.
-- Abweisung von Anfragen mit gleichzeitigem `Content-Length` und `Transfer-Encoding` (HTTP Request Smuggling).
-- Zugriffsschlüssel und Client-Token werden nicht an das Backend weitergeleitet: Sie werden vor dem Proxy-Forwarding entfernt.
-- WebSocket-Tunnel unterliegt denselben Origin-Prüfungen, CRLF-Bereinigung und geordnetem Verbindungsabbau.
+- Gemeinsamer Schlüssel per HTTP Basic auf jeder Route, Vergleich in konstanter Zeit, Ratenbegrenzung pro IP.
+- Strikte Client-Autorisierung: Loopback, das Subnetz der Bind-Schnittstelle **mit seiner echten Netzmaske** oder explizit deklarierte CIDRs.
+- Die Geräteidentität ist das **Sitzungscookie-Token**, nicht die Quell-IP: Ein Gerät, das eine Adresse erbt, erbt nicht die Sitzung.
+- `Host`-Validierung gegen die Adresse der Bridge (DNS-Rebinding), Ablehnung von `Origin: null`, leerer Origin und unerwartetem `Sec-Fetch-Site`.
+- Sofortige Ablehnung von `Content-Length` + `Transfer-Encoding` (Request-Smuggling).
+- Zugriffsschlüssel und Client-Tokens werden vor dem Proxying an das Backend entfernt.
+- `DSH_ACCESS_DISABLE=1` verweigert den Start, sofern die Bridge nicht an Loopback gebunden ist.
+- Der Kill-Switch **rotiert** den Zugriffsschlüssel; alles, was bereits gepaart war, muss erneut freigegeben werden.
 
-**Anmeldeinformationen**
+**Anmeldedaten**
 
-- Das Sitzungs-Secret wird einmalig eingelesen, niemals protokolliert und gelangt nie an den Client. Es wird beim Start validiert: Fehlt es, bricht der Prozess sofort ab, anstatt Requests hängen zu lassen.
-- HMAC-SHA256-Cookie Version 1, identisch mit dem von DeepSeek Harness generierten Cookie, mit 12 Stunden Gültigkeit und vorausschauender Erneuerung.
-- Antwortet das Backend mit 401, lädt die Bridge das Secret neu und versucht es einmal erneut: übersteht eine Rotation von `.credentials.yaml` ohne Neustart.
+- Das Sitzungsgeheimnis wird einmal gelesen, nie protokolliert und nie an den Client gesendet; der Prozess schlägt sofort fehl, wenn es fehlt.
+- HMAC-SHA256-Cookie Version 1, identisch mit dem von Harness ausgegebenen, 12 Stunden Gültigkeit mit proaktiver Erneuerung.
+- Bei einem Backend-401 lädt die Bridge das Geheimnis neu und versucht es einmal erneut, sodass eine Rotation von `.credentials.yaml` keinen Neustart erfordert.
+- Der Zugriffsschlüssel wird nie vollständig ins Protokoll geschrieben: nur seine letzten vier Zeichen.
+- Das Panel hat kein dauerhaftes Token: Einmal-Ticket plus Sitzungscookie im Speicher.
+- Unter Android werden die gespeicherten Schlüssel mit **AES-256-GCM im Android Keystore** verschlüsselt, mit automatischer Migration älterer Klartextwerte.
 
 **Daten und Speicherung**
 
-- Synchronisierte Konversationen werden atomar geschrieben, mit Dateinamen aus einer kontrollierten ID und strikter Path-Traversal-Prüfung.
-- Sämtliche Inhalte werden vor der Serialisierung escaped: Es wird kein ausführbares HTML in Dateien oder den Index eingeschleust.
-- Explizite Grenzwerte für Body-Größe, Nachrichtenanzahl und Maximallänge einzelner Nachrichten.
-- Das Rate-Limiting besitzt eine Speicherbegrenzung: Kann nicht durch das Fluten mit eindeutigen Schlüsseln aufgebläht werden.
+- Konversationen werden atomar geschrieben, mit bereinigten Bezeichnern und strikter Pfadbegrenzung gegen Pfad-Traversal.
+- Inhalte werden vor der Serialisierung escapt: kein ausführbares HTML gelangt in exportierte Dateien oder Indizes.
+- Explizite Obergrenzen für Body-Größe, Nachrichtenzahl und Länge einzelner Nachrichten.
+- Ratenbegrenzung im Speicher mit einer begrenzten Obergrenze.
 
-**Native App (Android)**
+**Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version 4.4.1, `versionCode` 22, `minSdk` 26, `targetSdk` 35.
-- Weniger als 240 KB, ohne AndroidX oder Kotlin: `classes.dex` besteht aus reinem, reproduzierbarem Java-Bytecode.
-- **Dynamische Multi-PC-Unterstützung:** Beliebig viele Computer hinzufügen und umschalten, inklusive intelligenter Auswahl und sicherem Löschen.
-- **Interaktive Hintergrundbenachrichtigungen:** Ermöglicht das Genehmigen oder Ablehnen von Werkzeugen und `danger-full-access`-Berechtigungen direkt aus der Benachrichtigungsleiste heraus, ohne das App-Fenster öffnen zu müssen.
-- **Redaktioneller Offline-Reader:** Erlaubt das komfortable Lesen synchronisierter Sitzungen auf dem Smartphone mit literarischer, auf Kapitel und narrative Texte optimierter Typografie – selbst bei ausgeschaltetem Computer.
-- **Nüchternes Konsolendesign:** Sachliche Benutzeroberfläche ohne störende Emojis, mit klarer visueller Konsolenhierarchie und der offiziellen dunklen Farbpalette von DeepSeek / GitHub Dark.
-- Lokaler Dateizugriff deaktiviert, Mixed Content blockiert, Popups und Remote-Debugging abgeschaltet.
-- Mikrofonzugriff wird ausschließlich für den exakten Bunker-Origin gewährt (Schema, Host und Port); jeder abweichende Origin wird abgewiesen.
-- Navigation strikt auf den Bunker-Origin beschränkt; externe Links werden über den nativen System-Auswahldialog geöffnet.
-- TLS-Fehler führen ausnahmslos zum Verbindungsabbruch.
-- Navigationsabbrüche (`ERR_ABORTED`) werden nicht als Netzwerkausfälle fehlinterpretiert: keine Endlos-Reload-Schleifen.
-- Wiederholungsversuche werden im Hintergrund pausiert und über exponentiellen Backoff mit Jitter begrenzt.
+- `DSH-Companion.apk` — Version **4.5.10**, `versionCode` 37, `minSdk` 26, `targetSdk` 35.
+- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 210 KB.
+- **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
+- Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
+- Mikrofonzugriff auf die exakte Origin des Bunkers beschränkt (Schema, Host und Port).
+- Navigation auf die Bunker-Origin beschränkt; externe Links werden an die Systemauswahl delegiert.
+- TLS-Fehler brechen die Navigation sofort ab.
+- `ERR_ABORTED` wird von Transportabbrüchen unterschieden, was die endlose Neuladeschleife beseitigt.
+- `onRenderProcessGone` baut die Ansicht neu auf, statt Android die App beenden zu lassen.
+- Die Wiederverbindung pausiert im Hintergrund und wendet exponentielles Backoff mit Jitter an.
+- Freigabe-Benachrichtigungen werden auf dem Sperrbildschirm verborgen (`VISIBILITY_SECRET`), und die Freigabeaktion verweigert die Ausführung, solange das Gerät gesperrt ist.
+
+---
 
 ## Tests
 
 ```bash
-node test/verify_bridge.mjs
-node test/verify_sync_ws.mjs
-node test/verify_access_key.mjs   # erfordert beim Start gesetztes DSH_ACCESS_KEY
+npm test
 ```
 
-Decken Discovery, mobile Viewport-Injektion, Beachtung von `?dshc=off`, Cross-Origin-Abweisung, Request Smuggling, Payload-Grenzwerte, Inhaltsneutralisierung, WebSocket-Handshake und Zugriffskontrolle ab.
+Zehn Suites, **136 Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+
+Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
 ---
 
-## Ehrliche Grenzen
+## Ehrliche Einschränkungen
 
-Dieses Design ist für die **persönliche Nutzung** konzipiert: eine Person, ihre Geräte, ihr privates Netzwerk. Es ist kein mandantenfähiger Multi-User-Dienst.
+Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, seine vertrauenswürdigen Geräte und sein privates Netzwerk. Es ist kein Dienst für mehrere getrennte Mandanten.
 
-- Die Bridge gewährt vollen Zugriff auf die DeepSeek-Harness-Sitzung des ausführenden Windows-Benutzerkontos. Es gibt keine Isolation nach Benutzern oder Geräten.
-- Zwei Smartphones desselben Nutzers teilen sich dieselbe Sitzung, werden jedoch jeweils separat über das Dashboard autorisiert und widerrufen.
-- Es gibt weder Benutzerkonten noch Rollen: Wer ein autorisiertes Gerät besitzt, hat die volle Kontrolle.
-- Das Autorisierungs-Dashboard erfasst letzte Aktivitäten, stellt jedoch kein Revisions-Audit dar: Es lässt sich per Knopfdruck bereinigen.
-- Ein öffentliches oder geteiltes ZeroTier-Netzwerk hebt die Netzwerkbarriere auf. Halten Sie es privat mit manueller Beitrittsautorisierung auf my.zerotier.com.
-- Ein lokaler Windows-Administrator kann Anmeldedaten und Chats auslesen. Das entspricht dem Windows-Sicherheitsmodell, keinem Mangel der Bridge.
-- Synchronisierte Chats werden im Klartext in `synced_chats/` abgelegt. Unter Windows garantiert Modus `0600` keine strikte ACL: Der wirksame Schutz sind die Zugriffsrechte des Benutzerprofils. Verschlüsseln Sie das Laufwerk bei geteilter Hardware.
-- Der Datenverkehr erfolgt als HTTP über das VPN. Dies ist sicher, da ZeroTier und Tailscale den Transport Ende-zu-Ende verschlüsseln; niemals außerhalb des VPNs exponieren.
-- Die Netzwerkautorisierung basiert auf der Quelladresse. Sie schützt nicht vor einem Angreifer, der bereits einen Rechner in diesem Netzwerk kontrolliert: Für diesen Fall existiert `DSH_ACCESS_KEY`.
+- Die Bridge gewährt vollen Zugriff auf die DeepSeek-Harness-Sitzung des zugrunde liegenden Windows-Benutzerkontos. Es gibt keine Rechte-Trennung pro Gerät.
+- Es gibt keine Benutzerkonten oder RBAC: Wer ein autorisiertes Gerät besitzt, kontrolliert die Sitzung.
+- Das Pairing-Panel protokolliert aktuelle Aktivitäten für die betriebliche Sichtbarkeit, ist aber kein unveränderliches Audit-Ledger und kann mit einem einzigen Knopfdruck geleert werden.
+- Ein öffentliches oder geteiltes ZeroTier-Netzwerk hebt den privaten Perimeter auf. Halten Sie Netzwerke privat, indem Sie Knoten manuell auf my.zerotier.com autorisieren.
+- Ein lokaler Administrator auf dem Host kann Anmeldedaten und Konversationsprotokolle einsehen. Das ist das Sicherheitsmodell von Windows, kein Architekturfehler der Bridge.
+- Synchronisierte Chats werden im Klartext in `synced_chats/` gespeichert. Unter Windows übersetzt sich POSIX `0600` nicht in strikte ACLs: Der effektive Schutz ist die ACL des Benutzerprofils. Verwenden Sie BitLocker auf gemeinsam genutzter Hardware.
+- Die Bridge spricht Klartext-HTTP innerhalb des VPN-Tunnels. Das ist solide, solange ZeroTier oder Tailscale den Transport Ende-zu-Ende verschlüsseln; exponieren Sie den Port der Bridge niemals außerhalb des VPN.
+- Die Android-Netzwerksicherheitskonfiguration kann keine IP-Bereiche ausdrücken, daher wird die Cleartext-Regel „nur privat“ im App-Code erzwungen (siehe `CleartextPolicy`). Ein Angreifer, der bereits in Ihrem VPN sitzt, kann diesen Verkehr dennoch lesen: Die Verschlüsselung ist der Tunnel.
+- Die Abschlussbenachrichtigung hängt davon ab, dass DeepSeek Harness den `turn/end`-Eintrag in das Sitzungsprotokoll schreibt. Ändert eine künftige Harness-Version dieses Format, kommt der Hinweis nicht mehr an (die Test-Schaltfläche in der App sagt Ihnen, welche Hälfte versagt hat).
 
 ---
 
-## Hinweis zum Community-Projekt
+## Hinweis zum Gemeinschaftsprojekt
 
-> **Hinweis:** DSH Mobile Companion ist ein quelloffener, von der Community entwickelter mobiler Companion-Client zur Ermöglichung eines sicheren Fernzugriffs auf DeepSeek Harness über private Netzwerke (ZeroTier / Tailscale). Es handelt sich nicht um ein offizielles Produkt von DeepSeek; das Projekt ist weder mit DeepSeek verbunden noch wird es von DeepSeek gesponsert oder unterstützt. Alle genannten Markennamen und Logos sind Eigentum der jeweiligen Inhaber.
+> **Hinweis:** DSH Mobile Companion ist ein von der Gemeinschaft entwickelter mobiler Open-Source-Begleitclient, der sicheren Fernzugriff auf DeepSeek Harness über private Netzwerke (ZeroTier / Tailscale) erleichtert. Es ist kein offizielles DeepSeek-Produkt und weder mit DeepSeek verbunden noch von DeepSeek gesponsert oder unterstützt. Alle genannten Marken und Logos gehören ihren jeweiligen Inhabern.
 
 ## Lizenz
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0. Frei für die individuelle, pädagogische und nicht-kommerzielle Nutzung. Weiterverbreitung und kommerzielle Verwertung ohne ausdrückliche Genehmigung untersagt.
-Urheberschaft und Rechteinhaber: Ismael Muñoz Reyes · Tinta y Nodos. Siehe [LICENSE](LICENSE).
+BSL 1.1 / PolyForm Noncommercial 1.0.0. Kostenlos für individuelle, bildungsbezogene und nicht-kommerzielle Nutzung. Kommerzielle Weiterverbreitung und kommerzielle Verwertung sind ohne ausdrückliche Genehmigung untersagt.
+
+Urheberschaft und Urheberrecht: Ismael Muñoz Reyes · Tinta y Nodos. Siehe [LICENSE](LICENSE).

@@ -49,7 +49,11 @@ export const loadRegistry = () => {
 
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+    // Un BOM al inicio (al guardar el archivo con Notepad o PowerShell) hacia
+    // fallar JSON.parse: el registro quedaba ilegible, se perdian todos los
+    // dispositivos emparejados y no se podia volver a escribir.
+    const raw = fs.readFileSync(registryPath, "utf8").replace(/^\uFEFF/, "");
+    parsed = JSON.parse(raw);
   } catch (error) {
     try {
       fs.copyFileSync(registryPath, `${registryPath}.corrupt`);

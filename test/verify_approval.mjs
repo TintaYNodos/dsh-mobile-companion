@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const HOST = process.env.DSH_TEST_HOST || "10.173.252.87";
+const HOST = process.env.DSH_TEST_HOST || "127.0.0.1";
 const PORT = Number(process.env.DSH_TEST_PORT || 57420);
 const PANEL_PORT = Number(process.env.DSH_PANEL_PORT || 57421);
 

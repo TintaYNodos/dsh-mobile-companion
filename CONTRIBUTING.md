@@ -19,14 +19,13 @@ Al enviar un *Pull Request* (PR), parche de código, propuesta de documentación
 
 ## 2. Directiva de Estilo y Anti-Patrones de IA
 
-Toda contribución técnica o de diseño debe cumplir obligatoriamente con el protocolo establecido en:  
-`internal_docs/REGLAS_ESTILO_Y_ANTI_PATRONES_IA.md`
-
 Reglas clave para aceptar un PR:
 * **Cero emojis en controles:** Prohibido añadir emojis en botones, títulos, menús o barras (`🚀`, `🔍`, `⚙️`, etc.).
-* **Modularización estricta:** Ningún módulo de backend en Node.js debe superar las ~300 líneas de código. Si una funcionalidad nueva crece, debe desacoplarse en un archivo auxiliar limpio dentro de `src/`.
+* **Modularización estricta:** Ningún archivo de código (Node.js o Java) debe superar las **400 líneas**. Si una funcionalidad crece, se desacopla en un módulo con una sola responsabilidad dentro de `src/` o `android_src/`.
 * **Cero dependencias npm externas:** El servidor puente opera 100% sobre APIs nativas de Node.js (`node:http`, `node:crypto`, `node:net`, `node:os`, `node:fs`). No se admiten dependencias añadidas a `package.json`.
 * **Binarios Android compactos (< 250 KB):** El cliente Android debe construirse en Java nativo puro, sin dependencias infladas de AndroidX, Kotlin Runtime ni librerías pesadas de terceros.
+* **Pruebas en verde:** Todo PR debe dejar `npm test` con 136/136 (o más) contra un puente en marcha. La prueba destructiva del kill switch es opt-in con `DSH_TEST_DESTRUCTIVE=1`.
+* **Sin secretos en los cambios:** ni claves, ni tokens, ni direcciones privadas de tu red. El registro de dispositivos y los chats sincronizados no se publican (ver `.gitignore`).
 
 ---
 
@@ -42,5 +41,6 @@ Damos una cálida bienvenida a correcciones de estilo, ortografía y redacción 
 ## 4. Puerto Seguro para Investigación de Seguridad (Safe Harbor)
 
 Apoyamos la investigación ética y de buena fe:
-* Si detectas una vulnerabilidad de seguridad o un fallo en el aislamiento perimétrico, por favor repórtalo de manera responsable a través de los canales privados del proyecto.
+* Si detectas una vulnerabilidad de seguridad o un fallo en el aislamiento perimétrico, repórtalo de forma privada siguiendo [SECURITY.md](SECURITY.md) (aviso privado de GitHub o correo). **No abras un issue público con el detalle.**
+* Confirmamos recepción en 72 horas y damos una evaluación inicial en 7 días.
 * Tinta y Nodos se compromete a no iniciar acciones legales contra investigadores de seguridad que actúen de buena fe bajo los términos de la Sección 8 de [LICENSE](LICENSE).

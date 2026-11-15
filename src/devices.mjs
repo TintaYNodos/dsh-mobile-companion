@@ -25,27 +25,48 @@ export const readCookie = (req) => {
   return null;
 };
 
-export const deviceCookieName = () => COOKIE;
 export const deviceCookieMaxAge = () => config.deviceTtlDays * 24 * 3600;
-export const devicesFile = registryFile;
 
 export const deviceCookieHeader = (id) =>
   `${COOKIE}=${id}; Path=/; Max-Age=${deviceCookieMaxAge()}; HttpOnly; SameSite=Lax`;
 
-export const findPairedDeviceByAddress = (remoteAddress) => {
-  const address = normalize(remoteAddress);
-  if (!address || address.startsWith("127.")) return null;
-  return loadRegistry().devices.find((device) => device.address === address) || null;
+/**
+ * Un dispositivo caduca si lleva mas de `deviceTtlDays` sin aparecer. Antes el
+ * TTL solo alimentaba el Max-Age de la cookie: el servidor aceptaba para
+ * siempre a un dispositivo de hace meses porque solo comparaba el id.
+ */
+export const isDeviceExpired = (device) => {
+  if (!device) return true;
+  const stamp = device.lastSeen || device.lastRefresh || device.approvedAt;
+  const seen = stamp ? new Date(stamp).getTime() : 0;
+  if (!seen) return true;
+  const ttlMs = config.deviceTtlDays * 24 * 60 * 60 * 1000;
+  return Date.now() - seen > ttlMs;
 };
 
 export const findPairedDevice = (req) => {
+  // Solo la cookie identifica al dispositivo. Emparejar por direccion IP dejaba
+  // la sesion abierta a cualquiera que heredara esa IP (DHCP, otra maquina de
+  // la VPN) y anulaba la puerta de la clave de acceso: con una clave
+  // incorrecta, una IP ya aprobada seguia entrando.
   const id = readCookie(req);
-  if (id) {
-    const matched = loadRegistry().devices.find((device) => device.id === id);
-    if (matched) return matched;
+  if (!id) return null;
+  const matched = loadRegistry().devices.find((device) => device.id === id);
+  if (!matched) return null;
+
+  if (isDeviceExpired(matched)) {
+    // Caducado: se descarta del registro para que no vuelva a autorizar.
+    const current = loadRegistry();
+    const before = current.devices.length;
+    current.devices = current.devices.filter((device) => device.id !== matched.id);
+    if (current.devices.length !== before) {
+      saveRegistry();
+      log("pair", `Dispositivo caducado y eliminado: ${matched.address}`);
+    }
+    return null;
   }
-  const remoteAddress = req?.socket?.remoteAddress;
-  return findPairedDeviceByAddress(remoteAddress);
+
+  return matched;
 };
 
 export const recentEvents = () => loadRegistry().history.slice(0, 20);
@@ -103,11 +124,9 @@ export function requestAccess(remoteAddress, userAgent) {
     return { entry: null, created: false, denied: true };
   }
 
-  const alreadyApproved = current.devices.find((d) => d.address === address);
-  if (alreadyApproved) {
-    return { entry: null, created: false, denied: false, approved: true };
-  }
-
+  // Un equipo que ya tiene dispositivo pero llega SIN su cookie no se da por
+  // aprobado: puede ser otro aparato con la misma IP. Se crea la solicitud para
+  // que el panel decida; aprobar reemplaza el dispositivo de esa direccion.
   const existing = current.pending.find((entry) => entry.address === address);
   if (existing) return { entry: existing, created: false, denied: false };
 
@@ -229,11 +248,23 @@ export function revokeAll() {
   return persisted ? removed : -1;
 }
 
+/**
+ * Entrega la cookie de dispositivo a un equipo recien aprobado.
+ *
+ * Se usa UNA sola vez por dispositivo: es el paso en el que el telefono, que
+ * acaba de ser aprobado desde el panel, recibe su credencial. A partir de ahi
+ * la autorizacion exige esa cookie, no la direccion IP, para que nadie que
+ * herede la IP (DHCP, otra maquina de la VPN) entre sin credencial.
+ */
 export function claimApprovedDevice(remoteAddress) {
   const current = loadRegistry();
   const address = normalize(remoteAddress);
+  if (!address) return null;
+
   const device = current.devices.find((entry) => entry.address === address);
   if (!device) return null;
+  // Todavia no tiene cookie: se le entrega ahora (una sola vez).
+  if (device.claimed === true) return null;
 
   device.claimed = true;
   device.lastRefresh = new Date().toISOString();

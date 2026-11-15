@@ -1,4 +1,19 @@
-version: '3.8'
+# DSH Mobile Companion — contenedor del puente
+#
+# El puente necesita dos cosas que un contenedor aislado no tiene por defecto:
+#   1. La misma red privada que el teléfono (ZeroTier / Tailscale). En Linux eso
+#      se consigue con network_mode: host; si publicas puertos, estás exponiendo
+#      el puente fuera del túnel, que es justo lo que el diseño evita.
+#   2. El directorio de DeepSeek Harness con su .credentials.yaml y el registro
+#      de sesiones (de ahí salen los avisos de "respuesta terminada").
+#
+# Antes de arrancar: define DSH_HOME si tu DSH no está en ~/.dsh.
+#
+#   DSH_HOME=/home/tu-usuario/.dsh docker compose up -d
+#
+# En macOS y Windows Docker Desktop no ofrece network_mode: host real: ahí el
+# contenedor no verá las interfaces del túnel. Usa la instalación nativa
+# (install-autostart.bat / install-launchd.sh) en su lugar.
 
 services:
   dsh-companion:
@@ -8,22 +23,32 @@ services:
     image: tintaynodos/dsh-companion:latest
     container_name: dsh-companion
     restart: unless-stopped
-    # En Linux para acceso directo a interfaces ZeroTier/Tailscale se recomienda:
-    # network_mode: host
-    ports:
-      - "57420:57420"
-      - "127.0.0.1:57421:57421"
+
+    # Linux: comparte la pila de red del host para ver ZeroTier/Tailscale.
+    network_mode: host
+
     volumes:
-      - dsh-data:/home/node/.dsh
-      - ./synced_chats:/app/synced_chats
+      # Credenciales, clave de acceso y registro de dispositivos.
+      - ${DSH_HOME:-~/.dsh}:/home/node/.dsh
+      # Conversaciones sincronizadas, legibles desde el host.
+      - ./synced_chats:/app/synced_chats:z
+
     environment:
       - NODE_ENV=production
+      - DSH_HOME=/home/node/.dsh
+      # Personaliza el puerto si el 57420 ya está ocupado en el host.
+      - DSH_LISTEN_PORT=${DSH_LISTEN_PORT:-57420}
+      - DSH_PANEL_PORT=${DSH_PANEL_PORT:-57421}
+      # Descomenta para arrancar sin clave de acceso: solo válido en loopback.
+      # - DSH_ACCESS_DISABLE=1
+      #
+      # La terminal remota está apagada por defecto: el puente es un proxy de la
+      # GUI, no un shell. Actívala solo si sabes lo que implica.
+      # - DSH_ENABLE_TERMINAL=1
+
     healthcheck:
-      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://127.0.0.1:57420/dsh-companion/status\", (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on(\"error\", () => process.exit(1))'"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:57420/dsh-companion/status', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
       interval: 30s
       timeout: 5s
       retries: 3
-
-volumes:
-  dsh-data:
-    driver: local
+      start_period: 10s

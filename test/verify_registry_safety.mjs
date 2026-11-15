@@ -42,12 +42,30 @@ const valid = {
   denied: [],
 };
 
+
+/**
+ * El puente escribe el registro de forma atomica pero concurrente: en Windows
+ * un write directo puede chocar con EBUSY. Se reintenta con una espera corta.
+ */
+async function writeRegistry(content) {
+  for (let intento = 1; intento <= 20; intento++) {
+    try {
+      fs.writeFileSync(registryPath, content);
+      return;
+    } catch (error) {
+      if (error.code !== "EBUSY" && error.code !== "EPERM") throw error;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }
+  throw new Error("no se pudo escribir el registro: seguia ocupado");
+}
+
 // 1. Registro sano: el puente lo lee.
-fs.writeFileSync(registryPath, JSON.stringify(valid, null, 2));
+await writeRegistry(JSON.stringify(valid, null, 2));
 await call("/dsh-companion/status", { "user-agent": "prueba" });
 
 // 2. Se corrompe el archivo y llega una petición del teléfono.
-fs.writeFileSync(registryPath, '{"devices":[{"id":"dispo');
+await writeRegistry('{"devices":[{"id":"dispo');
 await call("/dsh-companion/status", { "user-agent": "prueba" });
 await call("/", { accept: "text/html", "sec-fetch-dest": "document", "user-agent": "prueba" });
 
@@ -55,7 +73,7 @@ const afterCorrupt = fs.readFileSync(registryPath, "utf8");
 check("un registro ilegible no se sobrescribe", afterCorrupt.startsWith('{"devices":[{"id":"dispo'), afterCorrupt.slice(0, 40));
 
 // 3. Al reparar el archivo, el dispositivo sigue ahí y vuelve a leerse.
-fs.writeFileSync(registryPath, JSON.stringify(valid, null, 2));
+await writeRegistry(JSON.stringify(valid, null, 2));
 await call("/dsh-companion/status", { "user-agent": "prueba" });
 
 const repaired = JSON.parse(fs.readFileSync(registryPath, "utf8"));

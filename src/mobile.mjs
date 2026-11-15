@@ -35,5 +35,4 @@ export function injectMobileShell(html) {
   const withoutViewport = VIEWPORT_PATTERN.test(html) ? html.replace(VIEWPORT_PATTERN, "") : html;
   return withoutViewport.replace(HEAD_PATTERN, `${block}\n</head>`);
 }
-
-export const mobileStylesheet = () => MOBILE_STYLES;
+

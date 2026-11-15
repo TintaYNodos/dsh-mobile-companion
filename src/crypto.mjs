@@ -7,6 +7,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.mjs";
+import { findVpnAddress } from "./network.mjs";
+import { log } from "./log.mjs";
 
 const cookies = new Map();
 let secretCache = null;
@@ -132,10 +134,14 @@ export function injectSessionHeaders(headers, authority) {
 
 /**
  * Comparacion en tiempo constante contra el token compartido opcional.
- * Sin token configurado el control de acceso queda delegado a la red privada.
+ *
+ * Fail-closed: sin `DSH_COMPANION_TOKEN` configurado NINGUNA peticion es "de
+ * confianza" por el solo hecho de venir de la red privada. Las rutas que usan
+ * esta funcion aceptan tambien la clave de acceso o la cookie de dispositivo,
+ * que son credenciales verificables; la pertenencia a la VPN no lo es.
  */
 export function isCompanionRequestTrusted(req) {
-  if (!config.companionToken) return true;
+  if (!config.companionToken) return false;
 
   const header = String(req.headers.authorization || "");
   const provided = header.startsWith("Bearer ")
@@ -164,6 +170,16 @@ export function resolveAccessKey() {
   }
 
   if (config.accessKeyDisabled) {
+    // El README promete que desactivar la clave solo vale junto al equipo
+    // (loopback). Antes se apagaba la credencial en cualquier interfaz y la
+    // LAN/VPN quedaba sin ninguna puerta. Se exige enlace local.
+    const binding = findVpnAddress();
+    const local = String(binding?.address || "").startsWith("127.");
+    if (!local) {
+      throw new Error(
+        "DSH_ACCESS_DISABLE=1 solo se permite con el puente enlazado a 127.0.0.1"
+      );
+    }
     accessKeyCache = "";
     return accessKeyCache;
   }
@@ -192,6 +208,28 @@ export function resolveAccessKey() {
 }
 
 export const accessKeyEnabled = () => resolveAccessKey().length > 0;
+
+/**
+ * Rota la clave de acceso: borra la persistida y genera otra.
+ *
+ * La usaba el kill switch solo para revocar dispositivos; la clave seguia siendo
+ * la misma, asi que "cortar accesos" no cortaba la credencial maestra.
+ * Los dispositivos emparejados se identifican por cookie, no por la clave, y el
+ * kill switch los revoca aparte: quien quiera volver a entrar debe emparejarse.
+ */
+export function rotateAccessKey() {
+  const keyFile = path.join(config.dshHome, "companion-access-key");
+  try {
+    if (fs.existsSync(keyFile)) fs.unlinkSync(keyFile);
+  } catch {
+    // Si no se puede borrar, igual se invalida la copia en memoria.
+  }
+  accessKeyCache = null;
+  const fresh = resolveAccessKey();
+  invalidateSession();
+  log("bridge", `Clave de acceso rotada (****${fresh.slice(-4)})`);
+  return fresh;
+}
 
 const BASIC_HEADER = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i;
 

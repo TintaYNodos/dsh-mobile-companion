@@ -32,6 +32,21 @@ public class NotificationActionReceiver extends BroadcastReceiver {
         boolean isReject = NotificationHelper.ACTION_REJECT.equals(action);
         if (!isApprove && !isReject) return;
 
+        // Autorizar sin desbloquear dejaba aprobar herramientas con el telefono
+        // bloqueado. Se exige que el equipo este desbloqueado.
+        try {
+            android.app.KeyguardManager km =
+                    (android.app.KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+            if (km != null && km.isKeyguardLocked()) {
+                NotificationHelper.notifyCritical(context,
+                        "Desbloquea para autorizar",
+                        isApprove
+                                ? "El teléfono está bloqueado. Abre DSH Companion para aprobar esta petición."
+                                : "El teléfono está bloqueado. Abre DSH Companion para rechazar esta petición.");
+                return;
+            }
+        } catch (Throwable ignored) {}
+
         String requestId = intent.getStringExtra(NotificationHelper.EXTRA_REQUEST_ID);
         String actionType = intent.getStringExtra(NotificationHelper.EXTRA_ACTION_TYPE);
         int notifId = intent.getIntExtra(NotificationHelper.EXTRA_NOTIFICATION_ID, 0);
@@ -48,13 +63,19 @@ public class NotificationActionReceiver extends BroadcastReceiver {
 
         if (NotificationHelper.TYPE_TOOL_APPROVAL.equals(actionType)) {
             SharedPreferences prefs = context.getSharedPreferences("DshCompanionPrefs", Context.MODE_PRIVATE);
-            prefs.edit()
-                    .putString("pending_action_decision", decision)
-                    .putString("pending_action_id", requestId)
-                    .apply();
 
             MainActivity instance = MainActivity.getInstance();
             boolean isVisible = MainActivity.isAppVisible();
+
+            // Solo se guarda la acción pendiente cuando no hay proceso que pueda
+            // aplicarla ya. Antes se guardaba siempre y además se despachaba aquí:
+            // la misma aprobación se aplicaba dos veces (y pedía huella dos veces).
+            if (instance == null) {
+                prefs.edit()
+                        .putString("pending_action_decision", decision)
+                        .putString("pending_action_id", requestId)
+                        .apply();
+            }
 
             if (instance != null) {
                 instance.dispatchAction(decision, requestId);
@@ -64,8 +85,13 @@ public class NotificationActionReceiver extends BroadcastReceiver {
                 final String targetBunkerUrl = (bunkerUrl != null && !bunkerUrl.trim().isEmpty())
                         ? bunkerUrl
                         : MainActivity.getActiveBunkerUrl(context);
+                final PendingResult pendingResult = goAsync();
                 new Thread(() -> {
-                    sendToolAction(context, targetBunkerUrl, decision, requestId);
+                    try {
+                        sendToolAction(context, targetBunkerUrl, decision, requestId, isApprove);
+                    } finally {
+                        pendingResult.finish();
+                    }
                 }).start();
             } else {
                 Toast.makeText(context, isApprove ? "Petición aprobada" : "Petición rechazada", Toast.LENGTH_SHORT).show();
@@ -75,18 +101,24 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             final String targetBunkerUrl = (bunkerUrl != null && !bunkerUrl.trim().isEmpty())
                     ? bunkerUrl
                     : MainActivity.getActiveBunkerUrl(context);
+            final PendingResult pendingResult = goAsync();
             new Thread(() -> {
-                sendDeviceAction(context, targetBunkerUrl, apiAction, requestId);
+                try {
+                    sendDeviceAction(context, targetBunkerUrl, apiAction, requestId, isApprove);
+                } finally {
+                    pendingResult.finish();
+                }
             }).start();
         }
     }
 
-    private void sendToolAction(Context context, String bunkerUrl, String action, String requestId) {
+    private void sendToolAction(Context context, String bunkerUrl, String action, String requestId, boolean isApprove) {
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
             bunkerUrl = MainActivity.getActiveBunkerUrl(context);
         }
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
             postToast(context, "Búnker no configurado");
+            NotificationHelper.notifyActionFeedback(context, isApprove, requestId, false);
             return;
         }
 
@@ -95,27 +127,44 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             base = "http://" + base;
         }
 
-        String primaryEndpoint = base + "/dsh-companion/action";
-        boolean success = executePost(context, primaryEndpoint, "{\"action\":\"" + action + "\",\"id\":\"" + requestId + "\",\"requestId\":\"" + requestId + "\"}");
+        boolean success = false;
+        try {
+            String payload = buildToolPayload(action, requestId);
+            String primaryEndpoint = base + "/dsh-companion/action";
+            success = executePost(context, primaryEndpoint, payload);
 
-        if (!success) {
-            String fallbackEndpoint = base + "/dsh-companion/notification-action";
-            success = executePost(context, fallbackEndpoint, "{\"action\":\"" + action + "\",\"id\":\"" + requestId + "\",\"requestId\":\"" + requestId + "\"}");
-        }
+            if (!success) {
+                String fallbackEndpoint = base + "/dsh-companion/notification-action";
+                success = executePost(context, fallbackEndpoint, payload);
+            }
 
-        if (success) {
-            postToast(context, "allow".equals(action) ? "Petición aprobada" : "Petición rechazada");
-        } else {
+            if (success) {
+                // El puente ya aplicó la decisión: no hay nada que reintentar al
+                // abrir la app, así que se descarta la acción pendiente.
+                context.getSharedPreferences("DshCompanionPrefs", Context.MODE_PRIVATE)
+                        .edit()
+                        .remove("pending_action_decision")
+                        .remove("pending_action_id")
+                        .apply();
+                postToast(context, "allow".equals(action) ? "Petición aprobada" : "Petición rechazada");
+            } else {
+                postToast(context, "No se pudo conectar con el puente");
+            }
+        } catch (Exception e) {
+            success = false;
             postToast(context, "No se pudo conectar con el puente");
+        } finally {
+            NotificationHelper.notifyActionFeedback(context, isApprove, requestId, success);
         }
     }
 
-    private void sendDeviceAction(Context context, String bunkerUrl, String action, String deviceId) {
+    private void sendDeviceAction(Context context, String bunkerUrl, String action, String deviceId, boolean isApprove) {
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
             bunkerUrl = MainActivity.getActiveBunkerUrl(context);
         }
         if (bunkerUrl == null || bunkerUrl.trim().isEmpty()) {
             postToast(context, "Búnker no configurado");
+            NotificationHelper.notifyActionFeedback(context, isApprove, deviceId, false);
             return;
         }
 
@@ -124,13 +173,46 @@ public class NotificationActionReceiver extends BroadcastReceiver {
             base = "http://" + base;
         }
 
-        String endpoint = base + "/dsh-companion/notification-action";
-        boolean success = executePost(context, endpoint, "{\"action\":\"" + action + "\",\"id\":\"" + deviceId + "\"}");
+        boolean success = false;
+        try {
+            String endpoint = base + "/dsh-companion/notification-action";
+            String payload;
+            try {
+                org.json.JSONObject body = new org.json.JSONObject();
+                body.put("action", action);
+                body.put("id", deviceId);
+                payload = body.toString();
+            } catch (Exception error) {
+                payload = "{}";
+            }
+            success = executePost(context, endpoint, payload);
 
-        if (success) {
-            postToast(context, "approve_device".equals(action) ? "Dispositivo autorizado" : "Dispositivo rechazado");
-        } else {
+            if (success) {
+                postToast(context, "approve_device".equals(action) ? "Dispositivo autorizado" : "Dispositivo rechazado");
+            } else {
+                postToast(context, "No se pudo conectar con el puente");
+            }
+        } catch (Exception e) {
+            success = false;
             postToast(context, "No se pudo conectar con el puente");
+        } finally {
+            NotificationHelper.notifyActionFeedback(context, isApprove, deviceId, success);
+        }
+    }
+
+    /**
+     * Cuerpo JSON del POST. Se construye con JSONObject para escapar el id: antes
+     * se concatenaba a mano y un id con comillas rompía el cuerpo entero.
+     */
+    private String buildToolPayload(String action, String requestId) {
+        try {
+            org.json.JSONObject body = new org.json.JSONObject();
+            body.put("action", action);
+            body.put("id", requestId);
+            body.put("requestId", requestId);
+            return body.toString();
+        } catch (Exception error) {
+            return "{}";
         }
     }
 

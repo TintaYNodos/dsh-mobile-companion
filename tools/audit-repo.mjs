@@ -134,7 +134,7 @@ const allText = tracked.filter((x) => /\.(md|mjs|java|html)$/.test(x)).map(read)
 const RUNTIME_FILES = new Set([
   "companion-devices.json", "companion-access-key", "companion-panel-token",
   "companion-panel-url.txt", "bridge.log", "session.v4.jsonl.zstd",
-  ".credentials.yaml", "dsh-companion.service",
+  ".credentials.yaml", "dsh-companion.service", "doctor-report.json",
 ]);
 for (const m of allText.matchAll(/`([A-Za-z0-9_.\/-]+\.(?:mjs|java|json|md|html|css|js|yml|bat|vbs|sh|plist|svg|webmanifest))`/g)) {
   const name = m[1];

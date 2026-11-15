@@ -80,3 +80,6 @@ companion.stop
 *.jks
 keystore-password*
 release-keys/
+
+# Informe del diagnostico (se genera al ejecutarlo)
+doctor-report.json

@@ -25,12 +25,15 @@ language, and give the user the exact steps to fix it. Never report success with
 
 Run this in the project directory:
 
-    powershell -ExecutionPolicy Bypass -File doctor.ps1
+    powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report
 
-It checks Node, DeepSeek Harness credentials, the private tunnel, the bridge and the panel.
-Paste its output. Then:
+It returns machine-readable JSON (and writes `doctor-report.json`). Parse it, do not scrape the
+text version:
 
-- If it exits 0: continue with Step 2, and keep its "phone address" line.
+- `ok: true` → continue with Step 2. Use `phoneUrl` and `tunnel` exactly as reported.
+- `ok: false` → read `blockers` (the human-readable messages) and fix them one by one. The ids
+  in `checks[]` are stable slugs: use them to look up the fix below instead of improvising.
+- Never invent an IP, a version or a tunnel. If a field is empty, the step is missing.
 - If it reports NO TUNNEL (most common problem): STOP HERE. Do not invent an IP and do not
   continue. Explain to the user, briefly:
     * A phone cannot reach this computer without a private network between them. The bridge
@@ -160,12 +163,15 @@ los pasos exactos para arreglarlo. Nunca declares éxito sin pruebas.
 
 Ejecuta en la carpeta del proyecto:
 
-    powershell -ExecutionPolicy Bypass -File doctor.ps1
+    powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report
 
-Comprueba Node, credenciales de DeepSeek Harness, el túnel privado, el puente y el panel.
-Pega su salida. Después:
+Devuelve JSON legible por máquina (y escribe `doctor-report.json`). Parsea el JSON, no raspes el
+texto:
 
-- Si termina en 0: sigue con el Paso 2 y guarda su línea de "dirección para el teléfono".
+- `ok: true` → continúa con el Paso 2. Usa `phoneUrl` y `tunnel` tal como vienen.
+- `ok: false` → lee `blockers` y corrige uno por uno. Los ids de `checks[]` son slugs estables:
+  úsalos para buscar la solución de abajo en vez de improvisar.
+- Nunca inventes una IP, una versión ni un túnel. Si un campo viene vacío, ese paso falta.
 - Si dice que NO HAY TÚNEL (lo más habitual): PÁRATE. No inventes una IP ni continúes.
   Explícale, en corto:
     * Sin una red privada entre el teléfono y la computadora, el teléfono no puede llegar.

@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.1.2**（`versionCode` 42）。
+当前版本：**5.1.3**（`versionCode` 43）。
 
 ---
 
@@ -84,6 +84,14 @@ companion/
 │   ├── system-stats.mjs       CPU、内存与温度遥测
 │   ├── qr.mjs / visual-lab.mjs QR 与可视化测试台的辅助模块
 │   └── ratelimit.mjs          每客户端令牌桶
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
+├── tools/
+├── audit-repo.mjs   仓库审计（文本、语法、版本、密钥）
+├── build-apk.ps1   无需 Gradle 构建并签名 APK
+├── RELEASING.md   发布检查清单
+├── .github/workflows/verify.yml   CI：每次推送检查语法与审计
+├── SECURITY.md   如何报告漏洞
+└── CHANGELOG.md   版本历史
 ├── android_src/               原生客户端（纯 Java，无 AndroidX）
 │   ├── MainActivity.java      生命周期与编排
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +104,7 @@ companion/
 │   ├── KeyStoreVault.java     使用 Android Keystore 加密存储的密钥
 │   └── …                      发现、遥测、卫星、WOL、小组件
 ├── test/
-│   ├── verify_*.mjs           十一个验证套件（155 项检查）
+│   ├── verify_*.mjs           十一个验证套件（154 项检查）
 │   ├── _harness.mjs           共享客户端
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              已持久化的会话（.md 与 .json）
@@ -166,6 +174,10 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 | `DSH_DEVICE_TTL_DAYS` | `30` | 设备会话有效期；过期设备会被拒绝并清除 |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | 使用时效期续期的间隔 |
 | `DSH_PENDING_TTL_MIN` | `15` | 配对请求等待审批的分钟数 |
+| `DSH_ALLOWED_HOSTS` | 空 | `Host`/`Origin` 额外允许的主机名（Tailscale MagicDNS） |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` 接受通用 tun/tap 接口 |
+| `DSH_SYNC_MAX_FILES` | `200` | 保留的同步会话最大数量 |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | `synced_chats/` 的最大大小（MB） |
 
 ### 从电脑进行一次性批准
 
@@ -247,7 +259,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.1.2**、`versionCode` 42、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.1.3**、`versionCode` 43、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 210 KB。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
@@ -261,19 +273,28 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 ---
 
+## 构建 APK
+
+无需 Gradle 或 Android Studio：使用 SDK 的构建工具组装 APK。需要 JDK 17+、包含 `android-35` 的 Android SDK 与 build-tools，以及一个密钥库（默认使用调试密钥库）。
+
+```powershell
+`powershell -ExecutionPolicy Bypass -File build-apk.ps1`
+```
+
+
 ## 测试
 
 ```bash
 npm test
 ```
 
-十一个套件、**155 项检查**，覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
+十一个套件、**154 项检查**，覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
 
 套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
 ---
 
-> **卫星模式（可选）：** 离线页面可以使用你在手机上配置的 API 密钥把对话发送到 `api.deepseek.com`。这是唯一离开你私有网络的功能；它是可选的、需要该密钥，并且自 5.1.2 起只能由堡垒机的主框架触发。
+> **卫星模式（可选）：** 离线页面可以使用你在手机上配置的 API 密钥把对话发送到 `api.deepseek.com`。这是唯一离开你私有网络的功能；它是可选的、需要该密钥，并且自 5.1.0 起只能由堡垒机的主框架触发。
 
 ## 坦诚的局限
 
@@ -293,7 +314,7 @@ npm test
 
 ## 稳定性
 
-**5.1.2 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.3。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
+**5.1.3 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.3。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
 
 ## 截图
 

@@ -16,7 +16,7 @@ Follow these steps in order and report what you did at each one:
 
 1. Check the environment.
    - The DSH home is "%USERPROFILE%\.dsh" on Windows, "~/.dsh" on macOS and Linux.
-   - Locate Node.js: "node -v" must be 20 or newer. If it is not in PATH, use the runtime that ships
+   - Locate Node.js: "node -v" must be 22.15 or newer. If it is not in PATH, use the runtime that ships
      with DSH: "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe".
    - Confirm DeepSeek Harness is running locally (it listens on a loopback port and writes
      ".credentials.yaml" inside the DSH home).
@@ -28,10 +28,9 @@ Follow these steps in order and report what you did at each one:
 3. Configure.
    - Do not hardcode any IP address in the sources.
    - Leave the access key at its default (generated on first start) unless the user asks otherwise.
-   - Do not enable the remote terminal. It is off by default on purpose.
-
+   - 
 4. Start it in the background.
-   - Windows: run "install-autostart.bat" so it survives a reboot, then start it with "run-hidden.vbs".
+   - Windows: run "install-autostart.bat" once. It registers the silent startup **and starts the bridge**, so do not launch "run-hidden.vbs" again (the second instance would only fail with EADDRINUSE).
    - macOS: "install-launchd.sh". Linux: "install-systemd.sh".
    - Do not run the bridge in a visible console window as the final state.
 

@@ -19,7 +19,7 @@ La pantalla del teléfono se actualiza por sí misma cada 2 segundos.
 - Escucha **solo en 127.0.0.1:57421**. No es alcanzable desde la VPN: desde otro
   equipo el puente responde 403.
 - Exige su **propia credencial**: un boleto de un solo uso guardado en `%USERPROFILE%\.dsh\companion-panel-token`. Al abrirlo se canjea por una cookie de sesión HttpOnly cuyo identificador solo vive en memoria y caduca a las 12 h; el boleto se regenera en cada canje.
-  `panel.bat` la inyecta en la URL y el panel la cambia por una cookie de una semana,
+  `panel.bat` la inyecta en la URL y el panel la cambia por una cookie de 12 horas,
   para que el token no quede en el historial.
 - Muestra las solicitudes pendientes y los **dispositivos autorizados**.
 - Cada dispositivo se puede **nombrar** (por ejemplo "Pixel de Ismael"), **revocar**

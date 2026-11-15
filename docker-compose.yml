@@ -53,14 +53,13 @@ services:
       #
       # La terminal remota está apagada por defecto: el puente es un proxy de la
       # GUI, no un shell. Actívala solo si sabes lo que implica.
-      # - DSH_ENABLE_TERMINAL=1
 
     # P49: healthcheck real contra /dsh-companion/status: es la unica ruta que
     # responde 200 sin credenciales a un cliente que no pide HTML (el resto,
     # como /offline, devuelve 403 o la pagina de espera de aprobacion). Se
     # valida tambien que el cuerpo sea del puente y no un 200 ajeno.
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:57420/dsh-companion/status', (r) => { let b = ''; r.setEncoding('utf8'); r.on('data', (c) => b += c); r.on('end', () => process.exit(r.statusCode === 200 && b.includes('dsh-companion') ? 0 : 1)); }).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:' + (process.env.DSH_LISTEN_PORT || 57420) + '/dsh-companion/status', (r) => { let b = ''; r.setEncoding('utf8'); r.on('data', (c) => b += c); r.on('end', () => process.exit(r.statusCode === 200 && b.includes('dsh-companion') ? 0 : 1)); }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

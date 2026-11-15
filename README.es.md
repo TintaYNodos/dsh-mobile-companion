@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · **[Español (México)](README.es.md)** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ La aplicación móvil no reimplementa la interfaz: muestra la propia Web GUI de 
 
 Edición endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versión actual: **5.1.2** (`versionCode` 42).
+Versión actual: **5.1.3** (`versionCode` 43).
 
 ---
 
@@ -84,6 +84,7 @@ companion/
 │   ├── system-stats.mjs       telemetría de CPU, memoria y temperatura
 │   ├── qr.mjs / visual-lab.mjs utilidades para los arneses de QR y visual
 │   └── ratelimit.mjs          cubo de fichas por cliente
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
 ├── android_src/               cliente nativo (Java puro, sin AndroidX)
 │   ├── MainActivity.java      ciclo de vida y orquestación
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +97,7 @@ companion/
 │   ├── KeyStoreVault.java    cifrado con Android Keystore para las claves guardadas
 │   └── …                     descubrimiento, telemetría, satélite, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           once suites de verificación (155 comprobaciones)
+│   ├── verify_*.mjs           once suites de verificación (154 comprobaciones)
 │   ├── _harness.mjs           cliente compartido
 │   └── run-all.mjs            `npm test`
 ├── tools/
@@ -142,7 +143,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 Node.js 22.15 o más reciente, sin dependencias de npm.
 
 1. Define una clave de acceso (muy recomendado; ver más abajo).
-2. Instala el arranque automático con `install-autostart.bat` (tarea silenciosa al iniciar sesión en Windows).
+2. Instala el arranque automático con `install-autostart.bat`: registra la tarea silenciosa **y arranca el puente**. No lo inicies otra vez a mano.
 3. El puente detecta la interfaz de ZeroTier o Tailscale y se enlaza a ella. Si la detección falla, define `DSH_BIND_HOST` con tu IP privada.
 
 #### Teléfono
@@ -173,6 +174,10 @@ Dos métodos equivalentes:
 | `DSH_DEVICE_TTL_DAYS` | `30` | Vida de la sesión de dispositivo; los dispositivos vencidos se rechazan y se purgan |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Cada cuánto se renueva la vida al usar el dispositivo |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutos que una solicitud de emparejamiento espera aprobación |
+| `DSH_ALLOWED_HOSTS` | vacío | Nombres de host extra aceptados en `Host`/`Origin` (MagicDNS de Tailscale) |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` acepta una interfaz tun/tap genérica como red privada |
+| `DSH_SYNC_MAX_FILES` | `200` | Número máximo de conversaciones sincronizadas que se conservan |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | Tamaño máximo de `synced_chats/` en MB |
 
 ### Aprobación única desde la computadora
 
@@ -209,6 +214,14 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 - `POST /dsh-companion/retry` — borra un rechazo y solicita acceso de nuevo.
 - `POST /dsh-companion/kill-switch` — revoca todos los dispositivos, cierra los túneles y rota la clave de acceso.
 - `POST /dsh-companion/action` — retransmisión de aprobaciones de herramientas. Devuelve `501`: las aprobaciones viven en el DOM de la GUI; el puente no las falsifica.
+- `GET /dsh-companion/stats` — host telemetry (authorized).
+- `POST /dsh-companion/absorb-satellite` — absorbs a satellite-mode note into the conversation.
+- `POST /dsh-companion/notification-action` — action from a notification (devices; loopback only).
+- `GET /simulator` — mobile interface simulator for development.
+- `GET /dsh-companion/stats` — telemetría del host (autorizado).
+- `POST /dsh-companion/absorb-satellite` — absorbe una nota del modo satélite en la conversación.
+- `POST /dsh-companion/notification-action` — acción desde una notificación (dispositivos; solo loopback).
+- `GET /simulator` — simulador de la interfaz móvil para desarrollo.
 - `GET /companion.webmanifest` — manifiesto PWA.
 
 ---
@@ -254,7 +267,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión **5.1.3**, `versionCode` 43, `minSdk` 26, `targetSdk` 35.
 - Sin AndroidX y sin Kotlin: bytecode Java puro, alrededor de 210 KB.
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, DeepSeek). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.
@@ -270,7 +283,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 ## Construir el APK
 
-Sin Gradle ni Android Studio: el APK se arma con las herramientas del SDK.
+Sin Gradle ni Android Studio: el APK se arma con las herramientas del SDK. Requisitos: **JDK 17+**, Android SDK con la plataforma `android-35` y build-tools, y un keystore (por defecto el de depuración).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File build-apk.ps1
@@ -286,7 +299,7 @@ Lee la versión de `src/config.mjs`, compila `android_src/` con `javac`, pasa po
 npm test
 ```
 
-Once suites, **155 comprobaciones**, que cubren descubrimiento, inyección móvil, `?dshc=off`, rechazo de origen cruzado, defensas contra contrabando de peticiones, límites de cuerpo, saneamiento de contenido, integridad del handshake WebSocket, seguridad ante corrupción del registro, control de acceso, relevo satélite, TTL del registro de dispositivos, flujo del panel e interruptor de seguridad.
+Once suites, **154 comprobaciones**, que cubren descubrimiento, inyección móvil, `?dshc=off`, rechazo de origen cruzado, defensas contra contrabando de peticiones, límites de cuerpo, saneamiento de contenido, integridad del handshake WebSocket, seguridad ante corrupción del registro, control de acceso, relevo satélite, TTL del registro de dispositivos, flujo del panel e interruptor de seguridad.
 
 La suite habla con un **puente en vivo** (no es un mock): inicia el puente primero. La ejecución real del interruptor de seguridad es destructiva —revoca dispositivos y rota la clave—, así que se activa de forma opcional con `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -312,7 +325,7 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## Estabilidad
 
-**La 5.1.2 es la base congelada de la serie 5.** No recibe funciones nuevas; solo un fallo de seguridad crítico produciría una 5.1.3. Lo siguiente sale como **pre-release** (5.2.0-pre.1 y siguientes) hasta estabilizarse. La rama `stable/5` conserva exactamente este árbol.
+**La 5.1.3 es la base congelada de la serie 5.** No recibe funciones nuevas; solo un fallo de seguridad crítico produciría una 5.1.3. Lo siguiente sale como **pre-release** (5.2.0-pre.1 y siguientes) hasta estabilizarse. La rama `stable/5` conserva exactamente este árbol.
 
 
 ## Capturas
@@ -324,6 +337,10 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 ## Aviso de proyecto comunitario
 
 > **Aviso:** DSH Mobile Companion es un cliente móvil complementario desarrollado por la comunidad para facilitar el acceso remoto seguro a DeepSeek Harness a través de redes privadas (ZeroTier / Tailscale). No es un producto oficial de DeepSeek ni está afiliado, patrocinado o respaldado por DeepSeek. Todas las marcas y logotipos mencionados pertenecen a sus respectivos propietarios.
+
+## Documentos del proyecto
+
+[SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
 ## Licencia
 

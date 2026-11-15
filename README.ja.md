@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.1.2**（`versionCode` 42）。
+現在のバージョン：**5.1.3**（`versionCode` 43）。
 
 ---
 
@@ -84,6 +84,14 @@ companion/
 │   ├── system-stats.mjs       CPU、メモリ、温度のテレメトリ
 │   ├── qr.mjs / visual-lab.mjs QR とビジュアルハーネス用のヘルパー
 │   └── ratelimit.mjs          クライアントごとのトークンバケット
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
+├── tools/
+├── audit-repo.mjs   リポジトリ監査（テキスト、構文、バージョン、秘密情報）
+├── build-apk.ps1   Gradle なしで APK をビルドして署名
+├── RELEASING.md   リリース手順
+├── .github/workflows/verify.yml   CI：push ごとに構文チェックと監査
+├── SECURITY.md   脆弱性の報告方法
+└── CHANGELOG.md   バージョン履歴
 ├── android_src/               ネイティブクライアント（ピュア Java、AndroidX なし）
 │   ├── MainActivity.java      ライフサイクルとオーケストレーション
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +104,7 @@ companion/
 │   ├── KeyStoreVault.java     保存キーの Android Keystore 暗号化
 │   └── …                     ディスカバリ、テレメトリ、サテライト、WOL、ウィジェット
 ├── test/
-│   ├── verify_*.mjs           11 個の検証スイート（155 チェック）
+│   ├── verify_*.mjs           11 個の検証スイート（154 チェック）
 │   ├── _harness.mjs           共有クライアント
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              永続化された会話（.md および .json）
@@ -166,6 +174,10 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 | `DSH_DEVICE_TTL_DAYS` | `30` | デバイスセッションの寿命。期限切れのデバイスは拒否され、削除される |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | 使用時に寿命が更新される間隔 |
 | `DSH_PENDING_TTL_MIN` | `15` | ペアリング要求が承認を待つ分数 |
+| `DSH_ALLOWED_HOSTS` | 空 | `Host`/`Origin` で追加許可するホスト名（Tailscale MagicDNS） |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` で汎用 tun/tap インターフェースを許可 |
+| `DSH_SYNC_MAX_FILES` | `200` | 保持する同期会話の最大数 |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | `synced_chats/` の最大サイズ（MB） |
 
 ### パソコンからの初回承認
 
@@ -247,7 +259,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.1.2**、`versionCode` 42、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — バージョン **5.1.3**、`versionCode` 43、`minSdk` 26、`targetSdk` 35。
 - AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 210 KB。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
@@ -261,6 +273,15 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 ---
 
+## APK のビルド
+
+Gradle も Android Studio も使いません。SDK のビルドツールで APK を組み立てます。必要なもの：JDK 17 以上、`android-35` を含む Android SDK と build-tools、そしてキーストア（既定はデバッグ用）。
+
+```powershell
+`powershell -ExecutionPolicy Bypass -File build-apk.ps1`
+```
+
+
 ## テスト
 
 ```bash
@@ -273,7 +294,7 @@ npm test
 
 ---
 
-> **サテライトモード（任意）：** オフラインページは、スマートフォンで設定した API キーを使って会話を `api.deepseek.com` に送信できます。プライベートネットワークの外に出る唯一の機能です。任意で、そのキーが必要で、5.1.2 以降はバンカーのメインフレームからのみ起動できます。
+> **サテライトモード（任意）：** オフラインページは、スマートフォンで設定した API キーを使って会話を `api.deepseek.com` に送信できます。プライベートネットワークの外に出る唯一の機能です。任意で、そのキーが必要で、5.1.0 以降はバンカーのメインフレームからのみ起動できます。
 
 ## 正直な制限
 
@@ -293,7 +314,7 @@ npm test
 
 ## 安定性
 
-**5.1.2 はシリーズ 5 の固定ベースラインです。** 新機能は追加せず、重大なセキュリティ修正のみ 5.1.3 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
+**5.1.3 はシリーズ 5 の固定ベースラインです。** 新機能は追加せず、重大なセキュリティ修正のみ 5.1.3 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
 
 ## スクリーンショット
 

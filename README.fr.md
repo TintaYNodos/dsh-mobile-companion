@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ L'application mobile ne réimplémente pas l'interface : elle affiche la propre 
 
 Édition durcie par Ismael Muñoz Reyes pour Tinta y Nodos.
 
-Version actuelle : **5.1.2** (`versionCode` 42).
+Version actuelle : **5.1.3** (`versionCode` 43).
 
 ---
 
@@ -84,6 +84,14 @@ companion/
 │   ├── system-stats.mjs       télémétrie CPU, mémoire et température
 │   ├── qr.mjs / visual-lab.mjs assistants pour les harnais QR et visuel
 │   └── ratelimit.mjs          seau à jetons par client
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
+├── tools/
+├── audit-repo.mjs   audit du dépôt (texte, syntaxe, versions, secrets)
+├── build-apk.ps1   construit et signe l'APK sans Gradle
+├── RELEASING.md   liste de contrôle de publication
+├── .github/workflows/verify.yml   CI : syntaxe + audit à chaque push
+├── SECURITY.md   comment signaler une vulnérabilité
+└── CHANGELOG.md   historique des versions
 ├── android_src/               client natif (Java pur, sans AndroidX)
 │   ├── MainActivity.java      cycle de vie et orchestration
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +104,7 @@ companion/
 │   ├── KeyStoreVault.java    chiffrement Android Keystore des clés stockées
 │   └── …                     découverte, télémétrie, satellite, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           onze suites de vérification (155 contrôles)
+│   ├── verify_*.mjs           onze suites de vérification (154 contrôles)
 │   ├── _harness.mjs           client partagé
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversations persistées (.md et .json)
@@ -166,6 +174,10 @@ Deux méthodes équivalentes :
 | `DSH_DEVICE_TTL_DAYS` | `30` | Durée de vie de la session d'appareil ; les appareils expirés sont rejetés et purgés |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Fréquence de renouvellement de la durée de vie à l'usage |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutes pendant lesquelles une demande d'appairage attend l'approbation |
+| `DSH_ALLOWED_HOSTS` | vide | Noms d'hôte supplémentaires acceptés dans `Host`/`Origin` (MagicDNS Tailscale) |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` accepte une interface tun/tap générique |
+| `DSH_SYNC_MAX_FILES` | `200` | Nombre maximal de conversations conservées |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | Taille maximale de `synced_chats/` en Mo |
 
 ### Approbation unique depuis l'ordinateur
 
@@ -247,7 +259,7 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.3**, `versionCode` 43, `minSdk` 26, `targetSdk` 35.
 - Ni AndroidX ni Kotlin : bytecode Java pur, environ 210 Ko.
 - **Cleartext bloqué hors du réseau privé** : `CleartextPolicy` rejette toute requête qui n'est pas en HTTPS ou qui ne pointe pas vers le bunker configuré ou une adresse privée/loopback, et la configuration de sécurité réseau interdit le cleartext vers les services publics avec lesquels l'application communique (GitHub, DeepSeek). Cela est appliqué au-dessus de la WebView, car la configuration de sécurité réseau d'Android ne peut pas exprimer « plages d'IP privées uniquement ».
 - Accès aux fichiers locaux désactivé, contenu mixte bloqué, popups et débogage distant désactivés.
@@ -261,19 +273,28 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 ---
 
+## Construire l'APK
+
+Sans Gradle ni Android Studio : l'APK est assemblé avec les outils du SDK. Prérequis : JDK 17+, SDK Android avec la plateforme `android-35` et les build-tools, et un keystore (par défaut celui de débogage).
+
+```powershell
+`powershell -ExecutionPolicy Bypass -File build-apk.ps1`
+```
+
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Onze suites, **155 contrôles**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le relais satellite, le TTL du registre des appareils, le flux du panneau et le kill switch.
+Onze suites, **154 contrôles**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le relais satellite, le TTL du registre des appareils, le flux du panneau et le kill switch.
 
 La suite parle à un **pont en direct** (ce n'est pas une simulation) : démarrez d'abord le pont. L'exécution réelle du kill switch est destructrice — elle révoque des appareils et fait tourner la clé —, elle doit donc être activée explicitement avec `DSH_TEST_DESTRUCTIVE=1`.
 
 ---
 
-> **Mode satellite (facultatif) :** la page hors ligne peut envoyer une conversation à `api.deepseek.com` avec la clé d'API configurée sur le téléphone. C'est la seule fonction qui sort de votre réseau privé ; elle est facultative, exige cette clé et, depuis la 5.1.2, seul le frame principal du bunker peut la déclencher.
+> **Mode satellite (facultatif) :** la page hors ligne peut envoyer une conversation à `api.deepseek.com` avec la clé d'API configurée sur le téléphone. C'est la seule fonction qui sort de votre réseau privé ; elle est facultative, exige cette clé et, depuis la 5.1.0, seul le frame principal du bunker peut la déclencher.
 
 ## Limites honnêtes
 
@@ -293,7 +314,7 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 ## Stabilité
 
-**La 5.1.2 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.3. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
+**La 5.1.3 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.3. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
 
 ## Captures
 

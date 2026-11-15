@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** **[English](README.md)** · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **5.1.2** (`versionCode` 42).
+Current version: **5.1.3** (`versionCode` 43).
 
 ---
 
@@ -84,6 +84,7 @@ companion/
 │   ├── system-stats.mjs       CPU, memory and temperature telemetry
 │   ├── qr.mjs / visual-lab.mjs helpers for the QR and visual harnesses
 │   └── ratelimit.mjs          per-client token bucket
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
 ├── android_src/               native client (pure Java, no AndroidX)
 │   ├── MainActivity.java      lifecycle and orchestration
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +97,7 @@ companion/
 │   ├── KeyStoreVault.java    Android Keystore encryption for stored keys
 │   └── …                     discovery, telemetry, satellite, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           eleven verification suites (155 checks)
+│   ├── verify_*.mjs           eleven verification suites (154 checks)
 │   ├── _harness.mjs           shared client
 │   └── run-all.mjs            `npm test`
 ├── tools/
@@ -142,7 +143,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 Node.js 22.15 or newer, no npm dependencies.
 
 1. Set an access key (strongly recommended; see below).
-2. Install automatic startup with `install-autostart.bat` (silent task at Windows logon).
+2. Install automatic startup with `install-autostart.bat`: it registers the silent task **and starts the bridge**. Do not start it again by hand.
 3. The bridge detects the ZeroTier or Tailscale interface and binds to it. If detection fails, set `DSH_BIND_HOST` to your private IP.
 
 #### Phone
@@ -173,6 +174,10 @@ Two equivalent methods:
 | `DSH_DEVICE_TTL_DAYS` | `30` | Device session lifetime; expired devices are rejected and purged |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | How often the lifetime renews on use |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutes a pairing request waits for approval |
+| `DSH_ALLOWED_HOSTS` | empty | Extra host names accepted in `Host`/`Origin` (Tailscale MagicDNS) |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` accepts a generic tun/tap interface as the private network |
+| `DSH_SYNC_MAX_FILES` | `200` | Maximum number of synchronized conversations kept |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | Maximum size of `synced_chats/` in MB |
 
 ### One-time approval from the computer
 
@@ -209,6 +214,14 @@ The manual access key remains available as a fallback for standard browser acces
 - `POST /dsh-companion/retry` — clears a rejection and requests access again.
 - `POST /dsh-companion/kill-switch` — revokes every device, closes tunnels and rotates the access key.
 - `POST /dsh-companion/action` — tool approval relay. Returns `501`: approvals live in the GUI's DOM, the bridge does not fake them.
+- `GET /dsh-companion/stats` — host telemetry (authorized).
+- `POST /dsh-companion/absorb-satellite` — absorbs a satellite-mode note into the conversation.
+- `POST /dsh-companion/notification-action` — action from a notification (devices; loopback only).
+- `GET /simulator` — mobile interface simulator for development.
+- `GET /dsh-companion/stats` — telemetría del host (autorizado).
+- `POST /dsh-companion/absorb-satellite` — absorbe una nota del modo satélite en la conversación.
+- `POST /dsh-companion/notification-action` — acción desde una notificación (dispositivos; solo loopback).
+- `GET /simulator` — simulador de la interfaz móvil para desarrollo.
 - `GET /companion.webmanifest` — PWA manifest.
 
 ---
@@ -254,7 +267,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.3**, `versionCode` 43, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
@@ -270,7 +283,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 ## Building the APK
 
-No Gradle, no Android Studio: the APK is assembled with the Android SDK build tools.
+No Gradle, no Android Studio: the APK is assembled with the Android SDK build tools. Requirements: **JDK 17+**, Android SDK with the `android-35` platform and build-tools, and a keystore (the debug one by default).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File build-apk.ps1
@@ -286,7 +299,7 @@ It reads the version from `src/config.mjs`, compiles `android_src/` with `javac`
 npm test
 ```
 
-Eleven suites, **155 checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, satellite hand-off, device registry TTL, panel flow and the kill switch.
+Eleven suites, **154 checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, satellite hand-off, device registry TTL, panel flow and the kill switch.
 
 The suite talks to a **live bridge** (it is not a mock): start the bridge first. The real kill-switch run is destructive — it revokes devices and rotates the key — so it is opt-in with `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -312,7 +325,7 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ## Stability
 
-**5.1.2 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.3. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
+**5.1.3 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.3. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
 
 
 ## Screenshots
@@ -324,6 +337,10 @@ This design is intended for **personal use**: one operator, their trusted device
 ## Community project notice
 
 > **Notice:** DSH Mobile Companion is a companion mobile client developed by the community to facilitate secure remote access to DeepSeek Harness over private networks (ZeroTier / Tailscale). It is not an official DeepSeek product, nor is it affiliated with, sponsored by, or endorsed by DeepSeek. All referenced trademarks and logos belong to their respective owners.
+
+## Project documents
+
+[SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
 ## License
 

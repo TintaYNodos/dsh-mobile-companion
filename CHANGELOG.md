@@ -3,6 +3,36 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.3 — `versionCode` 43
+
+Correcciones de la auditoría final de publicación. Sin cambios de comportamiento.
+
+### Documentación
+
+- Los 5 README que se quedaron sin ella recuperan la sección **"Construir el APK"** y la
+  cola del árbol (`tools/`, `build-apk.ps1`, `RELEASING.md`, CI, `SECURITY.md`, `CHANGELOG.md`).
+- `AI_SETUP_PROMPT.md` pide **Node 22.15** (decía 20, que rompe los avisos por turno) y ya no
+  dice que se arranque el puente dos veces.
+- `SECURITY.md`, `AI_SETUP_PROMPT.md` y `docker-compose.yml` dejan de mencionar la terminal
+  remota, eliminada en la 5.1.1.
+- `DISPOSITIVOS.md`: la app sí usa la clave de acceso, y la sesión del panel dura 12 horas.
+- Tabla de variables ampliada en los 7 idiomas: `DSH_ALLOWED_HOSTS`, `DSH_ALLOW_GENERIC_VPN`,
+  `DSH_SYNC_MAX_FILES` y `DSH_SYNC_MAX_TOTAL_MB`.
+- Rutas y módulos completados en el README (`/stats`, `/absorb-satellite`,
+  `/notification-action`, `/simulator` y los seis módulos que faltaban).
+- La cifra de pruebas queda en **154**, la que da la corrida real (el badge decía 154 y el
+  texto 155).
+- Requisitos de compilación (JDK 17+, plataforma `android-35`, keystore) en README y
+  `RELEASING.md`.
+
+### Scripts
+
+- `panel.bat` respeta `DSH_PANEL_PORT` y su bloque de PowerShell se validó con el parser
+  (antes quedó con una línea rota al editarlo).
+- `install-autostart.bat` crea el acceso directo con las comillas correctas en `Arguments`.
+- Docker: el `COPY` incluye `icon.svg` y `manifest.webmanifest`, y el healthcheck usa el
+  puerto efectivo (`DSH_LISTEN_PORT`).
+
 ## 5.1.2 — `versionCode` 42
 
 ### Corregido

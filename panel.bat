@@ -8,14 +8,13 @@ echo.
 powershell -NoProfile -Command ^
   "$ws = New-Object -ComObject Wscript.Shell;" ^
   "if ($ws.AppActivate('Autorizar dispositivos') -or $ws.AppActivate('DSH Companion')) {" ^
-  "  Write-Host 'Enfocando ventana del panel existente...'; exit 0 " ^
-  "}" ^
+  "  Write-Host 'Enfocando ventana del panel existente...'; exit 0 }" ^
+  "$port = $env:DSH_PANEL_PORT; if (-not $port) { $port = '57421' };" ^
   "$tokenFile = Join-Path $env:USERPROFILE '.dsh\companion-panel-token';" ^
   "if (Test-Path $tokenFile) {" ^
   "  $token = (Get-Content $tokenFile -Raw).Trim();" ^
   "  Write-Host 'Abriendo el panel...';" ^
-  "  Start-Process ('http://127.0.0.1:57421/pair?t=' + $token); exit 0" ^
-  "}" ^
+  "  Start-Process ('http://127.0.0.1:' + $port + '/pair?t=' + $token); exit 0 }" ^
   "Write-Host '[ERROR] El puente no ha arrancado todavia.';" ^
   "exit 1"
 

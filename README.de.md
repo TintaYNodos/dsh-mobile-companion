@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.2-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.3-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BSL%201.1%20%2F%20PolyForm-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.1.2** (`versionCode` 42).
+Aktuelle Version: **5.1.3** (`versionCode` 43).
 
 ---
 
@@ -84,6 +84,14 @@ companion/
 │   ├── system-stats.mjs       Telemetrie für CPU, Speicher und Temperatur
 │   ├── qr.mjs / visual-lab.mjs Helfer für die QR- und Visual-Harnesses
 │   └── ratelimit.mjs          Token-Bucket pro Client
+│   ├── device-claim, panel-session, routes-data, sync-format, sync-index, sync-retention
+├── tools/
+├── audit-repo.mjs   Prüfung des Repositorys (Text, Syntax, Versionen, Geheimnisse)
+├── build-apk.ps1   baut und signiert das APK ohne Gradle
+├── RELEASING.md   Checkliste für Veröffentlichungen
+├── .github/workflows/verify.yml   CI: Syntax + Prüfung bei jedem Push
+├── SECURITY.md   wie man eine Schwachstelle meldet
+└── CHANGELOG.md   Versionshistorie
 ├── android_src/               nativer Client (reines Java, kein AndroidX)
 │   ├── MainActivity.java      Lebenszyklus und Orchestrierung
 │   ├── CompanionWebViewClient.java, CompanionChromeClient.java
@@ -96,7 +104,7 @@ companion/
 │   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
 │   └── …                     Erkennung, Telemetrie, Satellit, WOL, Widget
 ├── test/
-│   ├── verify_*.mjs           elf Verifikations-Suites (155 Prüfungen)
+│   ├── verify_*.mjs           elf Verifikations-Suites (154 Prüfungen)
 │   ├── _harness.mjs           gemeinsamer Client
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              persistierte Konversationen (.md und .json)
@@ -166,6 +174,10 @@ Zwei gleichwertige Methoden:
 | `DSH_DEVICE_TTL_DAYS` | `30` | Lebensdauer der Gerätesitzung; abgelaufene Geräte werden abgelehnt und entfernt |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Wie oft die Lebensdauer bei Nutzung erneuert wird |
 | `DSH_PENDING_TTL_MIN` | `15` | Minuten, die eine Pairing-Anfrage auf Freigabe wartet |
+| `DSH_ALLOWED_HOSTS` | leer | Zusätzliche Hostnamen für `Host`/`Origin` (Tailscale MagicDNS) |
+| `DSH_ALLOW_GENERIC_VPN` | — | `1` akzeptiert ein generisches tun/tap-Interface |
+| `DSH_SYNC_MAX_FILES` | `200` | Maximale Anzahl gespeicherter Unterhaltungen |
+| `DSH_SYNC_MAX_TOTAL_MB` | `200` | Maximale Größe von `synced_chats/` in MB |
 
 ### Einmalige Freigabe vom Computer
 
@@ -247,7 +259,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — Version **5.1.3**, `versionCode` 43, `minSdk` 26, `targetSdk` 35.
 - Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 210 KB.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
@@ -261,19 +273,28 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 ---
 
+## Das APK bauen
+
+Ohne Gradle und ohne Android Studio: das APK entsteht mit den Build-Tools des SDK. Voraussetzungen: JDK 17+, Android SDK mit Plattform `android-35` und Build-Tools, und ein Keystore (standardmäßig der Debug-Keystore).
+
+```powershell
+`powershell -ExecutionPolicy Bypass -File build-apk.ps1`
+```
+
+
 ## Tests
 
 ```bash
 npm test
 ```
 
-Elf Suites, **155 Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+Elf Suites, **154 Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
 
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
 ---
 
-> **Satellitenmodus (optional):** die Offline-Seite kann eine Unterhaltung mit dem auf dem Telefon hinterlegten API-Schlüssel an `api.deepseek.com` senden. Das ist die einzige Funktion, die das private Netz verlässt; sie ist optional, benötigt diesen Schlüssel und kann seit 5.1.2 nur vom Hauptframe des Bunkers ausgelöst werden.
+> **Satellitenmodus (optional):** die Offline-Seite kann eine Unterhaltung mit dem auf dem Telefon hinterlegten API-Schlüssel an `api.deepseek.com` senden. Das ist die einzige Funktion, die das private Netz verlässt; sie ist optional, benötigt diesen Schlüssel und kann seit 5.1.0 nur vom Hauptframe des Bunkers ausgelöst werden.
 
 ## Ehrliche Einschränkungen
 
@@ -293,7 +314,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.1.2 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.3 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
+**5.1.3 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.3 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
 
 ## Bildschirmfotos
 

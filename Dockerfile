@@ -21,6 +21,7 @@ RUN mkdir -p /home/node/.dsh /app/synced_chats && chown -R node:node /home/node 
 # Copiar código fuente. offline.html carga sus hojas y scripts por separado:
 # si no se copian, /offline se sirve sin estilos y sin lógica.
 COPY --chown=node:node bridge.mjs offline.html ./
+COPY --chown=node:node icon.svg manifest.webmanifest ./
 COPY --chown=node:node offline.css offline-reader.css offline-satellite.css ./
 COPY --chown=node:node offline-core.js offline-reader.js offline-satellite.js ./
 COPY --chown=node:node src/ ./src/

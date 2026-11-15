@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.1.x (current, `versionCode` 42) | Yes |
+| 5.1.x (current, `versionCode` 43) | Yes |
 | 4.5.x and earlier | No |
 
 Only the current release receives security fixes.
@@ -53,4 +53,4 @@ Out of scope:
 
 ## Security model in one paragraph
 
-Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device, closes the WebSocket tunnels and rotates the access key. The remote terminal is disabled unless `DSH_ENABLE_TERMINAL=1`, and even then it only accepts loopback. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.
+Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device, closes the WebSocket tunnels and rotates the access key. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.

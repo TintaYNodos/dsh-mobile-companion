@@ -14,7 +14,7 @@ powershell -NoProfile -Command ^
   "$ws = New-Object -ComObject WScript.Shell; " ^
   "$sc = $ws.CreateShortcut('%SHORTCUT_PATH%'); " ^
   "$sc.TargetPath = 'wscript.exe'; " ^
-  "$sc.Arguments = '\"%VBS_PATH%\"'; " ^
+  "$sc.Arguments = [char]34 + '%VBS_PATH%' + [char]34; " ^
   "$sc.WorkingDirectory = '%SCRIPT_DIR%'; " ^
   "$sc.Description = 'DeepSeek Harness Mobile Companion Auto-Start'; " ^
   "$sc.Save();"

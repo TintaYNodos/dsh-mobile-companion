@@ -28,6 +28,16 @@ Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/
 usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
 `mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
 
+El diagnóstico también deja un **recibo verificable**: `doctor.ps1 -Report` escribe
+`doctor-report.json` sin BOM con `apkSha256`, `apkVersion`, `apkVersionCode`, la huella del
+certificado de release (`certSha256Release`) y un `receipt` sha256 sobre el JSON compacto sin el
+propio recibo; antes de dar un informe por bueno, ejecuta
+`node tools/verify-receipt.mjs doctor-report.json` y pega su OK. La matriz de
+[AGENT_COMPAT.md](AGENT_COMPAT.md) dice, agente por agente y con estado explícito (probado o solo
+documentado), cómo darle el contexto, qué puede ejecutar y el texto mínimo de traspaso; la skill
+solo se descubre si está enlazada en `.dsh/skills` o `.agents/skills`, y sin eso se usa el prompt de
+este archivo.
+
 ---
 
 ## English

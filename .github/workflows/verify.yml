@@ -40,6 +40,11 @@ jobs:
       - name: Auditoría del repositorio
         run: node tools/audit-repo.mjs
 
+      # Autoprueba del verificador de recibos: fija el canon documentado y detecta
+      # regresiones sin necesitar PowerShell (el informe real se genera en Windows).
+      - name: Recibo del doctor (autoprueba)
+        run: node tools/verify-receipt.mjs --self-test
+
       - name: Guardas de configuración (sin puente)
         run: node test/verify_config_guard.mjs
 

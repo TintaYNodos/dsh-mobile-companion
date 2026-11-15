@@ -17,6 +17,15 @@ Android `versionCode` increments once per published build.
   que se arranque con `DSH_ALLOW_PROXY_ACCESS=1`. Así no se publica el puente por accidente.
 - `AI_SETUP_PROMPT.md` documenta iPhone/PWA (Safari, `Add to Home Screen`, PWA estática en
   Cloudflare Pages) y el acceso remoto opcional con Cloudflare Tunnel + Access.
+- **Informe del doctor verificable**: `doctor.ps1 -Report` añade `apkSha256`, `apkVersion`,
+  `apkVersionCode`, `certSha256Release` y un `receipt` sha256 calculado sobre el JSON compacto sin el
+  recibo, y escribe `doctor-report.json` sin BOM para que `JSON.parse` funcione sin limpieza previa.
+  Nuevo `tools/verify-receipt.mjs` (sin dependencias) que verifica el recibo y puede exigir el
+  sha256 del APK y la huella del certificado de release.
+- **Matriz de compatibilidad de agentes**: [AGENT_COMPAT.md](AGENT_COMPAT.md) documenta, con estado
+  explícito (probado frente a solo documentado), qué agentes pueden instalar el companion, cómo
+  reciben el contexto, qué pueden ejecutar y el texto mínimo de traspaso. Incluye el enlace de la
+  skill en `.dsh/skills` o `.agents/skills` y el recibo como evidencia.
 
 ## 5.1.7 — `versionCode` 47
 

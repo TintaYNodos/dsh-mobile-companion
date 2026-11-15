@@ -29,6 +29,79 @@ function Warn($t) { [void]$script:lines.Add("WARN|$t"); $script:avisos++; if (-n
 function Info($t) { [void]$script:lines.Add("INFO|$t"); if (-not $Json) { Write-Host "         $t" -ForegroundColor DarkGray } }
 function Out($msg, $color) { if (-not $Json) { if ($color) { Write-Host $msg -ForegroundColor $color } else { Write-Host $msg } } }
 
+# ==============================================================================
+# Recibo verificable del informe
+#
+# El recibo hashea una forma canonica del informe: JSON compacto (sin espacios
+# ni saltos de linea) del objeto completo MENOS el campo "receipt", con las
+# mismas claves y el mismo orden en que se escribe doctor-report.json. Es el
+# equivalente exacto de JSON.stringify(JSON.parse(archivo) sin receipt) en Node,
+# para que tools/verify-receipt.mjs lo recalcule sin depender de PowerShell.
+#
+# No se usa ConvertTo-Json para el canon: Windows PowerShell 5.1 escapa <, >, &
+# y la comilla simple como \u00XX y Node no, asi que el hash no cuadraria.
+# ==============================================================================
+function ConvertTo-CanonicalString {
+    param([string]$Text)
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.Append('"')
+    foreach ($ch in $Text.ToCharArray()) {
+        $code = [int]$ch
+        if ($ch -eq '"')      { [void]$sb.Append('\"') }
+        elseif ($ch -eq '\')  { [void]$sb.Append('\\') }
+        elseif ($code -eq 8)  { [void]$sb.Append('\b') }
+        elseif ($code -eq 9)  { [void]$sb.Append('\t') }
+        elseif ($code -eq 10) { [void]$sb.Append('\n') }
+        elseif ($code -eq 12) { [void]$sb.Append('\f') }
+        elseif ($code -eq 13) { [void]$sb.Append('\r') }
+        elseif ($code -lt 32) { [void]$sb.Append('\u' + $code.ToString("x4")) }
+        else                  { [void]$sb.Append($ch) }
+    }
+    [void]$sb.Append('"')
+    return $sb.ToString()
+}
+
+function ConvertTo-CanonicalJson {
+    param($Value)
+    if ($null -eq $Value) { return "null" }
+    if ($Value -is [bool]) {
+        if ($Value) { return "true" } else { return "false" }
+    }
+    if ($Value -is [string]) { return ConvertTo-CanonicalString $Value }
+    if ($Value -is [int] -or $Value -is [long] -or $Value -is [double] -or $Value -is [decimal]) {
+        return [Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture)
+    }
+    if ($Value -is [System.Collections.IDictionary]) {
+        $parts = New-Object System.Collections.Generic.List[string]
+        foreach ($key in $Value.Keys) {
+            $parts.Add((ConvertTo-CanonicalString ([string]$key)) + ":" + (ConvertTo-CanonicalJson $Value[$key]))
+        }
+        return "{" + ($parts -join ",") + "}"
+    }
+    if ($Value -is [System.Collections.IEnumerable]) {
+        $parts = New-Object System.Collections.Generic.List[string]
+        foreach ($item in $Value) { $parts.Add((ConvertTo-CanonicalJson $item)) }
+        return "[" + ($parts -join ",") + "]"
+    }
+    return ConvertTo-CanonicalString ([string]$Value)
+}
+
+function Get-Sha256Hex {
+    param([string]$Text)
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Text))
+        return ([System.BitConverter]::ToString($hash) -replace "-", "").ToLowerInvariant()
+    } finally {
+        $sha.Dispose()
+    }
+}
+
+# Huella SHA-256 del certificado del keystore de release: dato documental, no se
+# lee del keystore (el doctor no necesita la clave privada). Es la que publican
+# RELEASE_5.1.7.md, README y SECURITY.md; actualizala cuando cambie la firma.
+$certSha256Release = "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23"
+
 Out ""
 Out "== 1. Node.js ==" Cyan
 $nodeExe = ""
@@ -190,6 +263,12 @@ $doctorReport = [ordered]@{
     ok            = ($fallos -eq 0)
     nodeVersion   = $version
     bridgeVersion = $(if ($response) { $response.version } else { "" })
+    # Hashes y version del APK que el puente sirve de verdad (no del release de
+    # GitHub): salen de /dsh-companion/status, la misma respuesta que ya se consulta.
+    apkVersion    = $(if ($response) { [string]$response.apkVersion } else { "" })
+    apkVersionCode= $(if ($response) { [int]$response.apkVersionCode } else { 0 })
+    apkSha256     = $(if ($response) { [string]$response.apkSha256 } else { "" })
+    certSha256Release = $certSha256Release
     phoneUrl      = $(if ($privateIp) { "http://${privateIp}:57420" } else { "" })
     tunnel        = $(if ($privateIp) { $ifaceName } else { "" })
     bindHost      = $privateIp
@@ -200,11 +279,23 @@ $doctorReport = [ordered]@{
     warnings      = @($checks | Where-Object { $_.level -eq "WARN" } | ForEach-Object { $_.message })
     generatedAt   = (Get-Date).ToString("o")
 }
+# Recibo: se calcula sobre el informe SIN el campo receipt y se agrega al final,
+# de modo que el hash cubra exactamente los campos que el archivo dice cubrir.
+$canonicalJson = ConvertTo-CanonicalJson $doctorReport
+$doctorReport["receipt"] = [ordered]@{
+    algorithm = "sha256"
+    canonical = "json-compact-sin-receipt"
+    sha256    = Get-Sha256Hex $canonicalJson
+}
+$reportJson = $doctorReport | ConvertTo-Json -Depth 8
 if ($Report) {
-    $doctorReport | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $PSScriptRoot "doctor-report.json") -Encoding UTF8
+    # Sin BOM: JSON.parse() (Node, Python, jq...) funciona sin limpieza previa.
+    # En Windows PowerShell 5.1, Set-Content -Encoding UTF8 antepone BOM.
+    $reportPath = Join-Path $PSScriptRoot "doctor-report.json"
+    [System.IO.File]::WriteAllText($reportPath, $reportJson, (New-Object System.Text.UTF8Encoding($false)))
 }
 if ($Json) {
-    $doctorReport | ConvertTo-Json -Depth 6
+    $reportJson
     if ($fallos -eq 0) { exit 0 } else { exit 1 }
 }
 

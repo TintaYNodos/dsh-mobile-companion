@@ -12,9 +12,47 @@ import { scrubHeaders, isDocumentRequest, sendJson } from "./http.mjs";
 import { injectMobileShell } from "./mobile.mjs";
 // P11: faltaba resolveTargetPort en el import y la ruta de recuperacion tras un
 // cambio de puerto lanzaba ReferenceError (500) en vez de re-resolver destino.
-import { invalidateTargetPort, resolveTargetPort } from "./network.mjs";
+import { invalidateTargetPort } from "./network.mjs";
+import {
+  findPairedDevice,
+  isReadOnlyWriteBlocked,
+  logReadOnlyRejection,
+  resolveTargetPortForDevice,
+  sendReadOnly,
+} from "./devices.mjs";
+import { handleWsProxy as proxyWs } from "./proxy-ws.mjs";
 
-export { handleWsProxy } from "./proxy-ws.mjs";
+const proxyPathname = (req) => {
+  try {
+    return new URL(String(req.url || "/"), "http://companion.invalid").pathname;
+  } catch {
+    return String(req.url || "/").split("?")[0];
+  }
+};
+
+/**
+ * Tunel WebSocket con el backend del dispositivo.
+ *
+ * `bridge.mjs` (fuera de este cambio) resuelve el backend por defecto antes de
+ * llamar aqui; si el dispositivo tiene `targetPort` fijo se resuelve por
+ * peticion con la misma regla que HTTP (sonda + fallback registrado), de modo
+ * que un espectador de solo lectura o de otra instancia recibe su tunel.
+ */
+export async function handleWsProxy(req, socket, head, options = {}) {
+  try {
+    const device = findPairedDevice(req);
+    const fixed = Boolean(device && device.targetPort !== null);
+    const targetPort = fixed ? await resolveTargetPortForDevice(device) : options.targetPort;
+    proxyWs(req, socket, head, { ...options, targetPort });
+  } catch (error) {
+    log("ws", `sin puerto de destino: ${error.code || error.message}`);
+    if (!socket.destroyed && socket.writable) {
+      socket.end("HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+    } else {
+      socket.destroy();
+    }
+  }
+}
 
 const applyStreamTuning = (socket, idleMs) => {
   if (!socket) return;
@@ -164,12 +202,22 @@ async function forwardResponse(req, res, proxyReq, proxyRes, { wantsHtml, mobile
   deliverHtml(res, proxyRes, injectMobileShell(buffered.body.toString("utf8")));
 }
 
-export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
+export async function handleHttpProxy(req, res, { targetPort, mobileMode, device = null }) {
   // P24: metodo no permitido se corta aqui, antes de inyectar sesion o abrir
   // una conexion al backend.
   if (!ALLOWED_METHODS.has(req.method)) {
     req.resume(); // drenar el cuerpo para no dejar la conexion colgada
     sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: ALLOWED_METHODS_HEADER });
+    return;
+  }
+
+  // Perfil de solo lectura: metodos mutantes fuera del allowlist se rechazan
+  // antes de inyectar la sesion del backend. GET/HEAD/OPTIONS siguen pasando.
+  const pathname = proxyPathname(req);
+  if (isReadOnlyWriteBlocked(device, req.method, pathname)) {
+    req.resume();
+    logReadOnlyRejection(device, req.method, pathname);
+    sendReadOnly(res);
     return;
   }
 
@@ -295,7 +343,9 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
   }
 
   if (result.portChanged) {
-    targetPort = await resolveTargetPort(true);
+    // El backend se cayo a mitad de la peticion: se vuelve a resolver el
+    // destino POR DISPOSITIVO (puerto fijo o fallback al backend por defecto).
+    targetPort = await resolveTargetPortForDevice(device, { force: true });
     authority = getAuthority(config.targetHost, targetPort);
     headers = scrubHeaders(injectSessionHeaders(req.headers, authority));
     result = await requestOnce(false);

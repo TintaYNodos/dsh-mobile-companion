@@ -64,6 +64,17 @@ class PrefKeys {
     static final String KEY_SECURE_SCREEN = "secure_screen_enabled";
     static final String KEY_OFFLINE_COPY = "offline_copy_enabled";
 
+    // Vigilante del servicio de avisos de la PC (ver WatchdogPolicy).
+    /** Interruptor de Ajustes "Reiniciar el servicio si se cuelga". ON por defecto. */
+    static final String KEY_PC_EVENTS_WATCHDOG = "pc_events_watchdog_enabled";
+    /** Ultima conexion SSE establecida (para "Ultima conexion: hace X"). */
+    static final String KEY_PC_EVENTS_LAST_OK = "pc_events_last_ok_at";
+    /** Ultimo RESTART del vigilante (limite de 1 cada 10 min). */
+    static final String KEY_PC_EVENTS_LAST_RESTART = "pc_events_last_restart_at";
+    /** Ultima accion del vigilante y cuando, para la linea de estado. */
+    static final String KEY_PC_EVENTS_WATCHDOG_NOTE = "pc_events_watchdog_note";
+    static final String KEY_PC_EVENTS_WATCHDOG_NOTE_AT = "pc_events_watchdog_note_at";
+
     static final int PORT = 57420;
     static final int STATE_ONLINE = 0;
     static final int STATE_RETRYING = 1;

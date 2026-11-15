@@ -18,7 +18,7 @@ import android.os.Build;
  * Gestor de notificaciones de DSH Companion.
  *
  * Canales dedicados:
- * 1. Aprobaciones y peticiones de herramientas (Prioridad alta con botones de acción).
+ * 1. Aprobaciones y peticiones de herramientas (informativa: indica donde aprobar).
  * 2. Tareas y respuestas completadas (Prioridad normal).
  * 3. Alertas de desconexión prolongada (>10 minutos).
  */
@@ -31,23 +31,12 @@ public final class NotificationHelper {
     public static final String CHANNEL_SERVICE = "dsh_channel_service";
     public static final String CHANNEL_CRITICAL = "dsh_channel_critical";
 
-    public static final String ACTION_APPROVE = "com.tintaynodos.dshcompanion.ACTION_APPROVE";
-    public static final String ACTION_REJECT = "com.tintaynodos.dshcompanion.ACTION_REJECT";
-
-    public static final String EXTRA_REQUEST_ID = "extra_request_id";
-    public static final String EXTRA_ACTION_TYPE = "extra_action_type";
-    public static final String EXTRA_NOTIFICATION_ID = "extra_notification_id";
-    public static final String EXTRA_BUNKER_URL = "extra_bunker_url";
-
-    public static final String TYPE_TOOL_APPROVAL = "tool_approval";
-    public static final String TYPE_DEVICE_PAIRING = "device_pairing";
-
     public static final int NOTIFICATION_ID_DISCONNECTION = 9001;
     public static final int NOTIFICATION_ID_TASK = 8001;
-    public static final int NOTIFICATION_ID_FEEDBACK = 10099;
     public static final int NOTIFICATION_ID_PC_SERVICE = 7001;
     public static final int NOTIFICATION_ID_PC_RESPONSE = 7002;
     public static final int NOTIFICATION_ID_CRITICAL = 7003;
+    public static final int NOTIFICATION_ID_PC_WATCHDOG = 7004;
 
     private static final long[] VIBRATE_APPROVAL = new long[]{0, 250, 150, 250};
     private static final long[] VIBRATE_DISCONNECT = new long[]{0, 400, 200, 400};
@@ -67,44 +56,20 @@ public final class NotificationHelper {
     /**
 
     /**
-     * Muestra notificacion de autorizacion de nuevo dispositivo con botones Aceptar y Rechazar.
+     * Muestra la notificacion informativa de autorizacion de nuevo dispositivo.
+     * P3: sin botones Aceptar/Rechazar; el aviso dice donde se autoriza.
      */
-    public static void notifyDevicePairing(Context context, String deviceId, String code, String agent, String address, String bunkerUrl) {
+    public static void notifyDevicePairing(Context context, String deviceId, String code, String agent, String address) {
         if (!MainActivity.shouldShowNotification(context)) return;
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
         int notifId = notificationIdForKey("device:" + deviceId);
-        String resolvedBunkerUrl = (bunkerUrl != null && !bunkerUrl.trim().isEmpty())
-                ? bunkerUrl
-                : MainActivity.getActiveBunkerUrl(context);
 
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent openPending = PendingIntent.getActivity(
                 context, notifId, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        Intent approveIntent = new Intent(context, NotificationActionReceiver.class);
-        approveIntent.setAction(ACTION_APPROVE);
-        approveIntent.putExtra(EXTRA_REQUEST_ID, deviceId);
-        approveIntent.putExtra(EXTRA_ACTION_TYPE, TYPE_DEVICE_PAIRING);
-        approveIntent.putExtra(EXTRA_NOTIFICATION_ID, notifId);
-        approveIntent.putExtra(EXTRA_BUNKER_URL, resolvedBunkerUrl);
-        PendingIntent approvePending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 1, approveIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        Intent rejectIntent = new Intent(context, NotificationActionReceiver.class);
-        rejectIntent.setAction(ACTION_REJECT);
-        rejectIntent.putExtra(EXTRA_REQUEST_ID, deviceId);
-        rejectIntent.putExtra(EXTRA_ACTION_TYPE, TYPE_DEVICE_PAIRING);
-        rejectIntent.putExtra(EXTRA_NOTIFICATION_ID, notifId);
-        rejectIntent.putExtra(EXTRA_BUNKER_URL, resolvedBunkerUrl);
-        PendingIntent rejectPending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 2, rejectIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 
@@ -284,57 +249,60 @@ public final class NotificationHelper {
         nm.notify(notifId, builder.build());
     }
 
-    public static void notifyActionFeedback(Context context, boolean isApprove, String target, boolean success) {
-        if (context == null) return;
-        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm == null) return;
-
-        Intent openIntent = new Intent(context, MainActivity.class);
-        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent openPending = PendingIntent.getActivity(
-                context, NOTIFICATION_ID_FEEDBACK, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        String title;
-        String text;
-        int color;
-
-        if (success) {
-            title = isApprove ? "Autorización aplicada con éxito" : "Petición rechazada";
-            text = isApprove ? ("Se autorizó la ejecución de " + (target != null ? target : ""))
-                             : ("Se rechazó la ejecución de " + (target != null ? target : ""));
-            color = Color.parseColor("#10B981");
-        } else {
-            title = "Error al transmitir decisión";
-            text = "No se pudo comunicar con el búnker";
-            color = Color.parseColor("#EF4444");
-        }
-
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(context, CHANNEL_APPROVALS);
-        } else {
-            builder = new Notification.Builder(context);
-            builder.setPriority(Notification.PRIORITY_HIGH);
-        }
-
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(title)
-                .setContentText(text)
-                .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setContentIntent(openPending)
-                .setAutoCancel(true)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setColor(color);
-
-        nm.notify(NOTIFICATION_ID_FEEDBACK, builder.build());
-    }
-
     public static void cancelApproval(Context context, String key) {
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         nm.cancel(notificationIdForKey(key));
+    }
+
+    /**
+     * Aviso honesto del vigilante de PcEventsService: el servicio lleva 5 min
+     * sin recuperar la escucha tras reiniciarla, asi que los avisos "respuesta
+     * terminada" estan detenidos. Dice el problema y que abrir la app reconecta;
+     * no lleva botones que no funcionen. Se cancela solo cuando vuelve la
+     * conexion o se apaga el servicio.
+     */
+    public static void notifyPcEventsStalled(Context context) {
+        if (context == null) return;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        String body = "Los avisos de la PC están detenidos: no se pudo reconectar. Abre la aplicación para reconectar.";
+
+        Intent openIntent = new Intent(context, MainActivity.class);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent openPending = PendingIntent.getActivity(
+                context, NOTIFICATION_ID_PC_WATCHDOG, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, CHANNEL_CONNECTION);
+        } else {
+            builder = new Notification.Builder(context);
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            builder.setVibrate(VIBRATE_DISCONNECT);
+        }
+
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle("Avisos de la PC detenidos")
+                .setContentText(body)
+                .setStyle(new Notification.BigTextStyle().bigText(body))
+                .setContentIntent(openPending)
+                .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setColor(Color.parseColor("#D97706"));
+
+        nm.notify(NOTIFICATION_ID_PC_WATCHDOG, builder.build());
+    }
+
+    /** Retira el aviso de "avisos detenidos" cuando la escucha vuelve. */
+    public static void cancelPcEventsStalled(Context context) {
+        if (context == null) return;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        nm.cancel(NOTIFICATION_ID_PC_WATCHDOG);
     }
 
     public static void cancelDisconnection(Context context) {

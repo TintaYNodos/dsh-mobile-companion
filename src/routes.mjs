@@ -4,12 +4,16 @@
  * See LICENSE file in repository root for full terms.
  */
 import { config } from "./config.mjs";
-import { isClientAuthorized, normalizeAddress, resolveTargetPort, probePort } from "./network.mjs";
+import { isClientAuthorized, normalizeAddress, probePort } from "./network.mjs";
 import { hasValidAccessKey } from "./crypto.mjs";
 import {
   findPairedDevice,
+  isViewer,
+  logReadOnlyRejection,
   pendingRequests,
   requestAccess,
+  resolveTargetPortForDevice,
+  sendReadOnly,
   touchDevice,
 } from "./devices.mjs";
 import { hasAmbiguousFraming, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
@@ -30,7 +34,9 @@ export const wantsMobileShell = (req, url) => {
 
 export const buildStatusPayload = async (options = {}) => {
   const includePendingList = options.includePendingList === true;
-  const targetPort = await resolveTargetPort();
+  // Perfil por dispositivo: el estado informa el backend que ese dispositivo
+  // usaria de verdad, no solo el backend por defecto del puente.
+  const targetPort = await resolveTargetPortForDevice(options.device || null);
   const dshOnline = await probePort(targetPort, config.targetHost, 400);
   const pending = pendingRequests();
   return {
@@ -189,7 +195,7 @@ export async function dispatchRequest(req, res, context) {
     if (device) touchDevice(device);
 
     const isLoopback = normalizeAddress(remoteAddress).startsWith("127.");
-    const payload = await buildStatusPayload({ includePendingList: isLoopback });
+    const payload = await buildStatusPayload({ includePendingList: isLoopback, device });
     sendJson(res, 200, payload);
     return;
   }
@@ -224,11 +230,16 @@ export async function dispatchRequest(req, res, context) {
     return;
   }
 
-  if (await handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context })) return;
+  // La puerta devuelve el dispositivo de la peticion (o `true` si respondio
+  // ella). Se reutiliza aqui para aplicar su perfil (rol y puerto destino) al
+  // proxy, incluida la primera peticion en la que el dispositivo se canjea.
+  const gate = await handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context });
+  if (gate === true) return;
+  const requestDevice = gate || findPairedDevice(req) || null;
 
   if (pathname === "/" || pathname === "/index.html") {
-    const targetPort = await resolveTargetPort();
-    await handleHttpProxy(req, res, { targetPort, mobileMode: wantsMobileShell(req, url) });
+    const targetPort = await resolveTargetPortForDevice(requestDevice);
+    await handleHttpProxy(req, res, { targetPort, mobileMode: wantsMobileShell(req, url), device: requestDevice });
     return;
   }
 
@@ -262,6 +273,11 @@ export async function dispatchRequest(req, res, context) {
 
   if (pathname === "/dsh-companion/pc-events/test" && req.method === "POST") {
     const device = resolveDevice(req, res, remoteAddress);
+    if (device && isViewer(device)) {
+      logReadOnlyRejection(device, req.method, pathname);
+      sendReadOnly(res);
+      return;
+    }
     if (!device && !hasValidAccessKey(req)) {
       sendJson(res, 403, { error: "Acceso no autorizado" });
       return;
@@ -277,6 +293,6 @@ export async function dispatchRequest(req, res, context) {
     return;
   }
 
-  const targetPort = await resolveTargetPort();
-  await handleHttpProxy(req, res, { targetPort, mobileMode: wantsMobileShell(req, url) });
+  const targetPort = await resolveTargetPortForDevice(requestDevice);
+  await handleHttpProxy(req, res, { targetPort, mobileMode: wantsMobileShell(req, url), device: requestDevice });
 }

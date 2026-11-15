@@ -17,7 +17,41 @@ let loadedMtime = -1;
 let readOnly = false;
 let warnedReadOnly = false;
 
+export const DEVICE_ROLES = Object.freeze(["full", "viewer"]);
+export const DEFAULT_DEVICE_ROLE = "full";
+
 const empty = () => ({ devices: [], pending: [], history: [], denied: [] });
+
+/**
+ * Normaliza el rol de un dispositivo.
+ *
+ * Un registro anterior a los perfiles no trae `role`: se lee como `full`, de
+ * modo que actualizar el puente nunca degrada por sorpresa a un telefono ya
+ * emparejado. Cualquier valor desconocido tambien cae en `full`; `viewer` solo
+ * se aplica cuando esta escrito exactamente asi.
+ */
+export const normalizeDeviceRole = (value) => (value === "viewer" ? "viewer" : DEFAULT_DEVICE_ROLE);
+
+/**
+ * Normaliza el puerto destino de un dispositivo.
+ *
+ * `null` significa "usa el backend por defecto del puente", igual que antes de
+ * existir los perfiles. Un valor no numerico o fuera de rango se trata como
+ * `null` en vez de romper la lectura del registro.
+ */
+export const normalizeTargetPort = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const port = Number(value);
+  return Number.isInteger(port) && port > 0 && port <= 65535 ? port : null;
+};
+
+/** Aplica los valores por defecto del esquema a un dispositivo en memoria. */
+export const withDeviceDefaults = (device) => {
+  if (!device || typeof device !== "object") return device;
+  device.role = normalizeDeviceRole(device.role);
+  device.targetPort = normalizeTargetPort(device.targetPort);
+  return device;
+};
 
 const warnReadOnly = (reason) => {
   readOnly = true;
@@ -63,7 +97,7 @@ export const loadRegistry = () => {
   }
 
   registry = {
-    devices: Array.isArray(parsed.devices) ? parsed.devices : [],
+    devices: (Array.isArray(parsed.devices) ? parsed.devices : []).map(withDeviceDefaults),
     pending: Array.isArray(parsed.pending) ? parsed.pending : [],
     history: Array.isArray(parsed.history) ? parsed.history : [],
     denied: Array.isArray(parsed.denied) ? parsed.denied : [],

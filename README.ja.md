@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.7-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-181%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.8-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-229%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.1.7**（`versionCode` 47）。
+現在のバージョン：**5.1.8**（`versionCode` 48）。
 
 ---
 
@@ -105,7 +105,7 @@ companion/
 │   ├── KeyStoreVault.java     保存キーの Android Keystore 暗号化
 │   └── …                     ディスカバリ、テレメトリ、サテライト、WOL、ウィジェット
 ├── test/
-│   ├── verify_*.mjs           11 個の検証スイート（181 チェック）
+│   ├── verify_*.mjs           11 個の検証スイート（229 チェック）
 │   ├── _harness.mjs           共有クライアント
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              永続化された会話（.md および .json）
@@ -263,7 +263,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.1.7**、`versionCode` 47、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — バージョン **5.1.8**、`versionCode` 48、`minSdk` 26、`targetSdk` 35。
 - AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 210 KB。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
@@ -295,7 +295,7 @@ apksigner verify --print-certs DSH-Companion.apk
 
 リリース証明書の SHA-256：`4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
 
-5.1.6 以前の APK はデバッグ証明書で署名されていました。**5.1.7 で署名が変わった**ため、旧版を一度アンインストールしてからこれをインストールしてください。
+5.1.6 以前の APK はデバッグ証明書で署名されていました。**5.1.8 で署名が変わった**ため、旧版を一度アンインストールしてからこれをインストールしてください。
 
 ## テスト
 
@@ -303,7 +303,7 @@ apksigner verify --print-certs DSH-Companion.apk
 npm test
 ```
 
-12 個のスイート、**181 のチェック**（151 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、サテライトへの受け渡し、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
+14 個のスイート、**181 のチェック**（199 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、サテライトへの受け渡し、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
 
 スイートは**稼働中のブリッジ**と通信します（モックではありません）。先にブリッジを起動してください。実際のキルスイッチの実行は破壊的で、デバイスを失効させキーをローテーションするため、`DSH_TEST_DESTRUCTIVE=1` によるオプトインになっています。
 
@@ -329,7 +329,7 @@ npm test
 
 ## 安定性
 
-**5.1.7 はシリーズ 5 の固定ベースラインです。** 新機能は追加せず、重大なセキュリティ修正のみ 5.1.7 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
+**5.1.8 はシリーズ 5 の固定ベースラインです。** 新機能は追加せず、重大なセキュリティ修正のみ 5.1.8 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
 
 ## スクリーンショット
 

@@ -65,17 +65,54 @@
     },
     "no-private-tunnel": {
       "id": "no-private-tunnel",
-      "match": "No hay ninguna interfaz de ZeroTier ni Tailscale con IP privada.",
-      "matchRuntime": "No hay ninguna interfaz de ZeroTier ni Tailscale con IP privada.",
-      "title": "No hay túnel privado: sin ZeroTier o Tailscale el teléfono no puede llegar a esta computadora.",
+      "match": "No hay ninguna interfaz de VPN privada con IP utilizable.",
+      "matchRuntime": "No hay ninguna interfaz de VPN privada con IP utilizable.",
+      "title": "No hay túnel privado: sin una VPN entre PC y teléfono, el teléfono no puede llegar a esta computadora.",
       "command": null,
-      "docs": "AI_SETUP_PROMPT.md",
+      "docs": "VPN_OPTIONS.md",
       "blocking": true,
       "steps": [
-        "Tailscale: instala el cliente en la PC y en el teléfono, inicia sesión con la misma cuenta y comprueba `tailscale ip -4` (100.x.x.x).",
+        "Tailscale (recomendado): instala el cliente en la PC y en el teléfono, inicia sesión con la misma cuenta y comprueba `tailscale ip -4` (100.x.x.x).",
         "ZeroTier: crea una red en https://my.zerotier.com, une PC y teléfono con `zerotier-cli join <ID>`, autoriza ambos nodos y espera la IP 10.x.x.x.",
-        "Vuelve a ejecutar `doctor.ps1 -Json`: deben aparecer `tunnel` y `phoneUrl`.",
+        "NetBird: crea una red en https://netbird.io, instala el cliente en ambos equipos y comprueba la interfaz `wt0` con IP 100.x.x.x.",
+        "Otras opciones y sus límites: consulta VPN_OPTIONS.md. Hamachi y Radmin se detectan, pero no se enlazan (usan rangos públicos).",
+        "Vuelve a ejecutar `doctor.ps1 -Json`: deben aparecer `tunnel`, `candidates` y `phoneUrl`.",
         "No publiques el puente en Internet: sin túnel privado no hay acceso remoto soportado."
+      ]
+    },
+    "multiple-private-networks": {
+      "id": "multiple-private-networks",
+      "match": "Hay $($usable.Count) redes privadas detectadas; se usara $ifaceName -> $privateIp.",
+      "matchRuntime": [
+        "redes privadas detectadas",
+        "se usara "
+      ],
+      "title": "Hay más de una red privada y el doctor eligió una por prioridad: fija la correcta a mano si no es la que quieres.",
+      "command": null,
+      "docs": "VPN_OPTIONS.md",
+      "blocking": false,
+      "steps": [
+        "Mira `candidates[]` en el JSON del doctor: cada entrada trae `ip`, `iface`, `kind` y `provider`.",
+        "Para fijar otra antes de arrancar el puente: `$env:DSH_BIND_HOST=\"<ip-de-tu-eleccion>\"` y vuelve a ejecutar `doctor.ps1 -Json`.",
+        "Comprueba que `phoneUrl` usa esa IP y que el teléfono está en la misma red privada.",
+        "No fijes una IP de la LAN doméstica ni una dirección pública: el puente las rechaza."
+      ]
+    },
+    "bind-host-invalid": {
+      "id": "bind-host-invalid",
+      "match": "DSH_BIND_HOST=$bindOverride no es una IP privada; se ignora y se usa la deteccion.",
+      "matchRuntime": [
+        "no es una IP privada",
+        "se ignora y se usa la deteccion"
+      ],
+      "title": "DSH_BIND_HOST apunta a una dirección que no es privada: el puente la rechaza por política.",
+      "command": "Remove-Item Env:DSH_BIND_HOST",
+      "docs": "VPN_OPTIONS.md",
+      "blocking": false,
+      "steps": [
+        "Usa la IP privada real de tu VPN: 100.64.0.0/10 (Tailscale, NetBird), 10/8 o 192.168/16 (ZeroTier, Nebula, EasyTier), 172.16/12.",
+        "Si no quieres fijarla a mano, borra `DSH_BIND_HOST` y deja que el doctor y el puente detecten la interfaz.",
+        "Nunca uses una IP pública, `0.0.0.0` ni una dirección de la LAN doméstica: el puente no debe escuchar ahí."
       ]
     },
     "bridge-wrong-service": {

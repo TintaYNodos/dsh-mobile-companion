@@ -6,8 +6,16 @@
 import crypto from "node:crypto";
 import { config } from "./config.mjs";
 import { log } from "./log.mjs";
-import { loadRegistry, saveRegistry, recordEvent } from "./registry.mjs";
+import {
+  loadRegistry,
+  saveRegistry,
+  recordEvent,
+  normalizeDeviceRole,
+  normalizeTargetPort,
+} from "./registry.mjs";
 import { normalize, prune, readCookie } from "./device-claim.mjs";
+import { probeDshPort, resolveTargetPort } from "./network.mjs";
+import { sendJson } from "./http.mjs";
 
 // El canje por token/cookie vive en device-claim.mjs; se reexporta aqui para
 // conservar la API publica que usan routes-pairing.mjs y bridge.mjs.
@@ -22,6 +30,65 @@ export {
 
 const MAX_DEVICES = 8;
 const ONLINE_WINDOW_MS = 3 * 60 * 1000;
+
+/**
+ * Perfiles por dispositivo. `full` es el comportamiento de siempre; `viewer`
+ * deja al dispositivo en solo lectura (el APK no cambia, el rol es del
+ * servidor): el puente rechaza sus escrituras HTTP, la API de mutacion del
+ * puente y las aprobaciones de herramientas.
+ */
+export const READ_ONLY_ERROR = "dispositivo en solo lectura";
+
+export const isViewer = (device) => normalizeDeviceRole(device?.role) === "viewer";
+
+export const deviceLabel = (device) => String(device?.name || device?.address || "dispositivo");
+
+export const sendReadOnly = (res) => sendJson(res, 403, { error: READ_ONLY_ERROR });
+
+/**
+ * POST que un `viewer` puede seguir haciendo: lecturas que DSH transporta como
+ * `POST /api/<namespace>/<metodo>` (toda llamada Remote unaria). Es el
+ * subconjunto de solo lectura que el propio DSH clasifica como
+ * `reader-global-read` / `reader-session-read` en su politica de LiveShare
+ * (dsh-experimental-liveshare, endpoint-classification.ts). Se excluye
+ * `fileUploads/upload` (escribe adjuntos) y todo lo `owner-only`; cualquier otro
+ * mutante se rechaza, incluido `POST /api/$events/result`, por donde el
+ * navegador responde aprobaciones de herramientas y preguntas del agente.
+ */
+export const VIEWER_POST_ALLOWLIST = Object.freeze([
+  "/api/commands/list",
+  "/api/goals/get",
+  "/api/llm/listConfigurableProviders",
+  "/api/llm/listProviders",
+  "/api/session/attachment",
+  "/api/session/canOpenWorkspacePath",
+  "/api/session/list",
+  "/api/session/modelCatalog",
+  "/api/session/page",
+  "/api/session/projections",
+  "/api/session/state",
+  "/api/session/wait",
+  "/api/skills/list",
+]);
+
+const READ_ONLY_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/** Metodo mutante que un `viewer` tiene prohibido (allowlist aparte). */
+export const isReadOnlyWriteBlocked = (device, method, pathname) => {
+  if (!isViewer(device)) return false;
+  if (!READ_ONLY_WRITE_METHODS.has(String(method || "").toUpperCase())) return false;
+  return !VIEWER_POST_ALLOWLIST.includes(String(pathname || ""));
+};
+
+/** Registra el rechazo (sin secretos) sin inundar el log por cada asset. */
+const readOnlyLogAt = new Map();
+export const logReadOnlyRejection = (device, method, pathname) => {
+  const key = `${device?.id || "?"}|${method}|${pathname}`;
+  const now = Date.now();
+  if (now - (readOnlyLogAt.get(key) || 0) < 10_000) return;
+  readOnlyLogAt.set(key, now);
+  log("proxy", `Escritura rechazada para ${deviceLabel(device)} (solo lectura): ${method} ${pathname}`);
+};
 
 /**
  * Un dispositivo caduca si lleva mas de `deviceTtlDays` sin aparecer. Antes el
@@ -148,6 +215,10 @@ export function approveRequest(id) {
     lastSeen: null,
     lastRefresh: null,
     claimed: false,
+    // Perfiles: todo dispositivo nuevo arranca con control total y el backend
+    // por defecto, que es el comportamiento anterior a los perfiles.
+    role: "full",
+    targetPort: null,
     // P42: el canje se resuelve con estas credenciales de la solicitud, no con
     // la IP. `claimToken` viaja en la cookie de canje y `code` es el que el
     // usuario ve en la pantalla de espera.
@@ -189,6 +260,108 @@ export function renameDevice(id, name) {
   return persisted;
 }
 
+/** Valida un puerto destino fijo: alto y distinto de los puertos del puente. */
+export const isValidDeviceTargetPort = (port) =>
+  Number.isInteger(port) &&
+  port >= 1024 &&
+  port <= 65535 &&
+  port !== config.listenPort &&
+  port !== config.panelPort;
+
+export function setDeviceRole(id, role) {
+  const current = loadRegistry();
+  const device = current.devices.find((entry) => entry.id === id);
+  if (!device) return false;
+  device.role = normalizeDeviceRole(role);
+  const persisted = saveRegistry();
+  if (persisted) {
+    recordEvent("role", `${device.name || device.address}: ${device.role}`);
+    log("pair", `Rol ${device.role} guardado para ${device.address}`);
+  }
+  return persisted;
+}
+
+/** Fija (o borra con `null`) el backend: `{ ok, reason?, port? }` para el panel. */
+export function setDeviceTarget(id, rawPort) {
+  const current = loadRegistry();
+  const device = current.devices.find((entry) => entry.id === id);
+  if (!device) return { ok: false, reason: "missing" };
+
+  if (rawPort === null || rawPort === undefined || String(rawPort).trim() === "") {
+    device.targetPort = null;
+    const persisted = saveRegistry();
+    if (persisted) {
+      recordEvent("target", `${device.name || device.address}: por defecto`);
+      log("pair", `Puerto destino borrado para ${device.address}: backend por defecto`);
+    }
+    return { ok: persisted, reason: persisted ? undefined : "failed", port: null };
+  }
+
+  const text = String(rawPort).trim();
+  if (!/^\d{1,5}$/.test(text)) return { ok: false, reason: "invalid" };
+  const port = Number.parseInt(text, 10);
+  if (!isValidDeviceTargetPort(port)) return { ok: false, reason: "invalid" };
+
+  device.targetPort = port;
+  targetProbes.delete(port);
+  const persisted = saveRegistry();
+  if (persisted) {
+    recordEvent("target", `${device.name || device.address}: ${port}`);
+    log("pair", `Puerto destino ${port} guardado para ${device.address}`);
+  }
+  return { ok: persisted, reason: persisted ? undefined : "failed", port };
+}
+
+/**
+ * Resolucion POR PETICION: sin `targetPort` => comportamiento de siempre;
+ * puerto fijo sondable => ese puerto; puerto fijo muerto => backend por defecto
+ * y fallo registrado (limitado en frecuencia). Sonda cacheada 15 s; una caida
+ * posterior la detecta el proxy (ECONNREFUSED).
+ */
+const TARGET_PROBE_TTL_MS = 15_000;
+const TARGET_FALLBACK_LOG_MS = 60_000;
+const targetProbes = new Map();
+const targetFallbackLogAt = new Map();
+
+const noteTargetFallback = (device, port) => {
+  const key = `${device?.id || "?"}:${port}`;
+  const now = Date.now();
+  if (now - (targetFallbackLogAt.get(key) || 0) < TARGET_FALLBACK_LOG_MS) return;
+  targetFallbackLogAt.set(key, now);
+  log(
+    "network",
+    `El puerto ${port} de ${deviceLabel(device)} no responde como DeepSeek Harness; ` +
+      "se usa el backend por defecto del puente"
+  );
+};
+
+export async function resolveTargetPortForDevice(device, { force = false } = {}) {
+  const fixed = normalizeTargetPort(device?.targetPort);
+  if (fixed === null) return resolveTargetPort(force);
+
+  const cached = targetProbes.get(fixed);
+  if (!force && cached && Date.now() - cached.at < TARGET_PROBE_TTL_MS) {
+    if (cached.ok) return fixed;
+    noteTargetFallback(device, fixed);
+    return resolveTargetPort(false);
+  }
+
+  let alive = false;
+  try {
+    alive = await probeDshPort(fixed, config.targetHost, 400);
+  } catch {
+    alive = false;
+  }
+  targetProbes.set(fixed, { ok: alive, at: Date.now() });
+  if (alive) return fixed;
+
+  noteTargetFallback(device, fixed);
+  return resolveTargetPort(force);
+}
+
+/** Descarta la cache de sondas (pruebas y cambios de perfil). */
+export const clearTargetProbeCache = () => targetProbes.clear();
+
 export function removeDevice(id) {
   const current = loadRegistry();
   const index = current.devices.findIndex((device) => device.id === id);
@@ -217,6 +390,8 @@ export const deviceSummary = () =>
     name: device.name || "",
     address: device.address,
     agent: device.agent,
+    role: normalizeDeviceRole(device.role),
+    targetPort: normalizeTargetPort(device.targetPort),
     approvedAt: device.approvedAt,
     lastSeen: device.lastSeen,
     online: Boolean(device.lastSeen) && Date.now() - new Date(device.lastSeen).getTime() < ONLINE_WINDOW_MS,

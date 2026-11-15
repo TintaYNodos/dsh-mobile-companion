@@ -107,6 +107,22 @@ class WebBridge {
         }
     }
 
+    /**
+     * P1: guarda un borrador por el puente con el nonce de página. WebBridge y
+     * CompanionBridge se compilan en el mismo APK, así que la firma con token
+     * siempre coincide: aquí NO hay llamada de respaldo sin token (fail-closed).
+     */
+    private static final String DRAFT_SAVE_JS =
+            "function __dshSaveOfflineDraft(v) {"
+            + "  var b = window.AndroidCompanion;"
+            + "  var n = window.__DSH_BRIDGE_TOKEN__;"
+            + "  if (!b || !n || typeof b.saveOfflineDraft !== 'function') return false;"
+            + "  try {"
+            + "    try { if (typeof b.armBridge === 'function') b.armBridge(n); } catch (e0) {}"
+            + "    return b.saveOfflineDraft(n, v) !== false;"
+            + "  } catch (e1) { return false; }"
+            + "}";
+
     static void applyThemeToWeb(MainActivity a) {
         if (a.webView == null) return;
         int m = ThemePalette.themeMode(a);
@@ -202,6 +218,7 @@ class WebBridge {
         String js = "(function(){ "
                 + "if (window.__DSH_OUTBOX_INSTALLED__) return; "
                 + "window.__DSH_OUTBOX_INSTALLED__ = true; "
+                + DRAFT_SAVE_JS
                 + "function captureAndSave(e) { "
                 + "  if (window.AndroidCompanion && typeof window.AndroidCompanion.isOnline === 'function' && !window.AndroidCompanion.isOnline()) { "
                 + "    var t = document.querySelector('textarea, [contenteditable=\"true\"]'); "
@@ -209,9 +226,10 @@ class WebBridge {
                 + "      var v = (t.value || t.innerText || '').trim(); "
                 + "      if (v) { "
                 + "        if (e) { e.preventDefault(); e.stopPropagation(); } "
-                + "        window.AndroidCompanion.saveOfflineDraft(v); "
-                + "        t.value = ''; "
-                + "        if (t.innerText) t.innerText = ''; "
+                + "        if (__dshSaveOfflineDraft(v)) { "
+                + "          t.value = ''; "
+                + "          if (t.innerText) t.innerText = ''; "
+                + "        } "
                 + "      } "
                 + "    } "
                 + "  } "
@@ -260,12 +278,12 @@ class WebBridge {
     static void captureDraftIfOffline(MainActivity a) {
         if (a.state != STATE_ONLINE && a.webView != null) {
             String js = "(function(){ "
+                    + DRAFT_SAVE_JS
                     + "try { "
                     + "  var t = document.querySelector('textarea, [contenteditable=\"true\"]'); "
                     + "  if (t) { "
                     + "    var v = (t.value || t.innerText || '').trim(); "
-                    + "    if (v && window.AndroidCompanion && window.AndroidCompanion.saveOfflineDraft) { "
-                    + "      window.AndroidCompanion.saveOfflineDraft(v); "
+                    + "    if (v && __dshSaveOfflineDraft(v)) { "
                     + "      t.value = ''; "
                     + "      if (t.innerText) t.innerText = ''; "
                     + "    } "

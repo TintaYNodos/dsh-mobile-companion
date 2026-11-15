@@ -27,8 +27,29 @@ final class CleartextPolicy {
     private CleartextPolicy() {
     }
 
-    /** ¿La URL puede cargarse en claro? */
+    /**
+     * P36: fail-closed. Si la política no se puede evaluar por cualquier motivo
+     * (URL corrupta, error inesperado del runtime) se deniega la carga: nunca se
+     * deja pasar tráfico en claro por no haber podido decidir. La evaluación real
+     * vive en evaluate(); aquí solo se envuelve.
+     */
     static boolean allows(String url, String bunkerHost) {
+        try {
+            if (simulateFailure) throw new IllegalStateException("fallo de evaluacion simulado");
+            return evaluate(url, bunkerHost);
+        } catch (Throwable failure) {
+            return false;
+        }
+    }
+
+    /**
+     * Solo pruebas: simula un fallo de evaluación para comprobar el fail-closed
+     * de allows(). En producción siempre false.
+     */
+    static volatile boolean simulateFailure = false;
+
+    /** Evaluación real de la política (sin try/catch propio). */
+    private static boolean evaluate(String url, String bunkerHost) {
         if (url == null) return false;
         String value = url.trim();
         if (value.isEmpty()) return false;

@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.7-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-181%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.8-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-229%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.1.7**（`versionCode` 47）。
+当前版本：**5.1.8**（`versionCode` 48）。
 
 ---
 
@@ -105,7 +105,7 @@ companion/
 │   ├── KeyStoreVault.java     使用 Android Keystore 加密存储的密钥
 │   └── …                      发现、遥测、卫星、WOL、小组件
 ├── test/
-│   ├── verify_*.mjs           十一个验证套件（181 项检查）
+│   ├── verify_*.mjs           十一个验证套件（229 项检查）
 │   ├── _harness.mjs           共享客户端
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              已持久化的会话（.md 与 .json）
@@ -263,7 +263,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.1.7**、`versionCode` 47、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.1.8**、`versionCode` 48、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 210 KB。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
@@ -295,7 +295,7 @@ apksigner verify --print-certs DSH-Companion.apk
 
 发布证书 SHA-256：`4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
 
-5.1.6 及更早的 APK 使用调试证书签名。**5.1.7 更换了签名**：请先卸载旧版本一次，再安装此版本。
+5.1.6 及更早的 APK 使用调试证书签名。**5.1.8 更换了签名**：请先卸载旧版本一次，再安装此版本。
 
 ## 测试
 
@@ -303,7 +303,7 @@ apksigner verify --print-certs DSH-Companion.apk
 npm test
 ```
 
-十二个套件、**181 项检查**（其中 151 项在 CI 运行），覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
+十四个套件、**229 项检查**（其中 199 项在 CI 运行），覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
 
 套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
@@ -329,7 +329,7 @@ npm test
 
 ## 稳定性
 
-**5.1.7 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.7。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
+**5.1.8 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.8。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
 
 ## 截图
 

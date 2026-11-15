@@ -39,6 +39,8 @@ const SUITES = [
   "verify_subagente_a.mjs",
   "verify_panel.mjs",
   "verify_log_rotation.mjs",
+  "verify_vpn_detection.mjs",
+  "verify_device_profiles.mjs",
 ];
 
 /**

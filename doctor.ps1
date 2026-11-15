@@ -150,45 +150,111 @@ if (-not (Test-Path $dshHome)) {
 }
 
 Out ""
-Out "== 3. Tunel privado (ZeroTier o Tailscale) ==" Cyan
+Out "== 3. Red privada (VPN) ==" Cyan
 $privateIp = ""
 $ifaceName = ""
-$candidates = @()
+$vpnCandidates = @()
+# Mismo criterio que src/network.mjs: el nombre del adaptador manda y el rango
+# solo confirma. La LAN domestica nunca se elige; Hamachi (25/8) y Radmin
+# (26/8) se detectan, pero no se enlazan porque no son direcciones privadas.
+$vpnProviders = [ordered]@{
+    "tailscale" = "(?i)tailscale|headscale|^ts[0-9]"
+    "zerotier"  = "(?i)zerotier|^zt[a-z0-9]"
+    "netbird"   = "(?i)netbird|^wt[0-9]"
+    "nebula"    = "(?i)nebula"
+    "easytier"  = "(?i)easytier"
+    "wireguard" = "(?i)wireguard|^wg[0-9]"
+    "tinc"      = "(?i)tinc"
+    "softether" = "(?i)softether"
+    "twingate"  = "(?i)twingate|sdwan"
+    "hamachi"   = "(?i)hamachi"
+    "radmin"    = "(?i)radmin"
+}
+$providerRanks = @{}
+$nextRank = 0
+foreach ($key in $vpnProviders.Keys) { $providerRanks[$key] = $nextRank; $nextRank++ }
+$interfaces = @()
 try {
-    $candidates = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
+    $interfaces = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
         Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.IPAddress -notlike "169.254.*" }
 } catch {
-    $candidates = @()
+    $interfaces = @()
 }
-foreach ($entry in $candidates) {
+foreach ($entry in $interfaces) {
     $name = [string]$entry.InterfaceAlias
     $ip = [string]$entry.IPAddress
-    $isTunnel = $name -match "(?i)zerotier|tailscale|wireguard|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]"
-    $isGeneric = $name -match "(?i)openvpn|^tun[0-9]|^tap[0-9]"
+    $provider = ""
+    foreach ($key in $vpnProviders.Keys) { if ($name -match $vpnProviders[$key]) { $provider = $key; break } }
+    $isGeneric = $name -match "(?i)openvpn|^tun[0-9]|^tap[0-9]|^utun[0-9]|^ppp[0-9]|^ipsec[0-9]"
     $isCgnat = $ip -match "^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\."
-    if (-not $Json) { Write-Host ("         {0,-22} {1,-16} {2}" -f $name, $ip, $(if ($isTunnel) { "tunel" } elseif ($isGeneric) { "vpn generica" } elseif ($isCgnat) { "CGNAT (Tailscale)" } else { "" })) -ForegroundColor DarkGray }
-    if ($isTunnel -or $isCgnat) {
-        if (-not $privateIp) { $privateIp = $ip; $ifaceName = $name }
+    $isRfc1918 = $ip -match "^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\."
+    $isPrivate = $isCgnat -or $isRfc1918
+    $isPhysical = $name -match "(?i)ethernet|wi-?fi|wlan|^eth[0-9]|^en[0-9]|^wl|^eno|^ens|^enp"
+    $kind = ""
+    $selectable = $false
+    if ($provider) {
+        if ($isPrivate) { $kind = "strong"; $selectable = $true } else { $kind = "routable" }
+    } elseif ($isPrivate -and $isGeneric) {
+        $kind = "generic"; $selectable = $true
+    } elseif ($isCgnat -and -not $isPhysical) {
+        $kind = "cgnat"; $selectable = $true
+    }
+    if ($kind) {
+        $candidateRank = if ($provider) { [int]$providerRanks[$provider] + $(if ($selectable) { 0 } else { 1000 }) } elseif ($kind -eq "generic") { 100 } else { 200 }
+        $vpnCandidates += [ordered]@{ ip = $ip; iface = $name; kind = $kind; provider = $provider; rank = $candidateRank; selectable = $selectable }
+    }
+    if (-not $Json) {
+        $label = if ($kind) { "$kind/$($provider)" } elseif ($isPrivate) { "LAN del sistema" } else { "" }
+        Write-Host ("         {0,-22} {1,-16} {2}" -f $name, $ip, $label) -ForegroundColor DarkGray
+    }
+}
+$vpnCandidates = @($vpnCandidates | Sort-Object @{Expression = { $_.rank }}, @{Expression = { [version]$_.ip }})
+$usable = @($vpnCandidates | Where-Object {
+    $_.selectable -and (
+        $_.kind -eq "strong" -or
+        $_.kind -eq "cgnat" -or
+        ($_.kind -eq "generic" -and $env:DSH_ALLOW_GENERIC_VPN -eq "1")
+    )
+})
+$bindOverride = $env:DSH_BIND_HOST
+$overrideValid = $bindOverride -and $bindOverride -match "^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.|127\.)"
+$selected = $null
+if (-not $overrideValid) {
+    $selected = $usable | Select-Object -First 1
+    if ($selected) { $privateIp = [string]$selected.ip; $ifaceName = [string]$selected.iface }
+}
+if ($bindOverride) {
+    if ($overrideValid) {
+        Warn "DSH_BIND_HOST esta fijado a $bindOverride; se usara esa IP en vez de la detectada."
+        $privateIp = $bindOverride
+        $ifaceName = "DSH_BIND_HOST"
+    } else {
+        Warn "DSH_BIND_HOST=$bindOverride no es una IP privada; se ignora y se usa la deteccion."
     }
 }
 if ($privateIp) {
     Ok "Tunel detectado: $ifaceName -> $privateIp"
+    if ($selected -and $usable.Count -gt 1) {
+        Warn "Hay $($usable.Count) redes privadas detectadas; se usara $ifaceName -> $privateIp."
+        Info "Si quieres otra, fija la correcta antes de arrancar el puente:"
+        foreach ($candidate in $usable) {
+            Info ("  DSH_BIND_HOST={0}   # {1} ({2})" -f $candidate.ip, $candidate.iface, $candidate.kind)
+        }
+    }
 } else {
-    Bad "No hay ninguna interfaz de ZeroTier ni Tailscale con IP privada."
-    Info "Sin tunel el telefono no puede llegar a la computadora. Elige uno:"
+    Bad "No hay ninguna interfaz de VPN privada con IP utilizable."
+    Info "Sin red privada el telefono no puede llegar a la computadora. Elige una:"
     Info ""
-    Info "  ZeroTier:  instala https://www.zerotier.com/download/ en la PC y en el telefono,"
-    Info "             crea una red en https://my.zerotier.com y une los dos equipos a ella."
-    Info "             Marca la red como privada y autoriza cada nodo a mano."
-    Info "  Tailscale: instala https://tailscale.com/download en la PC y en el telefono,"
+    Info "  Tailscale (recomendada): instala https://tailscale.com/download en la PC y en el telefono,"
     Info "             inicia sesion con la misma cuenta en ambos y comparte el equipo."
+    Info "  ZeroTier:  instala https://www.zerotier.com/download/ en la PC y en el telefono, crea"
+    Info "             una red en https://my.zerotier.com y autoriza cada nodo a mano."
+    Info "  NetBird:   instala https://netbird.io y une PC y telefono a la misma red (interfaz wt0)."
+    Info "  Tambien:   Nebula, EasyTier, WireGuard, Headscale, Tinc, SoftEther y Twingate."
+    Info "  Hamachi y Radmin usan direcciones publicas (25/8 y 26/8): se detectan, no se enlazan."
+    Info "  Comparativa honesta de todas: VPN_OPTIONS.md (en la carpeta del proyecto)."
     Info ""
     Info "Despues de conectarlos, vuelve a ejecutar este diagnostico."
-}
-$bindOverride = $env:DSH_BIND_HOST
-if ($bindOverride) {
-    Warn "DSH_BIND_HOST esta fijado a $bindOverride; se usara esa IP en vez de la detectada."
-    $privateIp = $bindOverride
 }
 
 Out ""
@@ -271,6 +337,9 @@ $doctorReport = [ordered]@{
     certSha256Release = $certSha256Release
     phoneUrl      = $(if ($privateIp) { "http://${privateIp}:57420" } else { "" })
     tunnel        = $(if ($privateIp) { $ifaceName } else { "" })
+    # Todas las redes privadas vistas, en orden de preferencia. `tunnel` es la
+    # elegida; con varias, el agente puede fijar otra con DSH_BIND_HOST=<ip>.
+    candidates    = @($vpnCandidates | ForEach-Object { [ordered]@{ ip = $_.ip; iface = $_.iface; kind = $_.kind; provider = $_.provider } })
     bindHost      = $privateIp
     bridgePort    = $portBridge
     panelPort     = $panelPort

@@ -40,11 +40,11 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.1.7",
-  apkVersion: "5.1.7",
-  apkVersionCode: 47,
-  previousApkVersion: "5.1.6",
-  previousApkVersionCode: 46,
+  version: "5.1.8",
+  apkVersion: "5.1.8",
+  apkVersionCode: 48,
+  previousApkVersion: "5.1.7",
+  previousApkVersionCode: 47,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
@@ -53,6 +53,11 @@ export const config = Object.freeze({
   listenPort: positiveInt(process.env.DSH_LISTEN_PORT, 57420),
   panelPort: positiveInt(process.env.DSH_PANEL_PORT, positiveInt(process.env.DSH_LISTEN_PORT, 57420) + 1),
   bindHost: text(process.env.DSH_BIND_HOST),
+  // IP privada explicita cuando el adaptador tiene un nombre que no reconocemos.
+  vpnIp: text(process.env.DSH_VPN_IP),
+  // Los tun/tap genericos pueden ser la VPN corporativa de una oficina: solo se
+  // aceptan si el operador confirma que la red es suya.
+  allowGenericVpn: text(process.env.DSH_ALLOW_GENERIC_VPN) === "1",
   // Acceso a traves de un proxy/tunel (Cloudflare, nginx...). Por defecto es
   // un error de seguridad: el puente asumiria que la peticion viene de
   // loopback. Solo se permite si el operador lo pide explicitamente y pone

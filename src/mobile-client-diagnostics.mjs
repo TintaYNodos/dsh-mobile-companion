@@ -13,15 +13,14 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
   var genStartTime = 0;
 
   function checkState() {
-    if (window.AndroidCompanion && window.AndroidCompanion.onHeartbeat) {
-      window.AndroidCompanion.onHeartbeat();
-    }
+    // P1: el latido exige el nonce de pagina (callBridgeWithToken solo llama
+    // desde el frame principal y con el puente armado).
+    callBridgeWithToken('onHeartbeat', []);
 
     var card = findApprovalCard();
     if (card) {
       var key = card.getAttribute('data-approval-key') || 'approval';
       if (key !== lastApprovalKey) {
-        lastApprovalKey = key;
         var headlineEl = card.querySelector('[class*="headline"], h2, h3, header') || card.querySelector('[data-card="approval"] [class*="headline"]');
         var headline = headlineEl ? headlineEl.textContent.trim() : 'Aprobación requerida';
         var detailEl = card.querySelector('[class*="command"], [class*="description"], code, pre') || card.querySelector('[class*="command"]') || card.querySelector('[class*="description"]');
@@ -30,8 +29,11 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
         var match = headline.match(/(?:herramienta|tool)\\s+([A-Za-z0-9_\\-]+)/i);
         var toolName = match ? match[1] : 'Harness';
 
-        if (window.AndroidCompanion && window.AndroidCompanion.onApprovalRequested) {
-          window.AndroidCompanion.onApprovalRequested(key, toolName, headline, detail);
+        // P1: el aviso de aprobacion tambien exige el nonce de la pagina. Solo
+        // se marca como avisada si el puente lo acepto; si el nonce aun no esta
+        // (o el APK lo rechazo) se reintenta en el siguiente tick.
+        if (callBridgeWithToken('onApprovalRequested', [key, toolName, headline, detail])) {
+          lastApprovalKey = key;
         }
       }
     } else if (lastApprovalKey) {
@@ -76,9 +78,8 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
           }
         }
         var docTitle = cleanDocTitle();
-        if (window.AndroidCompanion && window.AndroidCompanion.onGenerationFinished) {
-          window.AndroidCompanion.onGenerationFinished(docTitle || 'Respuesta lista', snippet);
-        }
+        // P1: el aviso de "respuesta lista" tambien exige el nonce de pagina.
+        callBridgeWithToken('onGenerationFinished', [docTitle || 'Respuesta lista', snippet]);
       }
     }
     handleAutoReconnectAndDiagnostics();

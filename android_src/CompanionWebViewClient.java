@@ -171,7 +171,6 @@ class CompanionWebViewClient extends WebViewClient {
         }
 
         ConnectionController.markOnline(a);
-        ActionDispatcher.checkAndDispatchPendingAction(a);
         WebBridge.applyThemeToWeb(a);
         WebBridge.applyEnterBehaviorToWeb(a);
         WebBridge.applyOfflineCopyToWeb(a);
@@ -248,39 +247,53 @@ class CompanionWebViewClient extends WebViewClient {
     /**
      * Bloquea los subrecursos en claro que no vayan al búnker ni a la red
      * privada. La WebView no tiene una política por rango de IP, así que se
-     * corta aquí antes de descargar nada.
+     * corta aquí antes de descargar nada. Es el único llamador de
+     * CleartextPolicy: un false se traduce en una respuesta 403 con mensaje
+     * claro (nunca en una excepción). La navegación principal de otro origen ya
+     * se corta en onPageStarted y las páginas del búnker (mismo host) siempre
+     * pasan la política, así que no hay hueco en el frame raíz.
      */
     @Override
     public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view,
                                                                     WebResourceRequest request) {
+        String url = request != null && request.getUrl() != null ? request.getUrl().toString() : null;
         try {
-            String url = request != null && request.getUrl() != null ? request.getUrl().toString() : null;
-            String bunkerHost = Uri.parse(a.activeUrl).getHost();
+            String bunkerHost = a.activeUrl != null ? Uri.parse(a.activeUrl).getHost() : null;
             if (url != null && !CleartextPolicy.allows(url, bunkerHost)) {
                 android.util.Log.w("DshWebView", "bloqueado tráfico en claro: " + url);
-                java.util.Map<String, String> headers = new java.util.HashMap<>();
-                headers.put("Content-Type", "text/plain; charset=utf-8");
-                headers.put("Cache-Control", "no-store");
-                return new android.webkit.WebResourceResponse(
-                        "text/plain", "utf-8", 403, "Bloqueado",
-                        headers, new java.io.ByteArrayInputStream(
-                        "Bloqueado: tráfico en claro hacia un host no privado.".getBytes("UTF-8")));
+                return CompanionWebViewClient.blockedResponse(
+                        "Bloqueado: tráfico en claro hacia un host no privado.");
             }
         } catch (Throwable error) {
-            // P36: si la política no se puede evaluar, el tráfico en claro se
-            // bloquea (fail-closed). Dejarlo pasar convertía un error de parseo
-            // en una fuga silenciosa; https y los esquemas locales no se tocan.
-            try {
-                String raw = request != null && request.getUrl() != null ? request.getUrl().toString() : "";
-                if (raw.toLowerCase(java.util.Locale.ROOT).startsWith("http://")) {
-                    android.util.Log.w("DshWebView", "política no evaluable, http bloqueado: " + raw);
-                    return new android.webkit.WebResourceResponse("text/plain", "utf-8", 403, "Bloqueado",
-                            new java.util.HashMap<String, String>(), new java.io.ByteArrayInputStream(new byte[0]));
-                }
-            } catch (Throwable ignored) {
+            // P36: fail-closed. allows() ya devuelve false ante cualquier fallo;
+            // este segundo cerrojo cubre errores del propio interceptor (por
+            // ejemplo activeUrl corrupto) y solo afecta a http/ws en claro:
+            // https y los esquemas locales no se tocan.
+            if (CompanionWebViewClient.isCleartextUrl(url)) {
+                android.util.Log.w("DshWebView", "política no evaluable, tráfico en claro bloqueado: " + url);
+                return CompanionWebViewClient.blockedResponse(
+                        "Bloqueado: no se pudo evaluar la política de tráfico en claro; "
+                        + "la petición http se deniega por seguridad.");
             }
         }
         return null;
+    }
+
+    /** Respuesta 403 con cuerpo de texto claro para el usuario. */
+    private static android.webkit.WebResourceResponse blockedResponse(String message) {
+        java.util.Map<String, String> headers = new java.util.HashMap<>();
+        headers.put("Content-Type", "text/plain; charset=utf-8");
+        headers.put("Cache-Control", "no-store");
+        return new android.webkit.WebResourceResponse(
+                "text/plain", "utf-8", 403, "Bloqueado",
+                headers, new java.io.ByteArrayInputStream(
+                message.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+    }
+
+    private static boolean isCleartextUrl(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        return lower.startsWith("http://") || lower.startsWith("ws://");
     }
 
     @Override

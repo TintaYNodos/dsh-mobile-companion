@@ -4,7 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 import { hasValidAccessKey, isCompanionRequestTrusted } from "./crypto.mjs";
-import { touchDevice } from "./devices.mjs";
+import { isViewer, logReadOnlyRejection, sendReadOnly, touchDevice } from "./devices.mjs";
 import { isJsonRequest, sendJson } from "./http.mjs";
 import { resolveDevice } from "./routes-pairing.mjs";
 import { handleAbsorbSatellite, handleGetChat, handleListChats, handleSync } from "./sync.mjs";
@@ -46,6 +46,14 @@ export async function handleDataRoutes(req, res, { url, pathname, remoteAddress 
     // token compartido queda como via adicional. `isCompanionRequestTrusted`
     // es fail-closed: sin token configurado devuelve false.
     const syncDevice = resolveDevice(req, res, remoteAddress);
+    // Solo lectura: escribir conversaciones en el disco del host es una
+    // escritura, aunque el dispositivo este emparejado.
+    if (syncDevice && isViewer(syncDevice)) {
+      req.resume();
+      logReadOnlyRejection(syncDevice, req.method, pathname);
+      sendReadOnly(res);
+      return true;
+    }
     const syncAuthorized = Boolean(syncDevice) || hasValidAccessKey(req) || isCompanionRequestTrusted(req);
     if (!syncAuthorized) {
       sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
@@ -69,6 +77,12 @@ export async function handleDataRoutes(req, res, { url, pathname, remoteAddress 
       return true;
     }
     const device = resolveDevice(req, res, remoteAddress);
+    if (device && isViewer(device)) {
+      req.resume();
+      logReadOnlyRejection(device, req.method, pathname);
+      sendReadOnly(res);
+      return true;
+    }
     if (!device && !hasValidAccessKey(req) && !isCompanionRequestTrusted(req)) {
       sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
       return true;

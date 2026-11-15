@@ -14,8 +14,10 @@ import android.graphics.Color;
 import android.os.Build;
 
 /**
- * Avisos de peticiones de herramienta/permiso, con los botones Aprobar y
- * Rechazar. Separado de NotificationHelper para mantener ese archivo pequeno.
+ * Avisos de peticiones de herramienta/permiso. El aviso es solo informativo:
+ * no lleva botones Aprobar/Rechazar porque el puente no puede resolver esa
+ * decision desde el telefono; indica donde aprobar y toca para abrir la app.
+ * Separado de NotificationHelper para mantener ese archivo pequeno.
  */
 final class NotificationsApproval {
 
@@ -25,7 +27,8 @@ final class NotificationsApproval {
     }
 
     /**
-     * Muestra notificacion de peticion de herramienta / permiso con botones Aceptar y Rechazar.
+     * Muestra la notificacion informativa de peticion de herramienta / permiso.
+     * P3: sin botones ni accion pendiente; el unico intent es abrir la app.
      */
     public static void notifyApproval(Context context, String key, String toolName, String headline, String detail) {
         if (!MainActivity.shouldShowNotification(context)) return;
@@ -39,32 +42,6 @@ final class NotificationsApproval {
         openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent openPending = PendingIntent.getActivity(
                 context, notifId, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        String bunkerUrl = MainActivity.getActiveBunkerUrl(context);
-
-        // Accion Aceptar / Permitir
-        Intent approveIntent = new Intent(context, NotificationActionReceiver.class);
-        approveIntent.setAction(NotificationHelper.ACTION_APPROVE);
-        approveIntent.putExtra(NotificationHelper.EXTRA_REQUEST_ID, key);
-        approveIntent.putExtra(NotificationHelper.EXTRA_ACTION_TYPE, NotificationHelper.TYPE_TOOL_APPROVAL);
-        approveIntent.putExtra(NotificationHelper.EXTRA_NOTIFICATION_ID, notifId);
-        approveIntent.putExtra(NotificationHelper.EXTRA_BUNKER_URL, bunkerUrl);
-        PendingIntent approvePending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 1, approveIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        // Accion Rechazar
-        Intent rejectIntent = new Intent(context, NotificationActionReceiver.class);
-        rejectIntent.setAction(NotificationHelper.ACTION_REJECT);
-        rejectIntent.putExtra(NotificationHelper.EXTRA_REQUEST_ID, key);
-        rejectIntent.putExtra(NotificationHelper.EXTRA_ACTION_TYPE, NotificationHelper.TYPE_TOOL_APPROVAL);
-        rejectIntent.putExtra(NotificationHelper.EXTRA_NOTIFICATION_ID, notifId);
-        rejectIntent.putExtra(NotificationHelper.EXTRA_BUNKER_URL, bunkerUrl);
-        PendingIntent rejectPending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 2, rejectIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
         );
 

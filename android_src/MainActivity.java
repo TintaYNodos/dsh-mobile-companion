@@ -147,7 +147,6 @@ public class MainActivity extends Activity {
     public void recordHeartbeat() { ConnectionController.recordHeartbeat(this); }
     public void saveOfflineDraft(String draft) { WebBridge.saveOfflineDraft(this, draft); }
     public void reloadMainSession() { WebBridge.reloadMainSession(this); }
-    public void dispatchAction(String action, String key) { ActionDispatcher.dispatchAction(this, action, key); }
     public void requestCriticalBiometricApproval(String key, String toolName) {
         BiometricGate.requestCriticalBiometricApproval(this, key, toolName);
     }
@@ -161,6 +160,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        // P3: la notificacion de aprobacion ya no guarda decisiones pendientes.
+        // Se borran las que pudo dejar una version anterior para que no se
+        // apliquen solas al actualizar (el receptor que las usaba ya no existe).
+        if (prefs.contains("pending_action_decision") || prefs.contains("pending_action_id")) {
+            prefs.edit().remove("pending_action_decision").remove("pending_action_id").apply();
+        }
         int themeRes = ThemePalette.isDark(this) ? R.style.Theme_Companion : R.style.Theme_Companion_Light;
         setTheme(themeRes);
         super.onCreate(savedInstanceState);

@@ -13,6 +13,8 @@
  * El bloque Android inyecta `window.__DSH_BRIDGE_TOKEN__` en este documento y
  * exige que el JS propio lo arme con `armBridge(nonce)`; ademas los metodos
  * sensibles (`installUpdate`, `confirmCriticalApproval`, `startSatelliteQuery`)
+ * y los informativos (`onApprovalRequested`, `onGenerationFinished`,
+ * `onJobFinished`, `copyToClipboard`, `saveOfflineDraft`, `onHeartbeat`)
  * reciben ese nonce como primer argumento y solo se invocan desde el frame
  * principal (`window.top === window.self`). Un iframe cross-origin no puede leer
  * el global ni el meta del padre. El armado se intenta al arrancar, al cargar el
@@ -65,7 +67,7 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
       // nada sin ningún aviso.
       var writeText = function(text) {
         try {
-          window.AndroidCompanion.copyToClipboard(String(text != null ? text : ''));
+          callBridgeWithToken('copyToClipboard', [String(text != null ? text : '')]);
         } catch (err) {
           console.error('[companion-clipboard] Error al copiar:', err);
         }
@@ -214,6 +216,41 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
     if (nonce && invoke(nonce)) return true;
     nonce = rearmBridgeForCall();
     return Boolean(nonce) && invoke(nonce);
+  }
+
+  /**
+   * P1: invoca un metodo informativo del puente (latido, avisos, portapapeles,
+   * borrador) con el nonce de pagina. Los seis metodos pasaron a exigir el token
+   * como primer argumento; antes un iframe cross-origin podia usarlos.
+   *
+   * - APK con guardian (armBridge): exige frame principal, puente armado y
+   *   nonce. Sin nonce NO se llama: se prefiere no avisar antes que llamar sin
+   *   token (fail-closed).
+   * - APK 5.1.0-5.1.7 (tiene armBridge pero estos metodos iban sin token): la
+   *   llamada con token lanza y se reintenta UNA vez con la firma antigua.
+   * - APK anterior al guardian: se conserva la firma de siempre.
+   *
+   * No rearma en bucle como callBridgeSensitive: el latido se repite cada
+   * pocos segundos y no debe reiniciar el presupuesto de intentos del armado.
+   */
+  function callBridgeWithToken(method, args) {
+    var bridge = window.AndroidCompanion;
+    if (!bridge || typeof bridge[method] !== 'function') return false;
+    var extra = Array.prototype.slice.call(args || []);
+
+    if (!bridgeHasNonceGuard()) {
+      try { return bridge[method].apply(bridge, extra) !== false; } catch (e) { return false; }
+    }
+    if (!isTopFrame() || !ensureBridgeArmed()) return false;
+    var nonce = readBridgeToken();
+    if (!nonce) return false;
+
+    try {
+      return bridge[method].apply(bridge, [nonce].concat(extra)) !== false;
+    } catch (e) {
+      // Solo se cae a la firma vieja si la nueva no existe (APK intermedio).
+      try { return bridge[method].apply(bridge, extra) !== false; } catch (e2) { return false; }
+    }
   }
 
   // Intento inmediato (si WebBridge ya dejo el nonce antes de este script) y

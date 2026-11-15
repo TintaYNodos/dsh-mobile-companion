@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.7-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-181%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.8-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-229%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ L'application mobile ne réimplémente pas l'interface : elle affiche la propre 
 
 Édition durcie par Ismael Muñoz Reyes pour Tinta y Nodos.
 
-Version actuelle : **5.1.7** (`versionCode` 47).
+Version actuelle : **5.1.8** (`versionCode` 48).
 
 ---
 
@@ -105,7 +105,7 @@ companion/
 │   ├── KeyStoreVault.java    chiffrement Android Keystore des clés stockées
 │   └── …                     découverte, télémétrie, satellite, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           douze suites de vérification (181 contrôles)
+│   ├── verify_*.mjs           quatorze suites de vérification (229 contrôles)
 │   ├── _harness.mjs           client partagé
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversations persistées (.md et .json)
@@ -263,7 +263,7 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version **5.1.7**, `versionCode` 47, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.8**, `versionCode` 48, `minSdk` 26, `targetSdk` 35.
 - Ni AndroidX ni Kotlin : bytecode Java pur, environ 210 Ko.
 - **Cleartext bloqué hors du réseau privé** : `CleartextPolicy` rejette toute requête qui n'est pas en HTTPS ou qui ne pointe pas vers le bunker configuré ou une adresse privée/loopback, et la configuration de sécurité réseau interdit le cleartext vers les services publics avec lesquels l'application communique (GitHub, DeepSeek). Cela est appliqué au-dessus de la WebView, car la configuration de sécurité réseau d'Android ne peut pas exprimer « plages d'IP privées uniquement ».
 - Accès aux fichiers locaux désactivé, contenu mixte bloqué, popups et débogage distant désactivés.
@@ -295,7 +295,7 @@ apksigner verify --print-certs DSH-Companion.apk
 
 Empreinte SHA-256 du certificat de release : `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
 
-Les APK jusqu'à 5.1.6 étaient signés avec le certificat de débogage. **La signature a changé en 5.1.7** : désinstalle la version précédente une fois, puis installe celle-ci.
+Les APK jusqu'à 5.1.6 étaient signés avec le certificat de débogage. **La signature a changé en 5.1.8** : désinstalle la version précédente une fois, puis installe celle-ci.
 
 ## Tests
 
@@ -303,7 +303,7 @@ Les APK jusqu'à 5.1.6 étaient signés avec le certificat de débogage. **La si
 npm test
 ```
 
-Douze suites, **181 contrôles** (151 en CI), couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le relais satellite, le TTL du registre des appareils, le flux du panneau et le kill switch.
+Quatorze suites, **229 contrôles** (199 en CI), couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le relais satellite, le TTL du registre des appareils, le flux du panneau et le kill switch.
 
 La suite parle à un **pont en direct** (ce n'est pas une simulation) : démarrez d'abord le pont. L'exécution réelle du kill switch est destructrice — elle révoque des appareils et fait tourner la clé —, elle doit donc être activée explicitement avec `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -329,7 +329,7 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 ## Stabilité
 
-**La 5.1.7 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.7. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
+**La 5.1.8 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.8. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
 
 ## Captures
 

@@ -113,8 +113,6 @@ class ConnectionController {
         if (a.state != STATE_ONLINE && !a.activeUrl.isEmpty() && !a.pageLoading) {
             a.attempts = 0;
             scheduleReconnect(a, 600);
-        } else if (a.state == STATE_ONLINE) {
-            ActionDispatcher.checkAndDispatchPendingAction(a);
         }
     }
 

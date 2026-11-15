@@ -14,17 +14,30 @@ import { log, warn } from "./log.mjs";
 
 const execFileAsync = promisify(execFile);
 
-// P20: se separan las VPN conocidas (ZeroTier, Tailscale, WireGuard) de los
-// tun/tap genericos, que pueden ser la VPN corporativa de una oficina.
-const STRONG_VPN = /zerotier|tailscale|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]/i;
-const GENERIC_VPN = /wireguard|openvpn|^tun[0-9]|^tap[0-9]/i;
-
+// P20: VPN de proveedores conocidos frente a tun/tap genericos, que pueden ser
+// la VPN corporativa de una oficina. El nombre de la interfaz manda; el rango
+// solo confirma. El orden de esta tabla ES la prioridad cuando hay varias.
+const VPN_PROVIDERS = [
+  ["tailscale", /tailscale|headscale|^ts[0-9]/i],
+  ["zerotier", /zerotier|^zt[a-z0-9]/i],
+  ["netbird", /netbird|^wt[0-9]/i],
+  ["nebula", /nebula/i],
+  ["easytier", /easytier/i],
+  ["wireguard", /wireguard|^wg[0-9]/i],
+  ["tinc", /tinc/i],
+  ["softether", /softether/i],
+  ["twingate", /twingate|sdwan/i],
+  ["hamachi", /hamachi/i],
+  ["radmin", /radmin/i],
+];
+const GENERIC_VPN = /openvpn|^tun[0-9]|^tap[0-9]|^utun[0-9]|^ppp[0-9]|^ipsec[0-9]/i;
+// Un adaptador del sistema es la LAN/WAN de casa: su IP privada no es una VPN.
+const PHYSICAL_IFACE = /ethernet|wi-?fi|wlan|^eth[0-9]|^en[0-9]|^wl|^eno|^ens|^enp/i;
+const VPN_RANK = new Map(VPN_PROVIDERS.map(([provider], index) => [provider, index]));
+const providerOf = (name) => VPN_PROVIDERS.find(([, pattern]) => pattern.test(name))?.[0] || "";
 export const normalizeAddress = (address) => String(address || "").replace(/^::ffff:/, "");
-
-const ipv4Octets = (address) => {
-  if (!net.isIPv4(address)) return null;
-  return address.split(".").map((part) => Number.parseInt(part, 10));
-};
+const ipv4Octets = (address) =>
+  net.isIPv4(address) ? address.split(".").map((part) => Number.parseInt(part, 10)) : null;
 
 const ipv4ToInt = (address) => {
   const octets = ipv4Octets(address);
@@ -53,15 +66,22 @@ export const inCidr = (address, network, prefixLength) => {
   return (target & mask) === (base & mask);
 };
 
-const isPrivateVpnAddress = (address) => {
+const isCgnat = (address) => {
+  const octets = ipv4Octets(address);
+  return Boolean(octets && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127);
+};
+
+const isRfc1918 = (address) => {
   const octets = ipv4Octets(address);
   if (!octets) return false;
-  if (octets[0] === 10) return true;
-  if (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) return true;
-  if (octets[0] === 192 && octets[1] === 168) return true;
-  if (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) return true;
-  return false;
+  return (
+    octets[0] === 10 ||
+    (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+    (octets[0] === 192 && octets[1] === 168)
+  );
 };
+
+const isPrivateVpnAddress = (address) => isRfc1918(address) || isCgnat(address);
 
 const isSafeBindAddress = (address) => {
   if (!net.isIPv4(address)) return false;
@@ -71,10 +91,7 @@ const isSafeBindAddress = (address) => {
 
 export function probePort(port, host = config.targetHost, timeoutMs = 500) {
   return new Promise((resolve) => {
-    if (!net.isIP(host)) {
-      resolve(false);
-      return;
-    }
+    if (!net.isIP(host)) return resolve(false);
 
     const request = http.request(
       { hostname: host, port, method: "GET", path: "/", timeout: timeoutMs, agent: false },
@@ -84,85 +101,104 @@ export function probePort(port, host = config.targetHost, timeoutMs = 500) {
       }
     );
 
-    request.on("timeout", () => {
-      request.destroy();
-      resolve(false);
-    });
+    request.on("timeout", () => { request.destroy(); resolve(false); });
     request.on("error", () => resolve(false));
     request.end();
   });
 }
 
 /**
- * Localiza la interfaz de red privada. Prioriza el override explicito, luego los
- * adaptadores de VPN reconocidos y finalmente el rango CGNAT de Tailscale.
- * Nunca devuelve una direccion enrutable publicamente.
+ * Candidatas en orden de preferencia. Funcion pura: recibe `os.networkInterfaces()`.
+ * Hamachi y Radmin usan rangos publicos (25/8 y 26/8): se listan como no
+ * enlazables para no escuchar jamas en una direccion enrutable.
  */
-export function findVpnAddress() {
-  const override = config.bindHost || process.env.DSH_VPN_IP;
-
-  if (override) {
-    if (isSafeBindAddress(override)) {
-      return {
-        address: override,
-        iface: override === config.bindHost ? "DSH_BIND_HOST" : "DSH_VPN_IP",
-        prefix: 24,
-      };
-    }
-    warn("network", `Direccion de enlace rechazada por politica: ${override}`);
-  }
-
-  const interfaces = os.networkInterfaces();
+export function collectVpnCandidates(interfaces) {
   const candidates = [];
-
-  for (const [name, addresses] of Object.entries(interfaces)) {
-    if (!addresses) continue;
+  for (const [name, addresses] of Object.entries(interfaces || {})) {
+    if (!Array.isArray(addresses)) continue;
     for (const entry of addresses) {
-      const isIpv4 = entry.family === "IPv4" || entry.family === 4;
-      if (!isIpv4 || entry.internal || entry.address === "0.0.0.0") continue;
-      if (entry.address.startsWith("169.254.")) continue;
-      candidates.push({
-        name,
-        address: entry.address,
-        prefix: maskToPrefix(entry.netmask),
-        preferred: STRONG_VPN.test(name),
-        genericVpn: GENERIC_VPN.test(name),
-      });
+      const isIpv4 = entry?.family === "IPv4" || entry?.family === 4;
+      if (!isIpv4 || entry.internal || !entry.address) continue;
+      const isPrivate = isPrivateVpnAddress(entry.address);
+      const provider = providerOf(name);
+      let classified;
+      if (provider) {
+        classified = { kind: isPrivate ? "strong" : "routable", provider, rank: VPN_RANK.get(provider) + (isPrivate ? 0 : 1000), selectable: isPrivate };
+      } else if (isPrivate && GENERIC_VPN.test(name)) {
+        classified = { kind: "generic", provider: "", rank: 100, selectable: true };
+      } else if (isCgnat(entry.address) && !PHYSICAL_IFACE.test(name)) {
+        classified = { kind: "cgnat", provider: "cgnat", rank: 200, selectable: true };
+      } else {
+        continue;
+      }
+      candidates.push({ address: entry.address, iface: name, prefix: maskToPrefix(entry.netmask), ...classified });
     }
   }
-
-  const preferred = candidates.find((candidate) => candidate.preferred);
-  if (preferred) return { address: preferred.address, iface: preferred.name, prefix: preferred.prefix };
-
-  const generic = candidates.find((candidate) => candidate.genericVpn);
-  if (generic && process.env.DSH_ALLOW_GENERIC_VPN === "1") {
-    warn("network", `USB VPN generica (${generic.name}) permitida por DSH_ALLOW_GENERIC_VPN=1`);
-    return { address: generic.address, iface: generic.name, prefix: generic.prefix };
-  }
-  if (generic) {
-    warn(
-      "network",
-      `Ignorando ${generic.name}: parece una VPN generica (posible VPN corporativa). ` +
-        "Usa DSH_BIND_HOST con tu IP privada o DSH_ALLOW_GENERIC_VPN=1 si es tu red."
-    );
-  }
-
-  const cgnat = candidates.find((candidate) => {
-    const octets = ipv4Octets(candidate.address);
-    return octets && octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127;
-  });
-  if (cgnat) return { address: cgnat.address, iface: cgnat.name, prefix: cgnat.prefix };
-
-  return { address: "127.0.0.1", iface: "loopback", prefix: 8 };
+  return candidates.sort((a, b) => a.rank - b.rank || ipv4ToInt(a.address) - ipv4ToInt(b.address));
 }
 
 /**
- * Autorizacion de cliente con criterio cerrado: loopback, la subred real de la
- * interfaz de enlace con su mascara efectiva, o los CIDR declarados.
- *
- * La propia IP de enlace no se autoriza por si misma: cualquier proceso local
- * puede conectarse a esa direccion y heredaria la sesion. El acceso local ya
- * esta cubierto por loopback.
+ * Eleccion pura y testeable: recibe las interfaces del OS y no mira el entorno.
+ * Sin candidata utilizable cae a loopback con `blocked: true`; nunca a la LAN.
+ */
+export function pickVpnAddress(interfaces, options = {}) {
+  const candidates = collectVpnCandidates(interfaces);
+  const override = String(options.override || "");
+  const base = { candidates, ambiguous: false, rejectedOverride: false };
+  if (override) {
+    if (isSafeBindAddress(override)) {
+      return { ...base, address: override, iface: options.overrideLabel || "DSH_BIND_HOST", prefix: 24, kind: "override", provider: "", blocked: false };
+    }
+    base.rejectedOverride = true;
+  }
+  const usable = candidates.filter(
+    (candidate) =>
+      candidate.selectable &&
+      (candidate.kind === "strong" ||
+        candidate.kind === "cgnat" ||
+        (options.allowGenericVpn === true && candidate.kind === "generic"))
+  );
+  base.ambiguous = usable.length > 1;
+  if (usable.length > 0) {
+    const picked = usable[0];
+    return { ...base, address: picked.address, iface: picked.iface, prefix: picked.prefix, kind: picked.kind, provider: picked.provider, blocked: false };
+  }
+  return { ...base, address: "127.0.0.1", iface: "loopback", prefix: 8, kind: "loopback", provider: "", blocked: true };
+}
+
+/**
+ * Localiza la interfaz privada: override, VPN conocida por nombre, tun/tap
+ * generico solo con DSH_ALLOW_GENERIC_VPN=1 y CGNAT de un adaptador no fisico.
+ * Nunca la LAN domestica; sin candidata utilizable bloquea en loopback.
+ */
+export function findVpnAddress() {
+  const override = config.bindHost || config.vpnIp;
+  const result = pickVpnAddress(os.networkInterfaces(), {
+    override,
+    overrideLabel: override && override === config.bindHost ? "DSH_BIND_HOST" : "DSH_VPN_IP",
+    allowGenericVpn: config.allowGenericVpn,
+  });
+  const ignored = result.candidates.find((candidate) => !candidate.selectable);
+  if (ignored) warn("network", `Ignorando ${ignored.iface}: su IP no es privada (Hamachi/Radmin usan 25/8 y 26/8).`);
+  const generic = result.candidates.find((candidate) => candidate.kind === "generic");
+  if (generic && config.allowGenericVpn && result.kind === "generic") {
+    warn("network", `USB VPN generica (${generic.iface}) permitida por DSH_ALLOW_GENERIC_VPN=1`);
+  } else if (generic && !config.allowGenericVpn) {
+    warn("network", `Ignorando ${generic.iface}: parece una VPN generica (posible VPN corporativa). Usa DSH_BIND_HOST con tu IP privada o DSH_ALLOW_GENERIC_VPN=1 si es tu red.`);
+  }
+  if (result.rejectedOverride) warn("network", `Direccion de enlace rechazada por politica: ${override}`);
+  if (result.ambiguous) {
+    const list = result.candidates.filter((candidate) => candidate.selectable).map((candidate) => `${candidate.iface}=${candidate.address}`).join(", ");
+    warn("network", `Varias redes privadas (${list}): se usa ${result.iface}; fija DSH_BIND_HOST=<ip> si prefieres otra.`);
+  }
+  if (result.blocked) warn("network", "Bloqueo explicito: sin red privada utilizable el puente solo escucha en 127.0.0.1.");
+  return result;
+}
+
+/**
+ * Autorizacion de cliente cerrada: loopback, la subred real de la interfaz de
+ * enlace con su mascara efectiva, o los CIDR declarados. La propia IP de enlace
+ * no se autoriza por si misma: cualquier proceso local heredaria la sesion.
  */
 export function isClientAuthorized(remoteAddress, bindHost, bindPrefix = 24) {
   const client = normalizeAddress(remoteAddress);
@@ -200,29 +236,20 @@ export function probeDshPort(port, host = config.targetHost, timeoutMs = 400) {
             resolve(true);
           }
         });
-        response.on("end", () => {
-          resolve(body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__"));
-        });
+        response.on("end", () => resolve(body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__")));
       }
     );
 
-    request.on("timeout", () => {
-      request.destroy();
-      resolve(false);
-    });
+    request.on("timeout", () => { request.destroy(); resolve(false); });
     request.on("error", () => resolve(false));
     request.end();
   });
 }
 
 /**
- * P11: en Linux y macOS no habia descubrimiento dinamico (solo el netstat de
- * Windows) y ademas era sincrono: `execSync` congelaba el event loop hasta
- * 1.5 s en cada barrido, con los tuneles y peticiones en curso esperando.
- * Ahora hay una fuente por sistema (en Linux /proc/net/tcp, que ni siquiera
- * lanza proceso hijo) y los binarios se ejecutan con execFile asincrono.
- * Se conserva la misma politica de siempre: solo loopback 127.0.0.1, puertos
- * > 1024 y fuera de los puertos propios del puente.
+ * P11: en Linux y macOS no habia descubrimiento dinamico y era sincrono
+ * (`execSync` congelaba el event loop). Ahora hay una fuente por sistema y los
+ * binarios se ejecutan con execFile asincrono; la politica no cambia.
  */
 const DISCOVERY_TIMEOUT_MS = 1_500;
 const DISCOVERY_MAX_BUFFER = 1024 * 1024;
@@ -323,10 +350,7 @@ let resolvedPort = config.targetPort;
 let resolvedAt = 0;
 let inFlight = null;
 
-/**
- * Resuelve el puerto real de DeepSeek Harness con cache corto y una sola
- * sondas concurrente. Evita que N peticiones simultaneas disparen N barridos.
- */
+/** Resuelve el puerto de Harness con cache corto y una sola sonda concurrente. */
 export function resolveTargetPort(force = false) {
   const now = Date.now();
   if (!force && now - resolvedAt < 20_000) return Promise.resolve(resolvedPort);

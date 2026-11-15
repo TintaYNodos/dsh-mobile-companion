@@ -66,13 +66,19 @@ text version:
   continue. Explain to the user, briefly:
     * A phone cannot reach this computer without a private network between them. The bridge
       never opens a port to the internet, by design.
-    * Explain the two supported options and ask which one the user prefers. Both are free for
-      personal use. Give the exact steps, not just the links.
-    * **Option A — Tailscale (fastest, about 5 minutes):**
+    * Read `candidates[]` in the JSON: it lists every private network the doctor detected
+      (`ip`, `iface`, `kind`, `provider`). If more than one is usable, the doctor already picked
+      one by priority (Tailscale/Headscale, ZeroTier, NetBird, Nebula, EasyTier, WireGuard,
+      Tinc, SoftEther, Twingate); say which one it used and how to pin another with
+      `DSH_BIND_HOST=<ip>`.
+    * Explain the easiest options and ask which one the user prefers. All are free for personal
+      use. Give the exact steps, not just the links. The full, honest comparison is in
+      VPN_OPTIONS.md.
+    * **Option A — Tailscale (fastest, about 5 minutes, recommended):**
         1. PC: install https://tailscale.com/download/windows and sign in.
         2. Phone: install Tailscale from its store and sign in with the SAME account.
         3. PC: run `tailscale ip -4` (or check the tray app). Note the address (100.x.x.x).
-        4. Run `doctor.ps1 -Json` again: `tunnel` and `phoneUrl` must appear.
+        4. Run `doctor.ps1 -Json` again: `tunnel`, `candidates` and `phoneUrl` must appear.
     * **Option B — ZeroTier (private network managed by hand):**
         1. Create a network at https://my.zerotier.com (free tier) and copy the 16-character ID.
         2. PC: install https://www.zerotier.com/download/ and join it (tray → Join Network, or
@@ -80,6 +86,15 @@ text version:
         3. Phone: install ZeroTier One, join the same network ID.
         4. In my.zerotier.com mark the network **Private** and authorize both nodes.
         5. Wait for the PC to get a 10.x.x.x / 172.2x.x.x address, then run `doctor.ps1 -Json`.
+    * **Option C — NetBird (close to Tailscale):**
+        1. Create a network at https://netbird.io (free personal plan) and copy the setup key.
+        2. PC and phone: install the NetBird client and join with that key; the interface is
+           `wt0` with a 100.x.x.x address.
+        3. Run `doctor.ps1 -Json`: `candidates` must list `wt0` with provider `netbird`.
+    * Hamachi and Radmin are detected but intentionally not bindable: they use 25.x/26.x
+      addresses, which are not private. Do not force them with `DSH_BIND_HOST`.
+    * A generic `tun0`/`tap0` is ignored unless the network is the user's own and they set
+      `DSH_ALLOW_GENERIC_VPN=1`; never enable it on a corporate machine without asking.
     * If the PC is on a corporate network and the tunnel never gets an address, tell the user the
       network may be blocking it. Do not work around it by publishing the bridge.
     * If the user refuses to install a tunnel, say clearly that this setup cannot work: there is no
@@ -92,9 +107,10 @@ text version:
 
 - Node.js 22.15 or newer.
 - `%USERPROFILE%\.dsh` (or `$DSH_HOME`) exists with `.credentials.yaml`.
-- A tunnel interface with a private address (ZeroTier `10.x`/`172.x`/`192.168.x`,
-  Tailscale `100.64.0.0/10`) — this is the phone reachability path.
-- The bridge binds to that interface only; it must NOT be reachable from the internet.
+- A tunnel interface with a private address (Tailscale/NetBird `100.64.0.0/10`, ZeroTier/Nebula/
+  EasyTier `10.x`/`172.16-31.x`/`192.168.x`) — this is the phone reachability path. Hamachi
+  (`25.x`) and Radmin (`26.x`) are detected but not bindable. The bridge binds to that interface
+  only; it must NOT be reachable from the internet.
 
 ## Step 2 — Start it (and explain what it does)
 
@@ -210,13 +226,18 @@ texto:
   Explícale, en corto:
     * Sin una red privada entre el teléfono y la computadora, el teléfono no puede llegar.
       El puente nunca abre un puerto a Internet, es por diseño.
-    * Explícale las dos opciones y pregúntale cuál prefiere. Las dos son gratis para uso personal.
-      Da los pasos exactos, no solo los enlaces.
-    * **Opción A — Tailscale (la más rápida, unos 5 minutos):**
+    * Lee `candidates[]` en el JSON: lista todas las redes privadas que detectó el doctor
+      (`ip`, `iface`, `kind`, `provider`). Si hay más de una utilizable, el doctor ya eligió una
+      por prioridad (Tailscale/Headscale, ZeroTier, NetBird, Nebula, EasyTier, WireGuard, Tinc,
+      SoftEther, Twingate); dile cuál usó y cómo fijar otra con `DSH_BIND_HOST=<ip>`.
+    * Explícale las opciones más fáciles y pregúntale cuál prefiere. Todas son gratis para uso
+      personal. Da los pasos exactos, no solo los enlaces. La comparativa completa y honesta
+      está en VPN_OPTIONS.md.
+    * **Opción A — Tailscale (la más rápida, unos 5 minutos, recomendada):**
         1. PC: instala https://tailscale.com/download/windows e inicia sesión.
         2. Teléfono: instala Tailscale desde su tienda e inicia sesión con la MISMA cuenta.
         3. PC: ejecuta `tailscale ip -4` (o mira la app de la bandeja). Apunta la dirección (100.x.x.x).
-        4. Ejecuta `doctor.ps1 -Json` otra vez: deben aparecer `tunnel` y `phoneUrl`.
+        4. Ejecuta `doctor.ps1 -Json` otra vez: deben aparecer `tunnel`, `candidates` y `phoneUrl`.
     * **Opción B — ZeroTier (red privada gestionada a mano):**
         1. Crea una red en https://my.zerotier.com (plan gratuito) y copia el ID de 16 caracteres.
         2. PC: instala https://www.zerotier.com/download/ y únete (bandeja → Join Network, o
@@ -224,6 +245,15 @@ texto:
         3. Teléfono: instala ZeroTier One y únete al mismo ID.
         4. En my.zerotier.com marca la red como **Private** y autoriza los dos nodos.
         5. Espera a que la PC tenga una dirección 10.x.x.x / 172.2x.x.x y ejecuta `doctor.ps1 -Json`.
+    * **Opción C — NetBird (parecida a Tailscale):**
+        1. Crea una red en https://netbird.io (plan personal gratuito) y copia la setup key.
+        2. PC y teléfono: instala el cliente NetBird y únete con esa clave; la interfaz es `wt0`
+           con una dirección 100.x.x.x.
+        3. Ejecuta `doctor.ps1 -Json`: `candidates` debe listar `wt0` con provider `netbird`.
+    * Hamachi y Radmin se detectan, pero no se enlazan a propósito: usan direcciones 25.x/26.x
+      que no son privadas. No las fuerces con `DSH_BIND_HOST`.
+    * Una `tun0`/`tap0` genérica se ignora salvo que la red sea del usuario y ponga
+      `DSH_ALLOW_GENERIC_VPN=1`; no lo actives en una máquina corporativa sin preguntar.
     * Si la PC está en una red corporativa y el túnel no consigue dirección, dile que la red puede
       estar bloqueándolo. No lo rodees publicando el puente.
     * Si el usuario no quiere instalar un túnel, dile claro que así no puede funcionar: no hay
@@ -236,8 +266,9 @@ texto:
 
 - Node.js 22.15 o superior.
 - `%USERPROFILE%\.dsh` (o `$DSH_HOME`) con `.credentials.yaml`.
-- Una interfaz de túnel con dirección privada (ZeroTier `10.x`/`172.x`/`192.168.x`,
-  Tailscale `100.64.0.0/10`): es el camino por el que llega el teléfono.
+- Una interfaz de túnel con dirección privada (Tailscale/NetBird `100.64.0.0/10`,
+  ZeroTier/Nebula/EasyTier `10.x`/`172.16-31.x`/`192.168.x`): es el camino por el que llega el
+  teléfono. Hamachi (`25.x`) y Radmin (`26.x`) se detectan, pero no se enlazan.
 - El puente escucha SOLO en esa interfaz; no debe ser alcanzable desde Internet.
 
 ## Paso 2 — Arrancarlo (y explicar qué hace)

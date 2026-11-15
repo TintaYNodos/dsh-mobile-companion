@@ -13,11 +13,14 @@ import {
   deviceCookieHeader,
   findPairedDevice,
   isDenied,
+  isViewer,
+  logReadOnlyRejection,
   onDeviceApproved,
   readCookie,
   rejectRequest,
   requestAccess,
   revokeAll,
+  sendReadOnly,
   touchDevice,
 } from "./devices.mjs";
 import { isDocumentRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
@@ -165,6 +168,11 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
       return true;
     }
     const device = resolveDevice(req, res, remoteAddress);
+    if (device && isViewer(device)) {
+      logReadOnlyRejection(device, req.method, pathname);
+      sendReadOnly(res);
+      return true;
+    }
     if (!device && !hasValidAccessKey(req)) {
       sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
       return true;
@@ -216,6 +224,14 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
       sendJson(res, 403, { error: "Accion reservada al panel local de la computadora" });
       return true;
     }
+    // Aprobar o rechazar herramientas y dispositivos es una escritura: un
+    // dispositivo `viewer` no puede hacerlo ni siquiera desde el equipo host.
+    const actionDevice = resolveDevice(req, res, remoteAddress);
+    if (actionDevice && isViewer(actionDevice)) {
+      logReadOnlyRejection(actionDevice, req.method, pathname);
+      sendReadOnly(res);
+      return true;
+    }
     let body;
     try {
       body = JSON.parse((await readBody(req, 4096)).toString("utf8"));
@@ -256,8 +272,17 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
   return false;
 }
 
+/**
+ * Puerta de aprobacion.
+ *
+ * Devuelve `true` si ella misma respondio (pagina de espera, JSON de pendiente)
+ * o el dispositivo de la peticion cuando la deja pasar. `routes.mjs` usa ese
+ * dispositivo para aplicar su perfil (rol y puerto destino) al proxy, incluida
+ * la primera peticion en la que se canjea la cookie.
+ */
 export async function handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context }) {
   const { bindHost, openPanelWindow } = context;
+  let requestDevice = null;
 
   // P47: con DSH_ACCESS_DISABLE=1 no hay clave de acceso, asi que el filtro de
   // abajo se saltaba por completo y ningun dispositivo refrescaba su lastSeen:
@@ -265,21 +290,23 @@ export async function handlePendingApprovalGate(req, res, { url, pathname, remot
   // atender una peticion que trae una cookie de dispositivo valida. La
   // autorizacion no cambia (este modo solo se permite con enlace local).
   if (!accessKeyEnabled()) {
-    const device = resolveDevice(req, res, remoteAddress);
-    if (device && touchDevice(device)) res.setHeader("Set-Cookie", deviceCookieHeader(device.id));
-    return false;
+    requestDevice = resolveDevice(req, res, remoteAddress);
+    if (requestDevice && touchDevice(requestDevice)) {
+      res.setHeader("Set-Cookie", deviceCookieHeader(requestDevice.id));
+    }
+    return requestDevice;
   }
 
   // P43: `DSH_COMPANION_TOKEN` es la credencial documentada de la API
   // `/dsh-companion/sync`. Este filtro de aprobacion no la conoce y respondia
   // 403 antes de llegar a la ruta; se deja pasar SOLO esa ruta, que vuelve a
   // validar el token (o una credencial verificable) por su cuenta.
-  if (pathname === "/dsh-companion/sync" && isCompanionRequestTrusted(req)) return false;
+  if (pathname === "/dsh-companion/sync" && isCompanionRequestTrusted(req)) return null;
 
   if (!hasValidAccessKey(req)) {
-    const device = resolveDevice(req, res, remoteAddress);
+    requestDevice = resolveDevice(req, res, remoteAddress);
 
-    if (!device) {
+    if (!requestDevice) {
       const { entry: pending, created, denied } = requestAccess(remoteAddress, req.headers["user-agent"]);
       if (created) openPanelWindow();
 
@@ -301,8 +328,8 @@ export async function handlePendingApprovalGate(req, res, { url, pathname, remot
       return true;
     }
 
-    if (touchDevice(device)) res.setHeader("Set-Cookie", deviceCookieHeader(device.id));
+    if (touchDevice(requestDevice)) res.setHeader("Set-Cookie", deviceCookieHeader(requestDevice.id));
   }
 
-  return false;
+  return requestDevice;
 }

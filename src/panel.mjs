@@ -28,17 +28,8 @@ import {
   recoveryPage,
   stateStamp,
 } from "./pairing.mjs";
-import {
-  approveRequest,
-  clearHistory,
-  deviceSummary,
-  pendingRequests,
-  recentEvents,
-  rejectRequest,
-  removeDevice,
-  renameDevice,
-  revokeAll,
-} from "./devices.mjs";
+import { deviceSummary, pendingRequests, recentEvents } from "./devices.mjs";
+import { renderPanelBody, runPanelAction } from "./panel-actions.mjs";
 
 
 let activePort = config.panelPort;
@@ -159,38 +150,6 @@ const snapshot = () => {
   return { ...data, stamp: stateStamp(data) };
 };
 
-/**
- * Resultado de cada accion: el panel no debe decir "listo" cuando la solicitud
- * ya caduco o el dispositivo ya no existe.
- */
-const runAction = (pathname, form) => {
-  const id = form.get("id") || "";
-
-  const result = (() => {
-    switch (pathname) {
-      case "/pair/approve":
-        return approveRequest(id) ? "approve" : "expired";
-      case "/pair/reject":
-        return rejectRequest(id) ? "reject" : "expired";
-      case "/pair/revoke-device":
-        return removeDevice(id) ? "revoke" : "missing";
-      case "/pair/rename":
-        return renameDevice(id, form.get("name") || "") ? "rename" : "missing";
-      case "/pair/revoke":
-        revokeAll();
-        return "revoke-all";
-      case "/pair/clear-history":
-        clearHistory();
-        return "cleared";
-      default:
-        return null;
-    }
-  })();
-
-  if (result) notifyPanelClients();
-  return result;
-};
-
 const handler = async (req, res) => {
   const remote = String(req.socket.remoteAddress || "");
   if (!remote.startsWith("127.") && remote !== "::1") {
@@ -234,7 +193,11 @@ const handler = async (req, res) => {
     }
 
     const flash = url.searchParams.get("flash") || "";
-    html(res, approvalPage({ ...snapshot(), flash }));
+    const data = snapshot();
+    // Los controles de rol y puerto destino se inyectan aqui: el render base de
+    // la pagina no los conoce y no se toca desde el panel.
+    const body = await renderPanelBody(approvalPage({ ...data, flash }), { devices: data.devices, flash });
+    html(res, body);
     return;
   }
 
@@ -311,12 +274,13 @@ const handler = async (req, res) => {
       return;
     }
 
-    const flash = runAction(url.pathname, form);
+    const flash = await runPanelAction(url.pathname, form);
     if (!flash) {
       sendText(res, 404, "Accion desconocida");
       return;
     }
 
+    notifyPanelClients();
     redirect(res, `/pair?flash=${encodeURIComponent(flash)}`);
     return;
   }

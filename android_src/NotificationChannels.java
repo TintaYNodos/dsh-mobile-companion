@@ -38,7 +38,7 @@ public final class NotificationChannels {
                 "Peticiones y Aprobaciones",
                 NotificationManager.IMPORTANCE_HIGH
         );
-        approvals.setDescription("Peticiones de herramientas y permisos que requieren Aceptar o Rechazar");
+        approvals.setDescription("Peticiones de herramientas y permisos: el aviso indica donde aprobar en la computadora");
         approvals.enableVibration(true);
         approvals.setVibrationPattern(VIBRATE_APPROVAL);
         approvals.enableLights(true);

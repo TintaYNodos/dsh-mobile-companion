@@ -16,7 +16,8 @@ import android.widget.Toast;
 /**
  * Puente JavaScript expuesto al WebView como `window.AndroidCompanion`.
  * Permite que la aplicación web notifique eventos nativos al teléfono:
- * - Peticiones de autorización o permisos de herramientas (con botones Aceptar/Rechazar).
+ * - Peticiones de autorización o permisos de herramientas (aviso informativo,
+ *   sin botones: indica dónde aprobar en la computadora).
  * - Finalización de generación de respuestas.
  * - Finalización de trabajos o tareas en segundo plano.
  * - Latidos periódicos de conexión viva para el monitor de desconexión.
@@ -33,12 +34,25 @@ public class CompanionBridge {
         this.mainHandler = new Handler(Looper.getMainLooper());
     }
 
+    /**
+     * P1: los métodos informativos del puente también exigen el nonce de la
+     * página. Antes iban sin token y un iframe cross-origin podía usarlos para
+     * crear avisos, escribir el portapapeles o simular latidos. La ruta nativa
+     * (Java -> NotificationsApproval/WebBridge) NO pasa por aquí y no se toca.
+     * Sin nonce válido no se hace nada: se registra el rechazo y se devuelve
+     * false; nunca se lanza una excepción hacia JavaScript.
+     */
     @JavascriptInterface
-    public void onApprovalRequested(String key, String toolName, String headline, String detail) {
-        if (key == null || key.trim().isEmpty()) return;
+    public boolean onApprovalRequested(String nonce, String key, String toolName, String headline, String detail) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("onApprovalRequested");
+            return false;
+        }
+        if (key == null || key.trim().isEmpty()) return false;
         mainHandler.post(() -> {
             NotificationsApproval.notifyApproval(context, key, toolName, headline, detail);
         });
+        return true;
     }
 
     @JavascriptInterface
@@ -49,8 +63,13 @@ public class CompanionBridge {
         });
     }
 
+    /** P1: escribir el portapapeles también exige el nonce de la página. */
     @JavascriptInterface
-    public void copyToClipboard(String text) {
+    public boolean copyToClipboard(String nonce, String text) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("copyToClipboard");
+            return false;
+        }
         mainHandler.post(() -> {
             try {
                 ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -62,6 +81,7 @@ public class CompanionBridge {
             } catch (Throwable ignored) {
             }
         });
+        return true;
     }
 
     @JavascriptInterface
@@ -74,28 +94,46 @@ public class CompanionBridge {
         });
     }
 
+    /** P1: aviso de respuesta terminada; exige el nonce de la página. */
     @JavascriptInterface
-    public void onGenerationFinished(String title, String preview) {
+    public boolean onGenerationFinished(String nonce, String title, String preview) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("onGenerationFinished");
+            return false;
+        }
         mainHandler.post(() -> {
             NotificationHelper.notifyGenerationComplete(context, title, preview);
         });
+        return true;
     }
 
+    /** P1: aviso de trabajo terminado; exige el nonce de la página. */
     @JavascriptInterface
-    public void onJobFinished(String jobId, String jobName, String status) {
+    public boolean onJobFinished(String nonce, String jobId, String jobName, String status) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("onJobFinished");
+            return false;
+        }
         mainHandler.post(() -> {
             NotificationHelper.notifyJobComplete(context, jobId, jobName, status);
         });
+        return true;
     }
 
+    /** P1: latido del monitor de conexión; exige el nonce de la página. */
     @JavascriptInterface
-    public void onHeartbeat() {
+    public boolean onHeartbeat(String nonce) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("onHeartbeat");
+            return false;
+        }
         mainHandler.post(() -> {
             MainActivity instance = MainActivity.getInstance();
             if (instance != null) {
                 instance.recordHeartbeat();
             }
         });
+        return true;
     }
 
     /**
@@ -138,14 +176,25 @@ public class CompanionBridge {
         return instance != null && instance.isOnline();
     }
 
+    /**
+     * P1: guardar el borrador sin conexión exige el nonce de la página. La ruta
+     * nativa (IntentRouter -> WebBridge.saveOfflineDraft) escribe el borrador
+     * directamente en Java y no pasa por el puente, así que no necesita token;
+     * esta variante solo cubre la llamada desde JavaScript.
+     */
     @JavascriptInterface
-    public void saveOfflineDraft(String draft) {
+    public boolean saveOfflineDraft(String nonce, String draft) {
+        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+            BridgeGuard.logRejected("saveOfflineDraft");
+            return false;
+        }
         mainHandler.post(() -> {
             MainActivity instance = MainActivity.getInstance();
             if (instance != null) {
                 instance.saveOfflineDraft(draft);
             }
         });
+        return true;
     }
 
     @JavascriptInterface

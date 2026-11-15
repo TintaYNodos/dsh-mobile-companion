@@ -184,7 +184,7 @@ class PcStatusPoller {
                         String devAgent = dev.optString("agent");
                         String devAddress = dev.optString("address");
                         a.ui.post(() -> {
-                            NotificationHelper.notifyDevicePairing(a, devId, devCode, devAgent, devAddress, baseUrl);
+                            NotificationHelper.notifyDevicePairing(a, devId, devCode, devAgent, devAddress);
                         });
                     }
                 }

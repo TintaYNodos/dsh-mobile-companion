@@ -79,6 +79,32 @@ Android `versionCode` increments once per published build.
 - **P23**: el puerto del panel (57421) ya no está entre los candidatos del backend de Harness;
   antes el descubrimiento podía apuntar al panel.
 
+## 5.1.8 — `versionCode` 48
+
+### Añadido
+
+- **Roles por dispositivo**: `role: full | viewer`. Un `viewer` puede leer el chat y los avisos,
+  pero el puente le rechaza las escrituras (sync, absorb-satellite, aprobaciones, kill switch) y
+  los mutantes del proxy, con un allowlist corto de lecturas que DSH envía por POST. Documentado
+  en `DISPOSITIVOS.md` con sus límites.
+- **Multi-instancia**: cada dispositivo puede fijar `targetPort` y atender un backend de Harness
+  distinto (dos instancias o dos PCs). Si el puerto no responde se usa el backend por defecto y se
+  registra. Se configura desde el panel.
+- **VPN más amplia y guiada**: detección de NetBird, Nebula, EasyTier, Tinc, SoftEther, Twingate,
+  Headscale, Hamachi y Radmin (estos dos últimos detectados pero no enlazables por sus rangos).
+  Con varias candidatas el doctor lista y sugiere `DSH_BIND_HOST`. Nuevo `VPN_OPTIONS.md`.
+- **Watchdog de avisos**: el servicio en primer plano detecta un SSE colgado (3 min sin actividad
+  y sin keep-alive), reconecta, reinicia la escucha si hace falta y avisa una sola vez si no
+  recupera. Interruptor en Ajustes ("Reiniciar el servicio si se cuelga", ON por defecto).
+
+### Corregido (auditoría externa)
+
+- **P1**: el nonce cubre ahora también `onApprovalRequested`, `onGenerationFinished`,
+  `onJobFinished`, `copyToClipboard`, `saveOfflineDraft` y `onHeartbeat`.
+- **P3**: fuera la acción muerta de aprobación desde la notificación (botones, receptor y acción
+  pendiente); la notificación queda informativa y se limpian restos de versiones anteriores.
+- **P36**: `CleartextPolicy` es fail-closed ante cualquier excepción.
+
 ## 5.1.7 — `versionCode` 47
 
 ### Cambiado

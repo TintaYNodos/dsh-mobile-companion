@@ -80,6 +80,33 @@ class SettingsNotifications {
                     }
                 }));
 
+        // Vigilante del servicio: si el SSE se cuelga, reconecta solo y, si no
+        // puede, avisa. La linea de estado dice cuando fue la ultima conexion
+        // buena y que hizo el watchdog por ultima vez.
+        TextView watchdogLine = new TextView(a);
+        watchdogLine.setText(watchdogStatus(a));
+        watchdogLine.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        watchdogLine.setTextColor(ThemePalette.inkDim(a));
+        watchdogLine.setPadding(ThemePalette.dp(a, 4), 0, ThemePalette.dp(a, 4), ThemePalette.dp(a, 12));
+        final Runnable refreshWatchdog = new Runnable() {
+            @Override
+            public void run() {
+                if (!watchdogLine.isAttachedToWindow()) return; // el dialogo se cerro
+                watchdogLine.setText(watchdogStatus(a));
+                watchdogLine.postDelayed(this, 10_000L);
+            }
+        };
+        form.addView(UiKit.settingSwitchCard(a,
+                "Reiniciar el servicio si se cuelga",
+                "Si la conexión se queda colgada, reconecta sola y avisa cuando no puede.",
+                a.prefs.getBoolean(PrefKeys.KEY_PC_EVENTS_WATCHDOG, true),
+                (view, checked) -> {
+                    a.prefs.edit().putBoolean(PrefKeys.KEY_PC_EVENTS_WATCHDOG, checked).apply();
+                    watchdogLine.setText(watchdogStatus(a));
+                }));
+        form.addView(watchdogLine);
+        watchdogLine.postDelayed(refreshWatchdog, 10_000L);
+
         // Pruebas de la cadena de avisos: primero el aviso local (permiso y
         // canal), despues el recorrido completo hasta el puente. Sin esto, un
         // fallo solo se descubre cuando el chat termina y no suena nada.
@@ -121,6 +148,35 @@ class SettingsNotifications {
                     if (checked && !isBatteryExempt(a)) requestBatteryExemption(a);
                     else if (checked) Toast.makeText(a, "Ya esta exento de la optimizacion de bateria", Toast.LENGTH_SHORT).show();
                 }));
+    }
+
+    /**
+     * Línea de estado del vigilante: última conexión correcta y última acción
+     * del watchdog (reconexión, reinicio o aviso). Se refresca sola mientras el
+     * diálogo está abierto.
+     */
+    static String watchdogStatus(MainActivity a) {
+        long now = System.currentTimeMillis();
+        long lastOk = a.prefs.getLong(PrefKeys.KEY_PC_EVENTS_LAST_OK, 0L);
+        String lastConnection = lastOk > 0L
+                ? "Última conexión: " + WatchdogPolicy.describeAge(now, lastOk)
+                : "Última conexión: ninguna todavía";
+
+        String watchdogText;
+        if (!PcEventsService.isEnabled(a)) {
+            watchdogText = "watchdog inactivo (avisos de la PC apagados)";
+        } else if (!a.prefs.getBoolean(PrefKeys.KEY_PC_EVENTS_WATCHDOG, true)) {
+            watchdogText = "watchdog desactivado";
+        } else if (!PcEventsService.isRunning()) {
+            watchdogText = "watchdog detenido (escucha apagada)";
+        } else {
+            String note = a.prefs.getString(PrefKeys.KEY_PC_EVENTS_WATCHDOG_NOTE, "");
+            long noteAt = a.prefs.getLong(PrefKeys.KEY_PC_EVENTS_WATCHDOG_NOTE_AT, 0L);
+            watchdogText = note != null && !note.isEmpty() && noteAt > 0L
+                    ? "watchdog: " + note + " " + WatchdogPolicy.describeAge(now, noteAt)
+                    : "watchdog vigilando, sin incidencias";
+        }
+        return lastConnection + " · " + watchdogText;
     }
 
     static boolean isBatteryExempt(MainActivity a) {

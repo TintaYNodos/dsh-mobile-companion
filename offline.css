@@ -56,6 +56,7 @@
   }
   .app-shell {
     width: 100%;
+    min-width: 0;
     max-width: 440px;
     transition: max-width 0.2s ease;
   }
@@ -66,13 +67,17 @@
   /* Barra superior de pestañas técnicas */
   .tab-bar {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 20px;
     border-bottom: 1px solid var(--line);
     padding-bottom: 8px;
+    min-width: 0;
   }
   .tab-btn {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;

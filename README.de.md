@@ -10,7 +10,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.1.0** (`versionCode` 40).
+Aktuelle Version: **5.1.1** (`versionCode` 41).
 
 ---
 
@@ -164,7 +164,6 @@ Zwei gleichwertige Methoden:
 | `DSH_DEVICE_TTL_DAYS` | `30` | Lebensdauer der Gerätesitzung; abgelaufene Geräte werden abgelehnt und entfernt |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Wie oft die Lebensdauer bei Nutzung erneuert wird |
 | `DSH_PENDING_TTL_MIN` | `15` | Minuten, die eine Pairing-Anfrage auf Freigabe wartet |
-| `DSH_ENABLE_TERMINAL` | — | `1` aktiviert das Remote-Terminal (standardmäßig aus, nur Loopback) |
 
 ### Einmalige Freigabe vom Computer
 
@@ -200,7 +199,6 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 - `POST /dsh-companion/open-panel` — öffnet das lokale Panel-Fenster (nur Loopback).
 - `POST /dsh-companion/retry` — löscht eine Ablehnung und fordert erneut Zugriff an.
 - `POST /dsh-companion/kill-switch` — widerruft jedes Gerät, schließt Tunnel und rotiert den Zugriffsschlüssel.
-- `POST /dsh-companion/terminal` — Remote-Shell, **deaktiviert, sofern nicht `DSH_ENABLE_TERMINAL=1`**, und nur Loopback.
 - `POST /dsh-companion/action` — Relais für Werkzeug-Freigaben. Gibt `501` zurück: Freigaben leben im DOM der GUI, die Bridge täuscht sie nicht vor.
 - `GET /companion.webmanifest` — PWA-Manifest.
 
@@ -247,7 +245,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.1.0**, `versionCode` 40, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — Version **5.1.1**, `versionCode` 41, `minSdk` 26, `targetSdk` 35.
 - Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 210 KB.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
@@ -272,6 +270,8 @@ Elf Suites, **155 Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cr
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
 ---
+
+> **Satellitenmodus (optional):** die Offline-Seite kann eine Unterhaltung mit dem auf dem Telefon hinterlegten API-Schlüssel an `api.deepseek.com` senden. Das ist die einzige Funktion, die das private Netz verlässt; sie ist optional, benötigt diesen Schlüssel und kann seit 5.1.1 nur vom Hauptframe des Bunkers ausgelöst werden.
 
 ## Ehrliche Einschränkungen
 

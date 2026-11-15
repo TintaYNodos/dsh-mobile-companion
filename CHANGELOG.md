@@ -3,6 +3,29 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.1 — `versionCode` 41
+
+Cierre de los residuales del informe y de los opcionales de repositorio.
+
+### Cambios
+
+- **Terminal remota eliminada** (P14): fuera el endpoint `/dsh-companion/terminal`,
+  `DSH_ENABLE_TERMINAL` y su documentación. Era un shell remoto opcional que nadie
+  usaba y que no aporta nada que no puedas hacer en la propia computadora.
+- **`pendingList` ya no se envía a los teléfonos** (P16): solo el panel local recibe
+  ids, códigos, IPs y user-agents de otros equipos; el teléfono ve el contador.
+- **La VPN corporativa ya no se toma por defecto** (P20): la detección automática
+  solo acepta ZeroTier, Tailscale y WireGuard; un `tun`/`tap` genérico se ignora con
+  aviso y, si de verdad es tu red, se habilita con `DSH_ALLOW_GENERIC_VPN=1` o
+  `DSH_BIND_HOST`.
+- **El panel no roba el foco** (P33): traer la ventana al frente ocurre una sola vez
+  por minuto y nunca si ya hay una pestaña del panel abierta.
+- **Modo satélite documentado** (P15): el aviso de que envía tu conversación a
+  `api.deepseek.com` con tu clave está ahora en los 7 README y en la propia página
+  offline, antes de usarlo.
+- Arreglo de maquetación de la barra de pestañas de la página offline (flex-wrap y
+  min-width), que podía desbordar en pantallas muy angostas.
+
 ## 5.1.0 — `versionCode` 40
 
 Cierre de los 56 puntos del informe de revisión. Es la versión 5 completa.

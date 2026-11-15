@@ -14,7 +14,10 @@ import { log, warn } from "./log.mjs";
 
 const execFileAsync = promisify(execFile);
 
-const VPN_INTERFACE = /zerotier|tailscale|wireguard|openvpn|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]|^tun[0-9]|^tap[0-9]/i;
+// P20: se separan las VPN conocidas (ZeroTier, Tailscale, WireGuard) de los
+// tun/tap genericos, que pueden ser la VPN corporativa de una oficina.
+const STRONG_VPN = /zerotier|tailscale|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]/i;
+const GENERIC_VPN = /wireguard|openvpn|^tun[0-9]|^tap[0-9]/i;
 
 export const normalizeAddress = (address) => String(address || "").replace(/^::ffff:/, "");
 
@@ -122,13 +125,27 @@ export function findVpnAddress() {
         name,
         address: entry.address,
         prefix: maskToPrefix(entry.netmask),
-        preferred: VPN_INTERFACE.test(name),
+        preferred: STRONG_VPN.test(name),
+        genericVpn: GENERIC_VPN.test(name),
       });
     }
   }
 
   const preferred = candidates.find((candidate) => candidate.preferred);
   if (preferred) return { address: preferred.address, iface: preferred.name, prefix: preferred.prefix };
+
+  const generic = candidates.find((candidate) => candidate.genericVpn);
+  if (generic && process.env.DSH_ALLOW_GENERIC_VPN === "1") {
+    warn("network", `USB VPN generica (${generic.name}) permitida por DSH_ALLOW_GENERIC_VPN=1`);
+    return { address: generic.address, iface: generic.name, prefix: generic.prefix };
+  }
+  if (generic) {
+    warn(
+      "network",
+      `Ignorando ${generic.name}: parece una VPN generica (posible VPN corporativa). ` +
+        "Usa DSH_BIND_HOST con tu IP privada o DSH_ALLOW_GENERIC_VPN=1 si es tu red."
+    );
+  }
 
   const cgnat = candidates.find((candidate) => {
     const octets = ipv4Octets(candidate.address);

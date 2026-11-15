@@ -58,4 +58,4 @@ un navegador escribiéndola una vez. La app no la usa.
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Cada cuánto se renueva al usarla |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutos que una solicitud espera aprobación |
 | `DSH_ACCESS_DISABLE=1` | — | Sin aprobación ni clave. Solo se permite con el puente enlazado a `127.0.0.1` |
-| `DSH_ENABLE_TERMINAL=1` | — | Activa la terminal remota (apagada por defecto; además exige loopback) |
+

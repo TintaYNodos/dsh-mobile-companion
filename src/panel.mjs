@@ -65,8 +65,19 @@ export const notifyPanelClients = () => {
   }
 };
 
-export const focusPanelWindow = () => {
+let lastFocusAt = 0;
+
+/**
+ * P33: traer la ventana del panel al frente es una accion con efectos: se hace
+ * una sola vez por minuto y nunca si ya hay una pestana del panel abierta.
+ */
+export const focusPanelWindow = (options = {}) => {
   if (process.platform !== "win32") return;
+  if (!options.force) {
+    if (isPanelTabOpen()) return true;
+    if (Date.now() - lastFocusAt < 60000) return true;
+  }
+  lastFocusAt = Date.now();
   try {
     const psCmd = "$ws = New-Object -ComObject Wscript.Shell; if (-not $ws.AppActivate('Autorizar dispositivos')) { $ws.AppActivate('DSH Companion') }";
     spawn("powershell", ["-NoProfile", "-NonInteractive", "-Command", psCmd], {
@@ -74,6 +85,7 @@ export const focusPanelWindow = () => {
       stdio: "ignore",
     }).unref();
   } catch {}
+  return true;
 };
 
 const readPanelCookie = (req) => {

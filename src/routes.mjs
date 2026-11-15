@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
  * See LICENSE file in repository root for full terms.
  */
-import { spawn } from "node:child_process";
 import { config } from "./config.mjs";
 import { isClientAuthorized, normalizeAddress, resolveTargetPort, probePort } from "./network.mjs";
 import { hasValidAccessKey } from "./crypto.mjs";
@@ -28,7 +27,8 @@ export const wantsMobileShell = (req, url) => {
   return /android|iphone|ipad|ipod|mobile|harmonyos/i.test(String(req.headers["user-agent"] || ""));
 };
 
-export const buildStatusPayload = async () => {
+export const buildStatusPayload = async (options = {}) => {
+  const includePendingList = options.includePendingList === true;
   const targetPort = await resolveTargetPort();
   const dshOnline = await probePort(targetPort, config.targetHost, 400);
   const pending = pendingRequests();
@@ -43,7 +43,9 @@ export const buildStatusPayload = async () => {
     dshOnline,
     targetPort,
     pendingDevices: pending.length,
-    pendingList: pending,
+    // P16: el telefono no necesita la lista de pendientes (ids, codigos, IPs y
+    // user-agents de otros equipos). Solo se entrega al panel local.
+    ...(includePendingList ? { pendingList: pending } : {}),
     systemStats: collectSystemStats(),
     time: Date.now(),
   };
@@ -165,7 +167,8 @@ export async function dispatchRequest(req, res, context) {
     // a diario. Refrescar aqui no cambia la autorizacion.
     if (device) touchDevice(device);
 
-    const payload = await buildStatusPayload();
+    const isLoopback = normalizeAddress(remoteAddress).startsWith("127.");
+    const payload = await buildStatusPayload({ includePendingList: isLoopback });
     sendJson(res, 200, payload);
     return;
   }
@@ -185,134 +188,6 @@ export async function dispatchRequest(req, res, context) {
     return;
   }
 
-  if (pathname === "/dsh-companion/terminal" && req.method === "POST") {
-    // Shell remoto: cualquier dispositivo emparejado obtendria control total de
-    // la PC. Se deja como funcion opcional explicita y apagada por defecto;
-    // ademas solo se permite desde el propio equipo (loopback).
-    if (!config.enableTerminal) {
-      sendJson(res, 501, {
-        ok: false,
-        error: "terminal_disabled",
-        detail: "La terminal remota está desactivada. Actívala con DSH_ENABLE_TERMINAL=1.",
-      });
-      return;
-    }
-    if (!normalizeAddress(remoteAddress).startsWith("127.")) {
-      sendJson(res, 403, { ok: false, error: "La terminal solo está disponible desde la computadora" });
-      return;
-    }
-    if (!consumeAllowance(`terminal:${remoteAddress}`, { capacity: 20, refillPerSecond: 2 })) {
-      sendJson(res, 429, { ok: false, error: "Demasiadas peticiones" });
-      return;
-    }
-    const device = resolveDevice(req, res, remoteAddress);
-    if (!device && !hasValidAccessKey(req)) {
-      sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
-      return;
-    }
-    let body;
-    try {
-      body = JSON.parse((await readBody(req, 65536)).toString("utf8"));
-    } catch {
-      sendJson(res, 400, { ok: false, error: "JSON invalido" });
-      return;
-    }
-    const command = typeof body?.command === "string" ? body.command.trim() : "";
-    if (!command) {
-      sendJson(res, 400, { ok: false, error: "Comando vacio o no especificado" });
-      return;
-    }
-
-    const MAX_OUTPUT = 32 * 1024;
-    const sanitizeAndCap = (val) => {
-      if (typeof val !== "string") val = String(val ?? "");
-      val = val.replace(/\0/g, "");
-      const buf = Buffer.from(val, "utf8");
-      if (buf.length <= MAX_OUTPUT) return val;
-      return buf.subarray(0, MAX_OUTPUT).toString("utf8");
-    };
-
-    const isWin = process.platform === "win32";
-    const shell = isWin ? "powershell.exe" : "bash";
-    const args = isWin ? ["-NoProfile", "-Command", command] : ["-c", command];
-
-    const result = await new Promise((resolve) => {
-      let stdoutChunks = [];
-      let stderrChunks = [];
-      let totalStdoutBytes = 0;
-      let totalStderrBytes = 0;
-      let settled = false;
-
-      const child = spawn(shell, args, {
-        windowsHide: true,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        try {
-          child.kill("SIGKILL");
-        } catch {}
-        resolve({
-          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-          stderr: Buffer.concat(stderrChunks).toString("utf8") || "Tiempo de espera agotado",
-          status: 124,
-        });
-      }, 10000);
-
-      child.stdout.on("data", (chunk) => {
-        if (totalStdoutBytes < 1024 * 1024) {
-          stdoutChunks.push(chunk);
-          totalStdoutBytes += chunk.length;
-        }
-      });
-
-      child.stderr.on("data", (chunk) => {
-        if (totalStderrBytes < 1024 * 1024) {
-          stderrChunks.push(chunk);
-          totalStderrBytes += chunk.length;
-        }
-      });
-
-      child.on("error", (err) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        resolve({
-          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-          stderr: err?.message || String(err),
-          status: 1,
-        });
-      });
-
-      child.on("close", (code) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        resolve({
-          stdout: Buffer.concat(stdoutChunks).toString("utf8"),
-          stderr: Buffer.concat(stderrChunks).toString("utf8"),
-          status: code !== null ? code : 0,
-        });
-      });
-    });
-
-    const exitCode = result.status !== null && result.status !== undefined
-      ? result.status
-      : 0;
-
-    const stdout = sanitizeAndCap(result.stdout || "");
-    const stderr = sanitizeAndCap(result.stderr || "");
-
-    sendJson(res, 200, {
-      ok: true,
-      stdout,
-      stderr,
-      exitCode,
-    });
-    return;
-  }
 
   if (pathname === "/simulator") {
     serveStatic(pathname, req, res);

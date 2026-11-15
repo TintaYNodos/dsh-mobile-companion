@@ -40,11 +40,11 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.1.0",
-  apkVersion: "5.1.0",
-  apkVersionCode: 40,
-  previousApkVersion: "5.0.1",
-  previousApkVersionCode: 39,
+  version: "5.1.1",
+  apkVersion: "5.1.1",
+  apkVersionCode: 41,
+  previousApkVersion: "5.1.0",
+  previousApkVersionCode: 40,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
@@ -75,10 +75,6 @@ export const config = Object.freeze({
   companionToken: text(process.env.DSH_COMPANION_TOKEN),
   accessKey: text(process.env.DSH_ACCESS_KEY),
   accessKeyDisabled: accessDisableRaw === "1",
-
-  // Terminal remota: apagada salvo que se pida explicitamente. Es shell
-  // arbitrario en la PC a peticion de cualquier dispositivo emparejado.
-  enableTerminal: text(process.env.DSH_ENABLE_TERMINAL) === "1",
 
   // Sesion de dispositivo: 30 dias, renovada deslizantemente con el uso.
   deviceTtlDays: positiveInt(process.env.DSH_DEVICE_TTL_DAYS, 30),

@@ -10,7 +10,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.1.0**（`versionCode` 40）。
+当前版本：**5.1.1**（`versionCode` 41）。
 
 ---
 
@@ -164,7 +164,6 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 | `DSH_DEVICE_TTL_DAYS` | `30` | 设备会话有效期；过期设备会被拒绝并清除 |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | 使用时效期续期的间隔 |
 | `DSH_PENDING_TTL_MIN` | `15` | 配对请求等待审批的分钟数 |
-| `DSH_ENABLE_TERMINAL` | — | `1` 启用远程终端（默认关闭，仅回环） |
 
 ### 从电脑进行一次性批准
 
@@ -200,7 +199,6 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 - `POST /dsh-companion/open-panel` — 打开本地面板窗口（仅回环）。
 - `POST /dsh-companion/retry` — 清除拒绝并重新请求访问。
 - `POST /dsh-companion/kill-switch` — 撤销所有设备、关闭隧道并轮换访问密钥。
-- `POST /dsh-companion/terminal` — 远程 shell，**除非 `DSH_ENABLE_TERMINAL=1` 否则禁用**，且仅回环。
 - `POST /dsh-companion/action` — 工具审批中继。返回 `501`：审批存在于 GUI 的 DOM 中，桥接服务不会伪造它们。
 - `GET /companion.webmanifest` — PWA 清单。
 
@@ -247,7 +245,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.1.0**、`versionCode` 40、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.1.1**、`versionCode` 41、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 210 KB。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
@@ -272,6 +270,8 @@ npm test
 套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
 ---
+
+> **卫星模式（可选）：** 离线页面可以使用你在手机上配置的 API 密钥把对话发送到 `api.deepseek.com`。这是唯一离开你私有网络的功能；它是可选的、需要该密钥，并且自 5.1.1 起只能由堡垒机的主框架触发。
 
 ## 坦诚的局限
 

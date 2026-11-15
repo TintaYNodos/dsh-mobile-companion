@@ -57,86 +57,19 @@ check("panel /pair contiene texto explicativo exacto", panelHtml.includes("Escan
 check("panel /pair incluye la URL del bunker", panelHtml.includes(testBunkerUrl));
 
 // ============================================================================
-// 2. ENDPOINT DE TERMINAL REMOTA SEGURA (POST /dsh-companion/terminal)
-// ============================================================================
-// 2.0 La terminal remota esta APAGADA por defecto (DSH_ENABLE_TERMINAL=1 para
-// activarla). El contrato cambia con la configuracion, asi que se detecta primero.
-const probeTerm = await request("/dsh-companion/terminal", {
+// 2. LA TERMINAL REMOTA FUE RETIRADA (P14)
+// Era un shell remoto opcional que nadie usaba; ya no existe el endpoint.
+const removedTerminal = await request("/dsh-companion/terminal", {
   method: "POST",
   headers: { "content-type": "application/json", authorization: basic("dsh", KEY) },
-  body: JSON.stringify({ command: "echo probe" }),
+  body: JSON.stringify({ command: "echo test" }),
 });
-const TERMINAL_ENABLED = probeTerm.status !== 501;
+check(
+  "terminal remota retirada (ni 200 ni ejecucion)",
+  removedTerminal.status !== 200 && removedTerminal.status !== 501,
+  `status=${removedTerminal.status}`
+);
 
-if (!TERMINAL_ENABLED) {
-  check("terminal deshabilitada por defecto responde 501", probeTerm.status === 501, `status=${probeTerm.status}`);
-  let probeJson = {};
-  try { probeJson = JSON.parse(probeTerm.body); } catch {}
-  check("terminal deshabilitada explica como activarla", String(probeJson.detail || "").includes("DSH_ENABLE_TERMINAL"), String(probeJson.detail || "").slice(0, 60));
-  console.log("  (terminal apagada: se omiten las pruebas de ejecucion 2.1-2.6)");
-} else {
-  // 2.1 Peticion sin autorizacion debe responder 403
-  const unauthTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ command: "echo test" }),
-  });
-  check("terminal sin autorizacion rechazada con 403", unauthTerm.status === 403, `status=${unauthTerm.status}`);
-
-  // 2.2 Peticion con clave incorrecta rechazada con 403
-  const badKeyTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: basic("dsh", "clave-falsa-12345") },
-    body: JSON.stringify({ command: "echo test" }),
-  });
-  check("terminal con clave incorrecta rechazada con 403", badKeyTerm.status === 403, `status=${badKeyTerm.status}`);
-
-  // 2.3 Peticion con clave valida pero JSON invalido responde 400
-  const badJsonTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: basic("dsh", KEY) },
-    body: "invalido{json",
-  });
-  check("terminal con JSON invalido responde 400", badJsonTerm.status === 400, `status=${badJsonTerm.status}`);
-
-  // 2.4 Peticion con comando vacio responde 400
-  const emptyTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: basic("dsh", KEY) },
-    body: JSON.stringify({ command: "" }),
-  });
-  check("terminal con comando vacio responde 400", emptyTerm.status === 400, `status=${emptyTerm.status}`);
-
-  // 2.5 Ejecucion exitosa de comando
-  const cmdEcho = process.platform === "win32" ? "Write-Output 'Subagente_A_OK'" : "echo 'Subagente_A_OK'";
-  const goodTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: basic("dsh", KEY) },
-    body: JSON.stringify({ command: cmdEcho }),
-  });
-  check("terminal autorizada responde 200", goodTerm.status === 200, `status=${goodTerm.status}`);
-  let termJson = {};
-  try { termJson = JSON.parse(goodTerm.body); } catch {}
-  check("terminal retorna ok: true", termJson.ok === true);
-  check("terminal retorna stdout esperado", typeof termJson.stdout === "string" && termJson.stdout.includes("Subagente_A_OK"), `stdout=${termJson.stdout?.trim()}`);
-  check("terminal retorna exitCode 0", termJson.exitCode === 0, `exitCode=${termJson.exitCode}`);
-
-  // 2.6 Acotamiento de salida a maximo 32 KB
-  const cmdLarge = process.platform === "win32"
-    ? "Write-Output ('X' * 50000)"
-    : "python3 -c 'print(\"X\" * 50000)' 2>/dev/null || perl -e 'print \"X\" x 50000'";
-  const largeTerm = await request("/dsh-companion/terminal", {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: basic("dsh", KEY) },
-    body: JSON.stringify({ command: cmdLarge }),
-  });
-  let largeJson = {};
-  try { largeJson = JSON.parse(largeTerm.body); } catch {}
-  const outputBytes = Buffer.byteLength(largeJson.stdout || "", "utf8");
-  check("terminal acota salida a maximo 32 KB (<= 32768 bytes)", outputBytes <= 32768, `bytes=${outputBytes}`);
-}
-
-// ============================================================================
 // 3. TEMA "INK" EN mobile-styles.mjs
 // ============================================================================
 check("mobile-styles define body[data-ds-theme=\"ink-oled\"]", MOBILE_STYLES.includes('body[data-ds-theme="ink-oled"]'));

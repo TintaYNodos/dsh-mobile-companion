@@ -10,7 +10,7 @@ O aplicativo móvel não reimplementa a interface: ele renderiza a própria Web 
 
 Edição endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versão atual: **5.1.0** (`versionCode` 40).
+Versão atual: **5.1.1** (`versionCode` 41).
 
 ---
 
@@ -164,7 +164,6 @@ Dois métodos equivalentes:
 | `DSH_DEVICE_TTL_DAYS` | `30` | Tempo de vida da sessão do dispositivo; dispositivos expirados são rejeitados e removidos |
 | `DSH_DEVICE_REFRESH_HOURS` | `24` | Com que frequência o tempo de vida é renovado pelo uso |
 | `DSH_PENDING_TTL_MIN` | `15` | Minutos que uma solicitação de emparelhamento aguarda aprovação |
-| `DSH_ENABLE_TERMINAL` | — | `1` habilita o terminal remoto (desligado por padrão, somente loopback) |
 
 ### Aprovação única pelo computador
 
@@ -200,7 +199,6 @@ A chave de acesso manual continua disponível como contingência para acesso por
 - `POST /dsh-companion/open-panel` — abre a janela do painel local (somente loopback).
 - `POST /dsh-companion/retry` — limpa uma rejeição e solicita acesso novamente.
 - `POST /dsh-companion/kill-switch` — revoga todos os dispositivos, fecha os túneis e rotaciona a chave de acesso.
-- `POST /dsh-companion/terminal` — shell remoto, **desativado a menos que `DSH_ENABLE_TERMINAL=1`** e somente loopback.
 - `POST /dsh-companion/action` — retransmissão de aprovações de ferramentas. Retorna `501`: as aprovações vivem no DOM da GUI; a ponte não as falsifica.
 - `GET /companion.webmanifest` — manifesto PWA.
 
@@ -247,7 +245,7 @@ A chave de acesso manual continua disponível como contingência para acesso por
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão **5.1.0**, `versionCode` 40, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versão **5.1.1**, `versionCode` 41, `minSdk` 26, `targetSdk` 35.
 - Sem AndroidX e sem Kotlin: bytecode Java puro, cerca de 210 KB.
 - **Texto claro bloqueado fora da rede privada**: o `CleartextPolicy` rejeita qualquer requisição que não seja HTTPS ou que não aponte para o bunker configurado ou para um endereço privado/loopback, e a configuração de segurança de rede proíbe texto claro para os serviços públicos com os quais o app fala (GitHub, DeepSeek). Isso é aplicado acima da WebView, porque a configuração de segurança de rede do Android não consegue expressar "somente faixas de IP privadas".
 - Acesso a arquivos locais desativado, conteúdo misto bloqueado, pop-ups e depuração remota desativados.
@@ -272,6 +270,8 @@ Onze suítes, **155 verificações**, cobrindo descoberta, injeção móvel, `?d
 A suíte conversa com uma **ponte em execução** (não é um mock): inicie a ponte primeiro. A execução real do interruptor de segurança é destrutiva — revoga dispositivos e rotaciona a chave —, por isso é opcional com `DSH_TEST_DESTRUCTIVE=1`.
 
 ---
+
+> **Modo satélite (opcional):** a página offline pode enviar uma conversa para `api.deepseek.com` com a chave de API configurada no telefone. É a única função que sai da sua rede privada; é opcional, exige essa chave e, desde a 5.1.1, só o frame principal do búnker pode disparar.
 
 ## Limitações honestas
 

@@ -328,6 +328,6 @@ npm test
 
 ## ライセンス
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0。個人利用、教育目的、非商業利用は無償です。明示的な許可のない商業的な再頒布および商業的利用は禁止されています。
+Business Source License 1.1 (BUSL-1.1)。個人利用、教育目的、非商業利用は無償です。明示的な許可のない商業的な再頒布および商業的利用は禁止されています。
 
 著作者および著作権：Ismael Muñoz Reyes · Tinta y Nodos。[LICENSE](LICENSE) を参照してください。

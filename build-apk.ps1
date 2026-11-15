@@ -1,7 +1,7 @@
 # ==============================================================================
 # DSH Mobile Companion - construye y firma DSH-Companion.apk sin Gradle
 # Copyright (c) 2026 Tinta y Nodos / Ismael Munoz Reyes
-# SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+# SPDX-License-Identifier: BUSL-1.1
 #
 # Requisitos: JDK 17+ en PATH, Android SDK con build-tools y la plataforma
 # android-35, y un keystore (por defecto el de depuracion).

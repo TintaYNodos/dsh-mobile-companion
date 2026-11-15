@@ -1,12 +1,7 @@
 /*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
- * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * SPDX-License-Identifier: BUSL-1.1
  * See LICENSE file in repository root for full terms.
- */
-/**
- * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
- * Licensed under the Business Source License 1.1 (BSL 1.1) / PolyForm Noncommercial 1.0.0.
- * See companion/LICENSE or LICENSE for license terms.
  */
 
 import http from "node:http";

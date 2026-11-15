@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
- * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * SPDX-License-Identifier: BUSL-1.1
  * See LICENSE file in repository root for full terms.
  */
 /*
@@ -166,7 +166,7 @@ for (const f of tracked.filter(isText)) {
 for (const f of tracked.filter((x) => x.endsWith(".md"))) {
   const text = read(f);
   if (/open[- ]source|código abierto|código aberto|オープンソース|开源|Open-Source/i.test(text)) {
-    F(`afirma "open source" y la licencia es BSL 1.1 / PolyForm: ${f}`);
+    F(`afirma "open source" y la licencia es Business Source License 1.1 / PolyForm: ${f}`);
   }
 }
 

@@ -344,6 +344,6 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ## License
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0. Free for individual, educational and non-commercial use. Commercial redistribution and commercial exploitation are prohibited without express authorization.
+Business Source License 1.1 (BUSL-1.1). Free for individual, educational and non-commercial use. Commercial redistribution and commercial exploitation are prohibited without express authorization.
 
-Authorship and copyright ownership: Ismael Muñoz Reyes · Tinta y Nodos. See [LICENSE](LICENSE).
+Authorship and copyright ownership: Ismael Muñoz Reyes · Tinta y Nodos. See [LICENSE](LICENSE). Details in [LICENSING.md](LICENSING.md).

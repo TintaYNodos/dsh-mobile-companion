@@ -344,6 +344,6 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## Licencia
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0. Gratuito para uso individual, educativo y no comercial. Prohibida la redistribución comercial y la explotación comercial sin autorización expresa.
+Business Source License 1.1 (BUSL-1.1). Gratuito para uso individual, educativo y no comercial. Prohibida la redistribución comercial y la explotación comercial sin autorización expresa.
 
 Autoría y titularidad de derechos: Ismael Muñoz Reyes · Tinta y Nodos. Ver [LICENSE](LICENSE).

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
- * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * SPDX-License-Identifier: BUSL-1.1
  * See LICENSE file in repository root for full terms.
  */
 import { escapeHtml, page, brand, approvalPage as renderApproval, stateStamp, generateQrSvg } from "./pairing-views.mjs";

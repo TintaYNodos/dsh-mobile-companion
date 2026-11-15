@@ -2,7 +2,7 @@
 # ==============================================================================
 # DSH Mobile Companion - Instalador de Servicio Systemd (Linux)
 # Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes
-# SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+# SPDX-License-Identifier: BUSL-1.1
 # ==============================================================================
 set -euo pipefail
 

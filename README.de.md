@@ -328,6 +328,6 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Lizenz
 
-BSL 1.1 / PolyForm Noncommercial 1.0.0. Kostenlos für individuelle, bildungsbezogene und nicht-kommerzielle Nutzung. Kommerzielle Weiterverbreitung und kommerzielle Verwertung sind ohne ausdrückliche Genehmigung untersagt.
+Business Source License 1.1 (BUSL-1.1). Kostenlos für individuelle, bildungsbezogene und nicht-kommerzielle Nutzung. Kommerzielle Weiterverbreitung und kommerzielle Verwertung sind ohne ausdrückliche Genehmigung untersagt.
 
 Urheberschaft und Urheberrecht: Ismael Muñoz Reyes · Tinta y Nodos. Siehe [LICENSE](LICENSE).

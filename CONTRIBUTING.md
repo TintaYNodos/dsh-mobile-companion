@@ -2,7 +2,7 @@
 
 > **Proyecto:** DSH Mobile Companion  
 > **Titularidad y Copyright:** Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.  
-> **Licenciamiento:** BSL 1.1 (Business Source License) / PolyForm Noncommercial 1.0.0 Dual Framework.
+> **Licenciamiento:** Business Source License 1.1 (BUSL-1.1).
 
 Agradecemos profundamente el interés de la comunidad internacional de desarrolladores en mejorar, auditar y traducir DSH Mobile Companion. Para garantizar la seguridad del código, la calidad de ingeniería y la protección jurídica de todos los participantes, toda contribución debe regirse por los siguientes términos:
 
@@ -11,7 +11,7 @@ Agradecemos profundamente el interés de la comunidad internacional de desarroll
 ## 1. Términos de Licenciamiento de Entrada (Inbound Licensing)
 
 Al enviar un *Pull Request* (PR), parche de código, propuesta de documentación o corrección de idioma a este repositorio:
-1. **Cesión de licencia recíproca:** Aceptas de forma irrevocable que tus aportaciones quedan licenciadas bajo los términos idénticos de la **BSL 1.1 / PolyForm Noncommercial 1.0.0** estipulados en el archivo [LICENSE](LICENSE).
+1. **Cesión de licencia recíproca:** Aceptas de forma irrevocable que tus aportaciones quedan licenciadas bajo los términos idénticos de la **Business Source License 1.1 (BUSL-1.1)** estipulados en el archivo [LICENSE](LICENSE).
 2. **Derechos concedidos al mantenedor:** Concedes a **Ismael Muñoz Reyes / Tinta y Nodos** un derecho no exclusivo, perpetuo, mundial, transferible y libre de regalías para compilar, distribuir, modificar, empaquetar y versionar tu contribución como parte de DSH Mobile Companion.
 3. **Garantía de autoría:** Declaras bajo protesta de decir verdad que el código o texto enviado es de tu autoría original o que posees los derechos suficientes para licenciarlo bajo estos términos, libre de componentes con licencias incompatibles (como GPLv3 estricta o software propietario de terceros).
 

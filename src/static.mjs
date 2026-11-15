@@ -32,6 +32,9 @@ export const apkSha256 = () => {
 
 const ASSETS = new Map([
   ["/simulator", { file: "simulator/simulator.html", type: "text/html; charset=utf-8", cache: "no-store" }],
+  ["/simulator-base.css", { file: "simulator/simulator-base.css", type: "text/css; charset=utf-8", cache: "no-store" }],
+  ["/simulator-components.css", { file: "simulator/simulator-components.css", type: "text/css; charset=utf-8", cache: "no-store" }],
+  ["/simulator.js", { file: "simulator/simulator.js", type: "application/javascript; charset=utf-8", cache: "no-store" }],
   ["/offline", { file: "offline.html", type: "text/html; charset=utf-8", cache: "no-store" }],
   ["/offline.css", { file: "offline.css", type: "text/css; charset=utf-8", cache: "no-store" }],
   ["/offline-reader.css", { file: "offline-reader.css", type: "text/css; charset=utf-8", cache: "no-store" }],

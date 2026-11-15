@@ -7,6 +7,7 @@ import { config } from "./config.mjs";
 import { isClientAuthorized, normalizeAddress, resolveTargetPort, probePort } from "./network.mjs";
 import { hasValidAccessKey } from "./crypto.mjs";
 import {
+  findPairedDevice,
   pendingRequests,
   requestAccess,
   touchDevice,
@@ -162,7 +163,10 @@ export async function dispatchRequest(req, res, context) {
       const poll = trackPairingPoll(remoteAddress, req.headers["user-agent"]);
       if (!poll.state.panelOpened && !isPanelTabOpen()) {
         poll.state.panelOpened = true;
-        openPanelWindow();
+        // P6: si la peticion llego por un proxy/tunel no se abre una ventana del
+      // panel en el escritorio del host: el operador no esta delante y la ventana
+      // solo molesta.
+      if (!proxyHeaders) openPanelWindow();
       }
       sendJson(res, 200, {
         service: "dsh-companion",
@@ -206,7 +210,16 @@ export async function dispatchRequest(req, res, context) {
   }
 
 
-  if (pathname === "/simulator") {
+  // P7/P55: el simulador es una herramienta de desarrollo. Solo se sirve a un
+  // dispositivo emparejado o con la clave de acceso, y con sus propios recursos
+  // (antes el HTML cargaba CSS/JS que el puente no servia: 403).
+  if (pathname === "/simulator" || pathname === "/simulator-base.css" ||
+      pathname === "/simulator-components.css" || pathname === "/simulator.js") {
+    const simulatorDevice = findPairedDevice(req);
+    if (!simulatorDevice && !hasValidAccessKey(req)) {
+      sendJson(res, 403, { error: "Acceso no autorizado" });
+      return;
+    }
     serveStatic(pathname, req, res);
     return;
   }

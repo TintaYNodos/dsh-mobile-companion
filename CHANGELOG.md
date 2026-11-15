@@ -27,6 +27,22 @@ Android `versionCode` increments once per published build.
   reciben el contexto, qué pueden ejecutar y el texto mínimo de traspaso. Incluye el enlace de la
   skill en `.dsh/skills` o `.agents/skills` y el recibo como evidencia.
 
+## Sin publicar (siguiente versión)
+
+### Seguridad
+
+- **P7: el simulador ya no es público.** `/simulator` y sus recursos exigían la red privada pero
+  no credenciales; ahora requieren un dispositivo emparejado o la clave de acceso, y se sirven
+  sus CSS/JS (antes daban 403 y la página estaba rota: **P55**).
+- **P6: sin ventana del panel para peticiones proxificadas.** Si la petición llega con cabeceras
+  de proxy (Cloudflare, nginx), el puente ya no abre la ventana del panel en el escritorio del
+  host; con `DSH_ALLOW_PROXY_ACCESS=1` el operador no está delante.
+
+### Corregido
+
+- **P23**: el puerto del panel (57421) ya no está entre los candidatos del backend de Harness;
+  antes el descubrimiento podía apuntar al panel.
+
 ## 5.1.7 — `versionCode` 47
 
 ### Cambiado

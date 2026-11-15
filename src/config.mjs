@@ -48,7 +48,7 @@ export const config = Object.freeze({
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
-  targetCandidates: [52710, 52711, 52712, 59189, 57421],
+  targetCandidates: [52710, 52711, 52712, 59189],
 
   listenPort: positiveInt(process.env.DSH_LISTEN_PORT, 57420),
   panelPort: positiveInt(process.env.DSH_PANEL_PORT, positiveInt(process.env.DSH_LISTEN_PORT, 57420) + 1),

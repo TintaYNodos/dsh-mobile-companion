@@ -293,6 +293,12 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 **La 5.1.2 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.3. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
 
+## Captures
+
+| Application | Panneau d'appairage | Lecteur hors ligne |
+| --- | --- | --- |
+| ![Application](docs/images/app.png) | ![Panneau d'appairage](docs/images/panel.png) | ![Lecteur hors ligne](docs/images/offline.png) |
+
 ## Avis de projet communautaire
 
 > **Avis :** DSH Mobile Companion est un client mobile compagnon développé par la communauté pour faciliter l'accès distant sécurisé à DeepSeek Harness via des réseaux privés (ZeroTier / Tailscale). Ce n'est pas un produit officiel de DeepSeek, et il n'est ni affilié à DeepSeek, ni sponsorisé, ni approuvé par DeepSeek. Toutes les marques et logos cités appartiennent à leurs propriétaires respectifs.

@@ -312,7 +312,12 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 **La 5.1.2 es la base congelada de la serie 5.** No recibe funciones nuevas; solo un fallo de seguridad crítico produciría una 5.1.3. Lo siguiente sale como **pre-release** (5.2.0-pre.1 y siguientes) hasta estabilizarse. La rama `stable/5` conserva exactamente este árbol.
 
-![Lector offline](docs/images/offline.png)
+
+## Capturas
+
+| Aplicación | Panel de emparejamiento | Lector offline |
+| --- | --- | --- |
+| ![Aplicación](docs/images/app.png) | ![Panel de emparejamiento](docs/images/panel.png) | ![Lector offline](docs/images/offline.png) |
 
 ## Aviso de proyecto comunitario
 

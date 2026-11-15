@@ -312,7 +312,12 @@ This design is intended for **personal use**: one operator, their trusted device
 
 **5.1.2 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.3. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
 
-![Offline reader](docs/images/offline.png)
+
+## Screenshots
+
+| App | Panel | Offline reader |
+| --- | --- | --- |
+| ![App](docs/images/app.png) | ![Panel](docs/images/panel.png) | ![Offline reader](docs/images/offline.png) |
 
 ## Community project notice
 

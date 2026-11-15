@@ -13,11 +13,14 @@ import java.net.URL;
  */
 class UpdateRelease {
 
-    static void checkGitHubReleases(MainActivity a) {
+    static void checkGitHubReleases(MainActivity a) { checkGitHubReleases(a, false); }
+
+    static void checkGitHubReleases(MainActivity a, boolean force) {
         // Se consulta como mucho una vez cada 6 horas: antes cada apertura del hub
         // gastaba datos y agotaba el límite de 60 peticiones por hora de GitHub.
         long lastCheck = a.prefs.getLong("github_checked_at", 0L);
-        if (System.currentTimeMillis() - lastCheck < 6L * 60L * 60L * 1000L) return;
+        // Forzada cuando el puente no responde: sin tunel la unica via es GitHub.
+        if (!force && System.currentTimeMillis() - lastCheck < 6L * 60L * 60L * 1000L) return;
 
         new Thread(() -> {
             HttpURLConnection conn = null;

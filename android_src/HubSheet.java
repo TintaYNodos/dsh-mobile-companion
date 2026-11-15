@@ -42,7 +42,11 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
 class HubSheet {
 
     static void openHub(MainActivity a) {
-        UpdateInstaller.checkGitHubReleases(a);
+        // Si el puente no responde (sin tunel), la unica via es GitHub: se
+        // consulta sin esperar las 6 horas de cache.
+        long lastPcOk = a.prefs.getLong("last_pc_ok", 0L);
+        boolean bridgeOffline = System.currentTimeMillis() - lastPcOk > 3L * 60L * 1000L;
+        UpdateInstaller.checkGitHubReleases(a, bridgeOffline);
         final AlertDialog dialog = new AlertDialog.Builder(a).create();
         dialog.setCanceledOnTouchOutside(true);
         a.sheetDialog = dialog;
@@ -191,6 +195,7 @@ class HubSheet {
         boolean isUpdateAvailable = false;
         String updateTargetVer = "";
         String updateTargetUrl = "";
+        String updateTargetSha = "";
 
         // Prioridad al bunker: sirve siempre el APK que acaba de compilar el
         // proyecto. Antes se preferia el enlace de GitHub, y si ese asset no
@@ -199,6 +204,7 @@ class HubSheet {
             isUpdateAvailable = true;
             updateTargetVer = serverVer;
             updateTargetUrl = "";
+            updateTargetSha = a.prefs.getString("server_apk_sha256", "");
         } else if (UpdateInstaller.isVersionNewer(ghLatestVer, localVer) && !ghLatestUrl.isEmpty()) {
             isUpdateAvailable = true;
             updateTargetVer = ghLatestVer;
@@ -208,9 +214,10 @@ class HubSheet {
         if (isUpdateAvailable) {
             final String finalVer = updateTargetVer;
             final String finalUrl = updateTargetUrl;
+            final String finalSha = updateTargetSha;
             sheet.addView(UiKit.action(a, "Instalar actualización (v" + finalVer + ")", 3, () -> {
                 HubSheet.dismissHub(a);
-                UpdateInstaller.downloadAndInstallApk(a, finalUrl.isEmpty() ? null : finalUrl, "DSH-Companion.apk", "Actualizando a v" + finalVer + "...");
+                UpdateInstaller.downloadAndInstallApk(a, finalUrl.isEmpty() ? null : finalUrl, "DSH-Companion.apk", "Actualizando a v" + finalVer + "...", finalSha);
             }));
         } else {
             Button btnUpToDate = UiKit.action(a, "Sistema al día (v" + localVer + ")", 4, () -> {

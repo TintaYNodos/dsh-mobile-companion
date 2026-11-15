@@ -64,6 +64,10 @@ class UpdateInstaller {
         UpdateRelease.checkGitHubReleases(a);
     }
 
+    static void checkGitHubReleases(MainActivity a, boolean force) {
+        UpdateRelease.checkGitHubReleases(a, force);
+    }
+
     /**
      * P19: decide si el APK descargado puede instalarse. Si GitHub publica un
      * digest, debe coincidir; si el release no lo trae, se avisa y NO se
@@ -140,6 +144,15 @@ class UpdateInstaller {
     }
 
     static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText) {
+        downloadAndInstallApk(a, customUrl, customFilename, titleText, "");
+    }
+
+    /**
+     * Variante con SHA-256 esperado. Cuando la descarga viene del buner no hay
+     * digest de GitHub: antes se instalaba sin verificar. Ahora el puente publica
+     * apkSha256 en /status y el telefono comprueba que coincide.
+     */
+    static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText, String expectedSha) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!a.getPackageManager().canRequestPackageInstalls()) {
                 // P19: recuerda la procedencia para que, al volver del permiso,
@@ -149,6 +162,7 @@ class UpdateInstaller {
                         .putString("pending_apk_url", customUrl == null ? "" : customUrl)
                         .putString("pending_apk_name", customFilename == null ? "" : customFilename)
                         .putString("pending_apk_title", titleText == null ? "" : titleText)
+                        .putString("pending_apk_expected_sha", expectedSha == null ? "" : expectedSha.trim().toLowerCase(java.util.Locale.ROOT))
                         .apply();
                 Toast.makeText(a, "Permite a DSH Companion instalar actualizaciones", Toast.LENGTH_LONG).show();
                 try {
@@ -275,7 +289,10 @@ class UpdateInstaller {
                 }
 
                 final String actualDigest = ApkDigest.hex(sha256.digest());
-                final String expectedDigest = UpdateRelease.expectedDigestFor(a, apkUrl);
+                String githubDigest = UpdateRelease.expectedDigestFor(a, apkUrl);
+            final String expectedDigest = githubDigest.isEmpty()
+                    ? a.prefs.getString("pending_apk_expected_sha", "")
+                    : githubDigest;
                 final String digestDecision = ApkDigest.decision(expectedDigest, actualDigest);
 
                 a.ui.post(() -> {

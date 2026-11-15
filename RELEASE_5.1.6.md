@@ -1,4 +1,4 @@
-# DSH Mobile Companion 5.1.5 (versionCode 45) — base estable de la serie 5
+# DSH Mobile Companion 5.1.6 (versionCode 46) — base estable de la serie 5
 
 Esta es la **base congelada** de la serie 5. A partir de aquí el proyecto avanza con mejoras
 menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
@@ -44,20 +44,29 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 - **Exención de batería** en Ajustes del teléfono para que no maten el servicio de avisos.
 
 ### 5.1.5 — ingeniería cerrada
-- **La suite corre en CI**: job aislado con `DSH_HOME` temporal y un doble de Harness;
-  **9 suites · 151 comprobaciones** en cada push, sin tocar el equipo del usuario.
-- **Rotación de `bridge.log` en caliente** por tamaño (`DSH_LOG_MAX_MB`, 5 MB) con
-  `DSH_LOG_KEEP` (3) archivos, sin perder ni duplicar líneas en Windows.
-- Prueba nueva de rotación: **27/27**.
+- **La suite corre en CI**: 9 suites · 151 comprobaciones en cada push, en un puente
+  aislado con `DSH_HOME` temporal y un doble de Harness.
+- **Rotación de `bridge.log` en caliente** (`DSH_LOG_MAX_MB` 5, `DSH_LOG_KEEP` 3).
+
+### 5.1.6 — actualización desde la PC arreglada
+- **La actualización desde la PC instalaba el APK equivocado**: el puente servía la
+  copia de la **raíz** (`../DSH-Companion.apk`, a veces atrasada) mientras `/status`
+  anunciaba la versión recién compilada. Ahora sirve el APK de **su propio
+  directorio** (el que acaba de compilar) y el teléfono verifica que coincide.
+- **SHA-256 del APK en `/status`** (`apkSha256`): la actualización desde la PC ya no
+  se instala sin verificar.
+- **GitHub como vía sin túnel**: si el puente no responde, la app consulta los
+  releases sin esperar la caché de 6 horas.
+- El `versionCode` solo sube cuando cambia el código Android.
 
 ## Verificación de este binario
 
 | Parámetro | Valor |
 | --- | --- |
 | Archivo | `DSH-Companion.apk` |
-| Versión | `versionCode 45` / `versionName 5.1.5` |
+| Versión | `versionCode 46` / `versionName 5.1.6` |
 | Tamaño | 215 048 bytes (210 KB) |
-| SHA-256 | `2b3928fd8fb62f0f66be1393e1c033e6e8b1b19c742161f16e8889b948aefe36` |
+| SHA-256 | `9458e747afd355c8263086510d27520710f76921734c9ff19d77b3e3d7b18c6d` |
 | Firma | APK Signature Scheme v2 + v3 |
 | Requisitos | Android 8.0 (SDK 26) o superior |
 
@@ -67,7 +76,7 @@ auditoría del repositorio sin hallazgos, un solo aviso por turno, `pendingList`
 
 ## Política de esta línea
 
-- **5.1.5 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.6.
+- **5.1.6 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.7.
 - Lo siguiente sale como **pre-release** (5.2.0-pre.1...) hasta estabilizarse.
 - La rama `stable/5` conserva exactamente este árbol.
 

@@ -3,6 +3,28 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.6 — `versionCode` 46
+
+### Corregido
+
+- **La actualización desde la PC instalaba el APK equivocado.** El puente servía
+  `../DSH-Companion.apk` (la copia de la raíz, que puede quedarse atrás) mientras
+  `/status` anunciaba la versión recién compilada. Resultado: pulsabas "Instalar
+  actualización (v5.1.5)", se instalaba la 5.1.4 y el botón seguía apareciendo.
+  Ahora el puente sirve **el APK de su propio directorio** (el que acaba de
+  compilar) y el teléfono verifica que la versión instalada coincide.
+
+### Añadido
+
+- **SHA-256 del APK servido en `/status`** (`apkSha256`). El teléfono lo usa como
+  ancla al actualizar desde la PC: antes esa ruta se instalaba sin verificar.
+- **Consulta a GitHub forzada cuando el puente no responde**: sin túnel, la única
+  vía de actualización es GitHub y ya no espera las 6 horas de caché.
+
+### Nota de proceso
+
+- El `versionCode` solo sube cuando cambia el código Android. Las correcciones de
+  documentación o del puente ya no provocan un aviso de actualización.
 ## 5.1.5 — `versionCode` 45
 
 Cierre de los dos huecos que quedaban en ingeniería.

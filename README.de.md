@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.5-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.6-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.1.5** (`versionCode` 45).
+Aktuelle Version: **5.1.6** (`versionCode` 46).
 
 ---
 
@@ -263,7 +263,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.1.5**, `versionCode` 45, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — Version **5.1.6**, `versionCode` 46, `minSdk` 26, `targetSdk` 35.
 - Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 210 KB.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
@@ -318,7 +318,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.1.5 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.5 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
+**5.1.6 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.6 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
 
 ## Bildschirmfotos
 

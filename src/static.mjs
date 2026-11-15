@@ -5,7 +5,30 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { config } from "./config.mjs";
+
+/**
+ * SHA-256 del APK que este puente sirve en /DSH-Companion.apk.
+ *
+ * El telefono lo usa como ancla al actualizar desde la propia PC: esa ruta no
+ * tiene digest de GitHub. Se cachea por mtime y tamano para no leer el archivo
+ * en cada /status.
+ */
+let apkDigestCache = { key: "", value: "" };
+
+export const apkSha256 = () => {
+  try {
+    const info = fs.statSync("DSH-Companion.apk");
+    const key = String(info.size) + ":" + String(info.mtimeMs);
+    if (apkDigestCache.key === key) return apkDigestCache.value;
+    const hash = createHash("sha256").update(fs.readFileSync("DSH-Companion.apk")).digest("hex");
+    apkDigestCache = { key, value: hash };
+    return hash;
+  } catch {
+    return "";
+  }
+};
 
 const ASSETS = new Map([
   ["/simulator", { file: "simulator/simulator.html", type: "text/html; charset=utf-8", cache: "no-store" }],
@@ -18,9 +41,9 @@ const ASSETS = new Map([
   ["/offline-satellite.js", { file: "offline-satellite.js", type: "application/javascript; charset=utf-8", cache: "no-store" }],
   ["/companion.webmanifest", { file: "manifest.webmanifest", type: "application/manifest+json; charset=utf-8", cache: "public, max-age=3600" }],
   ["/icon.svg", { file: "icon.svg", type: "image/svg+xml", cache: "public, max-age=86400" }],
-  ["/DSH-Companion.apk", { file: "../DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
-  ["/download/DSH-Companion.apk", { file: "../DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
-  ["/DSH-Companion-previous.apk", { file: "../DSH-Companion-previous.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion-previous.apk" }],
+  ["/DSH-Companion.apk", { file: "DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
+  ["/download/DSH-Companion.apk", { file: "DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
+  ["/DSH-Companion-previous.apk", { file: "DSH-Companion-previous.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion-previous.apk" }],
 ]);
 
 // P51: las paginas propias no tenian CSP. La offline es autocontenida (sin

@@ -40,9 +40,9 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.1.5",
-  apkVersion: "5.1.5",
-  apkVersionCode: 45,
+  version: "5.1.6",
+  apkVersion: "5.1.6",
+  apkVersionCode: 46,
   previousApkVersion: "5.1.4",
   previousApkVersionCode: 44,
 

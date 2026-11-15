@@ -16,7 +16,7 @@ import { isPanelTabOpen } from "./panel.mjs";
 import { handlePairingRoutes, handlePendingApprovalGate, resolveDevice } from "./routes-pairing.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
 import { handleDataRoutes } from "./routes-data.mjs";
-import { hasStaticRoute, serveStatic } from "./static.mjs";
+import { hasStaticRoute, serveStatic, apkSha256 } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
 import { emitTestEvent, handlePcEvents, startPcWatcher } from "./pc-events.mjs";
@@ -37,6 +37,7 @@ export const buildStatusPayload = async (options = {}) => {
     version: config.version,
     apkVersion: config.apkVersion || config.version,
     apkVersionCode: config.apkVersionCode || 14,
+    apkSha256: apkSha256(),
     previousApkVersion: config.previousApkVersion || "3.9.2",
     previousApkVersionCode: config.previousApkVersionCode || 13,
     status: "online",

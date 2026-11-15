@@ -91,10 +91,13 @@ class PcStatusPoller {
                 int serverCode = obj.optInt("apkVersionCode", 0);
                 String prevVer = obj.optString("previousApkVersion", "");
                 int prevCode = obj.optInt("previousApkVersionCode", 0);
+                String serverSha = obj.optString("apkSha256", "");
+                a.prefs.edit().putLong("last_pc_ok", System.currentTimeMillis()).apply();
                 if (serverCode > 0) {
                     a.prefs.edit()
                             .putString("server_apk_version", serverVer)
                             .putInt("server_apk_code", serverCode)
+                            .putString("server_apk_sha256", serverSha)
                             .putString("server_prev_apk_version", prevVer)
                             .putInt("server_prev_apk_code", prevCode)
                             .apply();
@@ -187,6 +190,8 @@ class PcStatusPoller {
                 }
             }
         } catch (Throwable ignored) {
+            // Puente inalcanzable (sin tunel): se marca para forzar la consulta a GitHub.
+            a.prefs.edit().putLong("last_pc_ok", 0L).apply();
         } finally {
             if (conn != null) conn.disconnect();
         }

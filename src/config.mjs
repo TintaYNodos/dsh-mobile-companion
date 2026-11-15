@@ -53,6 +53,11 @@ export const config = Object.freeze({
   listenPort: positiveInt(process.env.DSH_LISTEN_PORT, 57420),
   panelPort: positiveInt(process.env.DSH_PANEL_PORT, positiveInt(process.env.DSH_LISTEN_PORT, 57420) + 1),
   bindHost: text(process.env.DSH_BIND_HOST),
+  // Acceso a traves de un proxy/tunel (Cloudflare, nginx...). Por defecto es
+  // un error de seguridad: el puente asumiria que la peticion viene de
+  // loopback. Solo se permite si el operador lo pide explicitamente y pone
+  // una capa de identidad delante (Cloudflare Access).
+  allowProxyAccess: text(process.env.DSH_ALLOW_PROXY_ACCESS) === "1",
 
   syncDir: path.join(ROOT, "synced_chats"),
   maxSyncBytes: 4 * 1024 * 1024,

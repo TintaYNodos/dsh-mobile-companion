@@ -111,6 +111,42 @@ Then give a final report in this exact shape:
 
 ---
 
+## Optional: iPhone, PWA and remote access without VPN
+
+### iPhone / iPad (no APK)
+
+There is no iOS app. Two supported ways, and do not mix them up:
+
+1. **Live chat (needs the PC on).** Open `http://<PRIVATE-IP>:57420` in Safari and use
+   *Share → Add to Home Screen*. The full DeepSeek Harness interface runs inside the PWA.
+   The phone must be on the same private network (ZeroTier/Tailscale). Background
+   notifications are **not** available on iOS: that is a platform limitation, say so.
+2. **Reading and satellite chat (PC off).** The offline reader and the satellite mode are a
+   static PWA that can be hosted anywhere, for example **Cloudflare Pages (free)**: upload
+   `offline.html`, `offline.css`, `offline-reader.css`, `offline-satellite.css`, the three
+   `offline-*.js` files, `manifest.webmanifest` and `icon.svg`. The user opens it on the
+   iPhone, adds it to the home screen, and can read synchronized chats or chat using their own
+   API key. Live chat still requires the PC.
+
+### Remote access without VPN (optional, advanced)
+
+Only do this if the user asks for it. It **weakens the design**: the bridge assumes a private
+network. The safe pattern is a tunnel plus an identity layer, and it never replaces the PC.
+
+1. Install `cloudflared` and create a tunnel (`cloudflared tunnel create dsh`).
+2. Point the public hostname to `http://127.0.0.1:57420`.
+3. In **Cloudflare Access**, protect that hostname with a policy (email OTP, Google, etc.).
+   Without Access **do not publish the hostname**: anyone could reach the pairing screen.
+4. Start the bridge with `DSH_ALLOW_PROXY_ACCESS=1`. Without that flag the bridge rejects
+   requests that arrive through a proxy (they look like loopback).
+5. Keep the VPN as the normal path. A tunnel does not host anything: if the PC is off, there is
+   no chat.
+
+Warn the user: the tunnel is a public door. Access must be configured first, the bridge flag
+second, and the key/device pairing still applies.
+
+---
+
 ## Español
 
 ```text
@@ -193,6 +229,39 @@ Después entrega el informe con esta forma exacta:
     Emparejamiento: <emparejado / pendiente>
     Avisos:         <resultado de la prueba>
     Pendiente:      <lo que siga fallando, o "nada">
+
+## Opcional: iPhone, PWA y acceso sin VPN
+
+### iPhone / iPad (no hay APK)
+
+Dos caminos que no se deben mezclar:
+
+1. **Chat en vivo (necesita la PC encendida).** Abre `http://<IP-PRIVADA>:57420` en Safari y usa
+   *Compartir → Añadir a pantalla de inicio*. La interfaz completa de Harness corre en la PWA.
+   El teléfono debe estar en la misma red privada (ZeroTier/Tailscale). **En iOS no hay avisos en
+   segundo plano**: dilo claro, es una limitación de la plataforma.
+2. **Lectura y satélite (PC apagada).** El lector offline y el modo satélite son una PWA estática
+   que se puede alojar gratis, por ejemplo en **Cloudflare Pages**: sube `offline.html`,
+   `offline.css`, `offline-reader.css`, `offline-satellite.css`, los tres `offline-*.js`,
+   `manifest.webmanifest` e `icon.svg`. Se abre en el iPhone, se añade a pantalla de inicio y
+   permite leer chats sincronizados o chatear con la clave de API del usuario. El chat en vivo
+   sigue necesitando la PC.
+
+### Acceso remoto sin VPN (opcional, avanzado)
+
+Solo si el usuario lo pide. **Debilita el diseño**: el puente asume red privada. El patrón seguro
+es túnel + capa de identidad, y nunca sustituye a la PC.
+
+1. Instala `cloudflared` y crea el túnel (`cloudflared tunnel create dsh`).
+2. Apunta el hostname público a `http://127.0.0.1:57420`.
+3. En **Cloudflare Access** protege ese hostname con una política (OTP por correo, Google...).
+   Sin Access **no publiques el hostname**: cualquiera llegaría a la pantalla de emparejamiento.
+4. Arranca el puente con `DSH_ALLOW_PROXY_ACCESS=1`. Sin ese flag el puente rechaza las
+   peticiones que llegan por un proxy (parecen loopback).
+5. Mantén la VPN como camino normal. Un túnel no aloja nada: si la PC está apagada, no hay chat.
+
+Avisa al usuario: el túnel es una puerta pública. Primero Access, después el flag, y la clave y
+el emparejamiento de dispositivos siguen aplicando.
 
 ## Reglas que nunca debes romper
 

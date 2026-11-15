@@ -357,6 +357,10 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
+## iPhone / iPad
+
+No hay app para iOS. Safari → *Añadir a pantalla de inicio* ejecuta la interfaz completa con la PC encendida (en iOS no hay avisos en segundo plano). El lector offline y el modo satélite se pueden alojar como PWA estática, por ejemplo en Cloudflare Pages.
+
 ## Uso empresarial
 
 El uso en producción dentro de una empresa, la integración en un producto o servicio y la redistribución requieren una licencia aparte (Business Source License 1.1). Una empresa puede abrir la consulta con la plantilla **Licencia comercial**: [github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose). Detalles en [LICENSING.md](LICENSING.md).

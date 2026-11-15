@@ -7,6 +7,28 @@ cuatro años después de la publicación de cada versión.
 Esto **no es** una licencia aprobada por la OSI. Es a propósito: el proyecto es gratuito
 para uso personal y no comercial, y el uso comercial requiere una licencia aparte.
 
+## ¿Necesito licencia? (resumen)
+
+| Situación | ¿Necesitas licencia comercial? |
+| --- | --- |
+| Uso personal, en tus equipos y tu red privada | **No** |
+| Docencia, taller, evaluación, auditoría de seguridad | **No** |
+| Empresa usándolo **internamente** en su producción, hasta 50 dispositivos | **No** |
+| Empresa usándolo internamente con más de 50 dispositivos | Sí |
+| Ofrecerlo (o una versión modificada) como producto o servicio a terceros | Sí |
+| Volver a venderlo, empaquetarlo o distribuirlo comercialmente | Sí |
+| Alojarlo como servicio gestionado para clientes | Sí |
+
+La "excepción" a un uso comercial restringido es el propio **Additional Use Grant** de la
+licencia: ahí está escrito lo que se permite sin pagar. Si necesitas algo que no cabe en esa
+tabla (más dispositivos, un contrato, soporte con SLA, facturación), escríbenos y hablamos.
+
+## Contacto y licencias
+
+- **Consulta comercial:** formulario [Licencia comercial](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose).
+- **Seguridad:** ver `SECURITY.md`.
+- Para un contrato o una factura se acuerda un canal privado en esa misma consulta.
+
 ## Qué puedes hacer sin pedir permiso
 
 - Usarlo para ti, en tus equipos y tu red privada.

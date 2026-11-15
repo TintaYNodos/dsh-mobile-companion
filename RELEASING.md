@@ -85,6 +85,9 @@ powershell -ExecutionPolicy Bypass -File build-apk.ps1 -KeyStore C:\ruta\release
 El APK queda en `DSH-Companion.apk` con su SHA-256 impreso. **No se versiona**: el `.gitignore`
 excluye `*.apk` a propósito, porque los binarios van como assets del release.
 
+> Si el puente se expone detras de un proxy o túnel (Cloudflare Access), hay que arrancarlo
+> con `DSH_ALLOW_PROXY_ACCESS=1`; sin ese flag rechaza las peticiones que llegan por proxy.
+
 ## 4. Commit, tag y push
 
 ```bash

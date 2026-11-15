@@ -359,6 +359,10 @@ This design is intended for **personal use**: one operator, their trusted device
 
 [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
+## iPhone / iPad
+
+There is no iOS app. Safari → *Add to Home Screen* runs the full interface while the PC is on (no background notifications on iOS). The offline reader and satellite mode can be hosted as a static PWA, for example on Cloudflare Pages.
+
 ## Business use
 
 Enterprise use in production, integration into a product or service, and redistribution require a separate license (Business Source License 1.1). Companies can open a request with the **Commercial license** form: [github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose). Details in [LICENSING.md](LICENSING.md).

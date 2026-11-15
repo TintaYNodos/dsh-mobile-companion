@@ -3,6 +3,21 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## Sin publicar
+
+### Añadido
+
+- **Licencia más clara para empresas**: el *Additional Use Grant* permite ahora uso interno en
+  producción hasta 50 dispositivos sin licencia comercial. El resto (producto, servicio alojado,
+  reventa) sigue requiriendo licencia. Tabla de decisión en `LICENSING.md`.
+- **Contribuciones**: `CONTRIBUTING.md` deja explícita la licencia de entrada y la posibilidad de
+  relicenciar en versiones futuras.
+- **Guarda contra proxies inesperados**: si una petición llega con cabeceras de proxy
+  (`cf-connecting-ip`, `cf-access-jwt-assertion`, `x-forwarded-for`) el puente la rechaza salvo
+  que se arranque con `DSH_ALLOW_PROXY_ACCESS=1`. Así no se publica el puente por accidente.
+- `AI_SETUP_PROMPT.md` documenta iPhone/PWA (Safari, `Add to Home Screen`, PWA estática en
+  Cloudflare Pages) y el acceso remoto opcional con Cloudflare Tunnel + Access.
+
 ## 5.1.7 — `versionCode` 47
 
 ### Cambiado

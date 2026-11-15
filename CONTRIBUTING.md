@@ -58,3 +58,11 @@ Apoyamos la investigación ética y de buena fe:
   `node test/verify_config_guard.mjs` (guardas de `DSH_ACCESS_DISABLE` y `DSH_ALLOWED_HOSTS`, sin
   necesidad de puente).
 - **Cómo publicar:** el checklist completo, con tag y release, está en [RELEASING.md](RELEASING.md).
+
+## Licencia de las contribuciones
+
+Al enviar un pull request aceptas que tu aportación se licencie bajo la **Business Source
+License 1.1** del proyecto y que el titular pueda relicenciarla en versiones futuras (por
+ejemplo, al pasar a MIT en la Change Date o al ofrecer una licencia comercial). No se aceptan
+aportaciones con licencias incompatibles. Si tu empresa necesita otro acuerdo, abre una
+consulta con la plantilla *Licencia comercial* antes de contribuir.

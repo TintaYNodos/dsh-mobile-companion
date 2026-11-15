@@ -93,6 +93,22 @@ export async function dispatchRequest(req, res, context) {
   const { bindHost, bindPrefix, allowedOrigins, allowedHosts, openPanelWindow } = context;
   const remoteAddress = req.socket.remoteAddress;
 
+  // Un proxy delante del puente (Cloudflare Tunnel, nginx) hace que todas las
+  // peticiones lleguen desde 127.0.0.1, y entonces el criterio de red dejaria de
+  // proteger nada. Si aparecen cabeceras de proxy y el operador no lo habilito
+  // de forma explicita, se rechaza: mejor fallar cerrado que publicar el puente
+  // sin querer.
+  const proxyHeaders =
+    String(req.headers["cf-connecting-ip"] || "").trim() !== "" ||
+    String(req.headers["cf-access-jwt-assertion"] || "").trim() !== "" ||
+    String(req.headers["x-forwarded-for"] || "").trim() !== "";
+  if (proxyHeaders && !config.allowProxyAccess) {
+    sendJson(res, 403, {
+      error: "Peticion a traves de un proxy rechazada",
+      hint: "Si es intencionado (Cloudflare Tunnel + Access), arranca el puente con DSH_ALLOW_PROXY_ACCESS=1 y pon una capa de identidad delante.",
+    });
+    return;
+  }
   if (!isClientAuthorized(remoteAddress, bindHost, bindPrefix)) {
     sendText(res, 403, "Acceso denegado");
     return;

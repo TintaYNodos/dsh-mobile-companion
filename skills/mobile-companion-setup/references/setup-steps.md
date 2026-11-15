@@ -66,7 +66,6 @@ En el teléfono: Ajustes -> "Notificaciones de la PC" (activado) -> "Probar desd
 
 - No abras puertos en el router ni crees túneles públicos hacia el puente.
 - No publiques el puente tras un proxy sin capa de identidad. `DSH_ALLOW_PROXY_ACCESS` solo con
-  Cloudflare Access (u otra identidad) delante, y aun así el emparejamiento sigue siendo obligatorio.
 - No ejecutes el kill switch ni "Revocar todos" sin pedirlo: rota la clave y obliga a emparejar todo.
 - No lances `npm test` contra la instalación real sin avisar.
 

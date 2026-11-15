@@ -379,7 +379,7 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ## iPhone / iPad
 
-There is no iOS app. Safari → *Add to Home Screen* runs the full interface while the PC is on (no background notifications on iOS). The offline reader and satellite mode can be hosted as a static PWA, for example on Cloudflare Pages.
+There is no iOS app. Safari → *Add to Home Screen* runs the full interface while the PC is on (no background notifications on iOS). The offline reader and satellite mode can be hosted as a static PWA on any static host you control.
 
 ## Business use
 

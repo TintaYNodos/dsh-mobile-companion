@@ -70,7 +70,13 @@
       "title": "No hay túnel privado: sin ZeroTier o Tailscale el teléfono no puede llegar a esta computadora.",
       "command": null,
       "docs": "AI_SETUP_PROMPT.md",
-      "blocking": true
+      "blocking": true,
+      "steps": [
+        "Tailscale: instala el cliente en la PC y en el teléfono, inicia sesión con la misma cuenta y comprueba `tailscale ip -4` (100.x.x.x).",
+        "ZeroTier: crea una red en https://my.zerotier.com, une PC y teléfono con `zerotier-cli join <ID>`, autoriza ambos nodos y espera la IP 10.x.x.x.",
+        "Vuelve a ejecutar `doctor.ps1 -Json`: deben aparecer `tunnel` y `phoneUrl`.",
+        "No publiques el puente en Internet: sin túnel privado no hay acceso remoto soportado."
+      ]
     },
     "bridge-wrong-service": {
       "id": "bridge-wrong-service",

@@ -377,7 +377,7 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## iPhone / iPad
 
-No hay app para iOS. Safari → *Añadir a pantalla de inicio* ejecuta la interfaz completa con la PC encendida (en iOS no hay avisos en segundo plano). El lector offline y el modo satélite se pueden alojar como PWA estática, por ejemplo en Cloudflare Pages.
+No hay app para iOS. Safari → *Añadir a pantalla de inicio* ejecuta la interfaz completa con la PC encendida (en iOS no hay avisos en segundo plano). El lector offline y el modo satélite se pueden alojar como PWA estática en cualquier servidor estático propio.
 
 ## Uso empresarial
 

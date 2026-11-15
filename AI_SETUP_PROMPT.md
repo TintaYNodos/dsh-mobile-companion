@@ -66,13 +66,24 @@ text version:
   continue. Explain to the user, briefly:
     * A phone cannot reach this computer without a private network between them. The bridge
       never opens a port to the internet, by design.
-    * Two options, both free for personal use:
-        ZeroTier: create a network at https://my.zerotier.com, install the client on the PC
-        and on the phone, join both to that network, mark it "private" and authorize each
-        node manually. The PC gets an address like 10.x.x.x.
-        Tailscale: install it on the PC and the phone, sign in with the SAME account on both;
-        the PC gets an address like 100.x.x.x.
-    * Then run doctor.ps1 again. It will detect the tunnel and print the address.
+    * Explain the two supported options and ask which one the user prefers. Both are free for
+      personal use. Give the exact steps, not just the links.
+    * **Option A — Tailscale (fastest, about 5 minutes):**
+        1. PC: install https://tailscale.com/download/windows and sign in.
+        2. Phone: install Tailscale from its store and sign in with the SAME account.
+        3. PC: run `tailscale ip -4` (or check the tray app). Note the address (100.x.x.x).
+        4. Run `doctor.ps1 -Json` again: `tunnel` and `phoneUrl` must appear.
+    * **Option B — ZeroTier (private network managed by hand):**
+        1. Create a network at https://my.zerotier.com (free tier) and copy the 16-character ID.
+        2. PC: install https://www.zerotier.com/download/ and join it (tray → Join Network, or
+           `zerotier-cli join <NETWORK_ID>`).
+        3. Phone: install ZeroTier One, join the same network ID.
+        4. In my.zerotier.com mark the network **Private** and authorize both nodes.
+        5. Wait for the PC to get a 10.x.x.x / 172.2x.x.x address, then run `doctor.ps1 -Json`.
+    * If the PC is on a corporate network and the tunnel never gets an address, tell the user the
+      network may be blocking it. Do not work around it by publishing the bridge.
+    * If the user refuses to install a tunnel, say clearly that this setup cannot work: there is no
+      supported remote access without a private network. Do not offer public tunnels.
 - If it reports Node older than 22.15: install Node 22 LTS and repeat.
 - If it reports missing DeepSeek Harness credentials: open Harness, sign in, repeat.
 - If it reports the bridge down: start it with install-autostart.bat, repeat.
@@ -153,28 +164,23 @@ There is no iOS app. Two supported ways, and do not mix them up:
    The phone must be on the same private network (ZeroTier/Tailscale). Background
    notifications are **not** available on iOS: that is a platform limitation, say so.
 2. **Reading and satellite chat (PC off).** The offline reader and the satellite mode are a
-   static PWA that can be hosted anywhere, for example **Cloudflare Pages (free)**: upload
+   static PWA that can be hosted on any static host you control: upload
    `offline.html`, `offline.css`, `offline-reader.css`, `offline-satellite.css`, the three
    `offline-*.js` files, `manifest.webmanifest` and `icon.svg`. The user opens it on the
    iPhone, adds it to the home screen, and can read synchronized chats or chat using their own
    API key. Live chat still requires the PC.
 
-### Remote access without VPN (optional, advanced)
+### Public exposure: not supported
 
-Only do this if the user asks for it. It **weakens the design**: the bridge assumes a private
-network. The safe pattern is a tunnel plus an identity layer, and it never replaces the PC.
+Do not publish the bridge on the internet: no port forwarding, no public tunnel, no reverse proxy
+with a public hostname. The design assumes a private network; the pairing screen and the panel are
+meant to be reachable only from the operator's own network. As a safety net the bridge rejects
+requests that carry proxy headers (`cf-connecting-ip`, `cf-access-jwt-assertion`,
+`x-forwarded-for`) unless it was started with `DSH_ALLOW_PROXY_ACCESS=1`, and even then it is not
+a supported configuration.
 
-1. Install `cloudflared` and create a tunnel (`cloudflared tunnel create dsh`).
-2. Point the public hostname to `http://127.0.0.1:57420`.
-3. In **Cloudflare Access**, protect that hostname with a policy (email OTP, Google, etc.).
-   Without Access **do not publish the hostname**: anyone could reach the pairing screen.
-4. Start the bridge with `DSH_ALLOW_PROXY_ACCESS=1`. Without that flag the bridge rejects
-   requests that arrive through a proxy (they look like loopback).
-5. Keep the VPN as the normal path. A tunnel does not host anything: if the PC is off, there is
-   no chat.
-
-Warn the user: the tunnel is a public door. Access must be configured first, the bridge flag
-second, and the key/device pairing still applies.
+If the user wants remote access from outside their network, the answer is: keep ZeroTier or
+Tailscale on the phone. That is the supported path and it exposes nothing.
 
 ---
 
@@ -204,13 +210,24 @@ texto:
   Explícale, en corto:
     * Sin una red privada entre el teléfono y la computadora, el teléfono no puede llegar.
       El puente nunca abre un puerto a Internet, es por diseño.
-    * Dos opciones, gratis para uso personal:
-        ZeroTier: crea una red en https://my.zerotier.com, instala el cliente en la PC y en
-        el teléfono, une ambos a esa red, márcala como privada y autoriza cada nodo a mano.
-        La PC recibe una dirección tipo 10.x.x.x.
-        Tailscale: instálalo en la PC y en el teléfono, inicia sesión con la MISMA cuenta en
-        ambos; la PC recibe una dirección tipo 100.x.x.x.
-    * Luego vuelve a ejecutar doctor.ps1: detectará el túnel e imprimirá la dirección.
+    * Explícale las dos opciones y pregúntale cuál prefiere. Las dos son gratis para uso personal.
+      Da los pasos exactos, no solo los enlaces.
+    * **Opción A — Tailscale (la más rápida, unos 5 minutos):**
+        1. PC: instala https://tailscale.com/download/windows e inicia sesión.
+        2. Teléfono: instala Tailscale desde su tienda e inicia sesión con la MISMA cuenta.
+        3. PC: ejecuta `tailscale ip -4` (o mira la app de la bandeja). Apunta la dirección (100.x.x.x).
+        4. Ejecuta `doctor.ps1 -Json` otra vez: deben aparecer `tunnel` y `phoneUrl`.
+    * **Opción B — ZeroTier (red privada gestionada a mano):**
+        1. Crea una red en https://my.zerotier.com (plan gratuito) y copia el ID de 16 caracteres.
+        2. PC: instala https://www.zerotier.com/download/ y únete (bandeja → Join Network, o
+           `zerotier-cli join <ID_DE_RED>`).
+        3. Teléfono: instala ZeroTier One y únete al mismo ID.
+        4. En my.zerotier.com marca la red como **Private** y autoriza los dos nodos.
+        5. Espera a que la PC tenga una dirección 10.x.x.x / 172.2x.x.x y ejecuta `doctor.ps1 -Json`.
+    * Si la PC está en una red corporativa y el túnel no consigue dirección, dile que la red puede
+      estar bloqueándolo. No lo rodees publicando el puente.
+    * Si el usuario no quiere instalar un túnel, dile claro que así no puede funcionar: no hay
+      acceso remoto soportado sin una red privada. No ofrezcas túneles públicos.
 - Si dice que Node es anterior a 22.15: instala Node 22 LTS y repite.
 - Si faltan credenciales de Harness: abre Harness, inicia sesión y repite.
 - Si el puente no está levantado: arráncalo con install-autostart.bat y repite.
@@ -275,27 +292,22 @@ Dos caminos que no se deben mezclar:
    El teléfono debe estar en la misma red privada (ZeroTier/Tailscale). **En iOS no hay avisos en
    segundo plano**: dilo claro, es una limitación de la plataforma.
 2. **Lectura y satélite (PC apagada).** El lector offline y el modo satélite son una PWA estática
-   que se puede alojar gratis, por ejemplo en **Cloudflare Pages**: sube `offline.html`,
+   que se puede alojar en cualquier servidor estático propio: sube `offline.html`,
    `offline.css`, `offline-reader.css`, `offline-satellite.css`, los tres `offline-*.js`,
    `manifest.webmanifest` e `icon.svg`. Se abre en el iPhone, se añade a pantalla de inicio y
    permite leer chats sincronizados o chatear con la clave de API del usuario. El chat en vivo
    sigue necesitando la PC.
 
-### Acceso remoto sin VPN (opcional, avanzado)
+### Exposición pública: no soportada
 
-Solo si el usuario lo pide. **Debilita el diseño**: el puente asume red privada. El patrón seguro
-es túnel + capa de identidad, y nunca sustituye a la PC.
+No publiques el puente en Internet: nada de abrir puertos, túneles públicos ni un proxy inverso con
+hostname público. El diseño asume red privada; la pantalla de emparejamiento y el panel están
+pensados para la red del operador. Como red de seguridad, el puente rechaza las peticiones con
+cabeceras de proxy (`cf-connecting-ip`, `cf-access-jwt-assertion`, `x-forwarded-for`) salvo que se
+arranque con `DSH_ALLOW_PROXY_ACCESS=1`, y aun así no es una configuración soportada.
 
-1. Instala `cloudflared` y crea el túnel (`cloudflared tunnel create dsh`).
-2. Apunta el hostname público a `http://127.0.0.1:57420`.
-3. En **Cloudflare Access** protege ese hostname con una política (OTP por correo, Google...).
-   Sin Access **no publiques el hostname**: cualquiera llegaría a la pantalla de emparejamiento.
-4. Arranca el puente con `DSH_ALLOW_PROXY_ACCESS=1`. Sin ese flag el puente rechaza las
-   peticiones que llegan por un proxy (parecen loopback).
-5. Mantén la VPN como camino normal. Un túnel no aloja nada: si la PC está apagada, no hay chat.
-
-Avisa al usuario: el túnel es una puerta pública. Primero Access, después el flag, y la clave y
-el emparejamiento de dispositivos siguen aplicando.
+Si el usuario quiere acceso remoto desde fuera de su red, la respuesta es: mantén ZeroTier o
+Tailscale instalado en el teléfono. Ese es el camino soportado y no expone nada.
 
 ## Reglas que nunca debes romper
 

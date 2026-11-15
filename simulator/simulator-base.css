@@ -1,0 +1,211 @@
+    :root {
+      --bg-canvas: #0a0e17;
+      --bg-surface: #161b22;
+      --bg-elevated: #21262d;
+      --border-line: #30363d;
+      --text-ink: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #1f6feb;
+      --accent-bright: #388bfd;
+      --accent-cyan: #58a6ff;
+      --ok: #238636;
+      --warn: #d29922;
+      --danger: #da3633;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Cabecera de ingeniería del simulador */
+    header.sim-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-line);
+      height: 48px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .brand .badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(56, 139, 253, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(56, 139, 253, 0.3);
+    }
+
+    .controls-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: var(--bg-elevated);
+      color: var(--text-ink);
+      border: 1px solid var(--border-line);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+
+    .btn.active {
+      background: rgba(31, 111, 235, 0.25);
+      border-color: var(--accent-bright);
+      color: #ffffff;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-bright);
+    }
+
+    /* Espacio de trabajo principal */
+    main.sim-workspace {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Escenario central del teléfono */
+    .viewport-stage {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: auto;
+      background: radial-gradient(circle at center, #111620 0%, #0a0e17 100%);
+    }
+
+    /* Chasis físico del teléfono (Samsung Galaxy S24) */
+    .phone-chassis {
+      position: relative;
+      background: #05070a;
+      border-radius: 44px;
+      box-shadow: 0 0 0 12px #1c2128, 0 0 0 14px #30363d, 0 24px 60px rgba(0, 0, 0, 0.7);
+      transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Dimensiones Portrait por defecto */
+    .phone-chassis.portrait {
+      width: 412px;
+      height: 915px;
+    }
+
+    /* Dimensiones Landscape */
+    .phone-chassis.landscape {
+      width: 915px;
+      height: 412px;
+      border-radius: 36px;
+    }
+
+    /* Barra de estado del sistema (Samsung One UI) */
+    .phone-status-bar {
+      height: 28px;
+      background: #000000;
+      color: #e6edf3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      z-index: 50;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .status-left, .status-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Cámara perforada central (Punch hole) */
+    .punch-hole {
+      width: 12px;
+      height: 12px;
+      background: #020406;
+      border-radius: 50%;
+      border: 1px solid #1a202c;
+    }
+
+    /* Contenedor del WebView interactivo */
+    .phone-screen-viewport {
+      flex: 1;
+      position: relative;
+      background: #0d1117;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .webview-frame {
+      width: 100%;
+      flex: 1;
+      border: none;
+      background: #0d1117;
+    }
+
+    /* Teclado Virtual Samsung (IME) */
+    .virtual-keyboard {
+      height: 240px;
+      background: #1e222b;
+      border-top: 1px solid #30363d;
+      display: none;
+      flex-direction: column;
+      padding: 6px 4px;
+      gap: 5px;
+      z-index: 60;
+      user-select: none;
+      animation: slideUp 0.18s ease-out;
+    }

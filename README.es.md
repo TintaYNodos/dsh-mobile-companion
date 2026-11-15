@@ -10,7 +10,7 @@ La aplicación móvil no reimplementa la interfaz: muestra la propia Web GUI de 
 
 Edición endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versión actual: **4.5.10** (`versionCode` 37).
+Versión actual: **5.0.0** (`versionCode` 38).
 
 ---
 
@@ -97,6 +97,13 @@ companion/
 │   ├── verify_*.mjs           diez suites de verificación (136 comprobaciones)
 │   ├── _harness.mjs           cliente compartido
 │   └── run-all.mjs            `npm test`
+├── tools/
+│   └── audit-repo.mjs         auditoría del repositorio (texto, sintaxis, versiones, secretos)
+├── build-apk.ps1              construye y firma el APK sin Gradle
+├── RELEASING.md               checklist de publicación
+├── .github/workflows/verify.yml   CI: sintaxis + auditoría en cada push
+├── SECURITY.md                cómo reportar una vulnerabilidad
+└── CHANGELOG.md               historial de versiones
 └── synced_chats/              conversaciones persistidas (.md y .json)
 ```
 
@@ -247,7 +254,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión **4.5.10**, `versionCode` 37, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión **5.0.0**, `versionCode` 38, `minSdk` 26, `targetSdk` 35.
 - Sin AndroidX y sin Kotlin: bytecode Java puro, alrededor de 210 KB.
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, DeepSeek). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.
@@ -260,6 +267,18 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 - Las notificaciones de aprobación se ocultan de la pantalla de bloqueo (`VISIBILITY_SECRET`) y la acción de aprobar se niega a ejecutarse mientras el dispositivo está bloqueado.
 
 ---
+
+## Construir el APK
+
+Sin Gradle ni Android Studio: el APK se arma con las herramientas del SDK.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build-apk.ps1
+```
+
+Lee la versión de `src/config.mjs`, compila `android_src/` con `javac`, pasa por `d8`, inyecta
+`classes.dex` y firma con `%USERPROFILE%\.android\debug.keystore` (se puede cambiar con
+`-KeyStore`, `-Alias`, `-StorePass`). Detalle en [RELEASING.md](RELEASING.md).
 
 ## Pruebas
 

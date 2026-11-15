@@ -1,0 +1,104 @@
+/*
+ * Copyright (c) 2026 Tinta y Nodos / Ismael Muñoz Reyes. All rights reserved.
+ * SPDX-License-Identifier: BSL-1.1 OR PolyForm-Noncommercial-1.0.0
+ * See LICENSE file in repository root for full terms.
+ */
+package com.tintaynodos.dshcompanion;
+
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Build;
+
+/**
+ * Avisos de peticiones de herramienta/permiso, con los botones Aprobar y
+ * Rechazar. Separado de NotificationHelper para mantener ese archivo pequeno.
+ */
+final class NotificationsApproval {
+
+    private static final long[] VIBRATE_APPROVAL = new long[]{0, 250, 150, 250};
+
+    private NotificationsApproval() {
+    }
+
+    /**
+     * Muestra notificacion de peticion de herramienta / permiso con botones Aceptar y Rechazar.
+     */
+    public static void notifyApproval(Context context, String key, String toolName, String headline, String detail) {
+        if (!MainActivity.shouldShowNotification(context)) return;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+
+        int notifId = NotificationHelper.notificationIdForKey(key);
+
+        // Intent principal al tocar la notificacion: abre MainActivity
+        Intent openIntent = new Intent(context, MainActivity.class);
+        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent openPending = PendingIntent.getActivity(
+                context, notifId, openIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        String bunkerUrl = MainActivity.getActiveBunkerUrl(context);
+
+        // Accion Aceptar / Permitir
+        Intent approveIntent = new Intent(context, NotificationActionReceiver.class);
+        approveIntent.setAction(NotificationHelper.ACTION_APPROVE);
+        approveIntent.putExtra(NotificationHelper.EXTRA_REQUEST_ID, key);
+        approveIntent.putExtra(NotificationHelper.EXTRA_ACTION_TYPE, NotificationHelper.TYPE_TOOL_APPROVAL);
+        approveIntent.putExtra(NotificationHelper.EXTRA_NOTIFICATION_ID, notifId);
+        approveIntent.putExtra(NotificationHelper.EXTRA_BUNKER_URL, bunkerUrl);
+        PendingIntent approvePending = PendingIntent.getBroadcast(
+                context, notifId * 2 + 1, approveIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        // Accion Rechazar
+        Intent rejectIntent = new Intent(context, NotificationActionReceiver.class);
+        rejectIntent.setAction(NotificationHelper.ACTION_REJECT);
+        rejectIntent.putExtra(NotificationHelper.EXTRA_REQUEST_ID, key);
+        rejectIntent.putExtra(NotificationHelper.EXTRA_ACTION_TYPE, NotificationHelper.TYPE_TOOL_APPROVAL);
+        rejectIntent.putExtra(NotificationHelper.EXTRA_NOTIFICATION_ID, notifId);
+        rejectIntent.putExtra(NotificationHelper.EXTRA_BUNKER_URL, bunkerUrl);
+        PendingIntent rejectPending = PendingIntent.getBroadcast(
+                context, notifId * 2 + 2, rejectIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
+        );
+
+        String title = "DSH: Aprobación requerida";
+        if (toolName != null && !toolName.trim().isEmpty() && !toolName.equalsIgnoreCase("Harness")) {
+            title = "Aprobación: " + toolName;
+        }
+
+        String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmación";
+        String fullText = body;
+        if (detail != null && !detail.trim().isEmpty()) {
+            fullText = body + "\n" + detail;
+        }
+
+        Notification.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            builder = new Notification.Builder(context, NotificationHelper.CHANNEL_APPROVALS);
+        } else {
+            builder = new Notification.Builder(context);
+            builder.setPriority(Notification.PRIORITY_HIGH);
+            builder.setVibrate(VIBRATE_APPROVAL);
+        }
+
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(new Notification.BigTextStyle().bigText(fullText))
+                .setContentIntent(openPending)
+                .setAutoCancel(true)
+                .setVisibility(Notification.VISIBILITY_SECRET)
+                .setColor(Color.parseColor("#0EA5E9"))
+                .addAction(new Notification.Action.Builder(0, "Aceptar", approvePending).build())
+                .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
+
+        nm.notify(notifId, builder.build());
+    }
+}

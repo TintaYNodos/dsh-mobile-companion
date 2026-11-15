@@ -10,7 +10,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **4.5.10** (`versionCode` 37).
+Current version: **5.0.0** (`versionCode` 38).
 
 ---
 
@@ -97,6 +97,13 @@ companion/
 │   ├── verify_*.mjs           ten verification suites (136 checks)
 │   ├── _harness.mjs           shared client
 │   └── run-all.mjs            `npm test`
+├── tools/
+│   └── audit-repo.mjs         repository audit (text, syntax, versions, secrets)
+├── build-apk.ps1              builds and signs the APK without Gradle
+├── RELEASING.md               release checklist
+├── .github/workflows/verify.yml   CI: syntax + audit on every push
+├── SECURITY.md                how to report a vulnerability
+└── CHANGELOG.md               version history
 └── synced_chats/              persisted conversations (.md and .json)
 ```
 
@@ -247,7 +254,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **4.5.10**, `versionCode` 37, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.0.0**, `versionCode` 38, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
@@ -260,6 +267,18 @@ The manual access key remains available as a fallback for standard browser acces
 - Approval notifications are hidden from the lock screen (`VISIBILITY_SECRET`) and the approve action refuses to run while the device is locked.
 
 ---
+
+## Building the APK
+
+No Gradle, no Android Studio: the APK is assembled with the Android SDK build tools.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build-apk.ps1
+```
+
+It reads the version from `src/config.mjs`, compiles `android_src/` with `javac`, dexes with
+`d8`, injects `classes.dex` and signs with `%USERPROFILE%\.android\debug.keystore` (override with
+`-KeyStore`, `-Alias`, `-StorePass`). Details in [RELEASING.md](RELEASING.md).
 
 ## Testing
 

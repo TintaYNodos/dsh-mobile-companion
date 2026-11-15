@@ -1,0 +1,30 @@
+# Verificación continua. Sin dependencias externas: el puente no usa npm.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    name: Auditoría del árbol
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sintaxis de todos los módulos
+        run: |
+          fail=0
+          for f in $(git ls-files '*.mjs'); do
+            node --check "$f" || fail=1
+          done
+          exit $fail
+
+      - name: Auditoría del repositorio
+        run: node tools/audit-repo.mjs

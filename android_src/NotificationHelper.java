@@ -60,87 +60,11 @@ public final class NotificationHelper {
         NotificationChannels.create(context);
     }
 
-    private static int notificationIdForKey(String key) {
+    static int notificationIdForKey(String key) {
         return Math.abs(key.hashCode() % 10000) + 1000;
     }
 
     /**
-     * Muestra notificacion de peticion de herramienta / permiso con botones Aceptar y Rechazar.
-     */
-    public static void notifyApproval(Context context, String key, String toolName, String headline, String detail) {
-        if (!MainActivity.shouldShowNotification(context)) return;
-        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        if (nm == null) return;
-
-        int notifId = notificationIdForKey(key);
-
-        // Intent principal al tocar la notificacion: abre MainActivity
-        Intent openIntent = new Intent(context, MainActivity.class);
-        openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        PendingIntent openPending = PendingIntent.getActivity(
-                context, notifId, openIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        String bunkerUrl = MainActivity.getActiveBunkerUrl(context);
-
-        // Accion Aceptar / Permitir
-        Intent approveIntent = new Intent(context, NotificationActionReceiver.class);
-        approveIntent.setAction(ACTION_APPROVE);
-        approveIntent.putExtra(EXTRA_REQUEST_ID, key);
-        approveIntent.putExtra(EXTRA_ACTION_TYPE, TYPE_TOOL_APPROVAL);
-        approveIntent.putExtra(EXTRA_NOTIFICATION_ID, notifId);
-        approveIntent.putExtra(EXTRA_BUNKER_URL, bunkerUrl);
-        PendingIntent approvePending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 1, approveIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        // Accion Rechazar
-        Intent rejectIntent = new Intent(context, NotificationActionReceiver.class);
-        rejectIntent.setAction(ACTION_REJECT);
-        rejectIntent.putExtra(EXTRA_REQUEST_ID, key);
-        rejectIntent.putExtra(EXTRA_ACTION_TYPE, TYPE_TOOL_APPROVAL);
-        rejectIntent.putExtra(EXTRA_NOTIFICATION_ID, notifId);
-        rejectIntent.putExtra(EXTRA_BUNKER_URL, bunkerUrl);
-        PendingIntent rejectPending = PendingIntent.getBroadcast(
-                context, notifId * 2 + 2, rejectIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)
-        );
-
-        String title = "DSH: Aprobación requerida";
-        if (toolName != null && !toolName.trim().isEmpty() && !toolName.equalsIgnoreCase("Harness")) {
-            title = "Aprobación: " + toolName;
-        }
-
-        String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmación";
-        String fullText = body;
-        if (detail != null && !detail.trim().isEmpty()) {
-            fullText = body + "\n" + detail;
-        }
-
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(context, CHANNEL_APPROVALS);
-        } else {
-            builder = new Notification.Builder(context);
-            builder.setPriority(Notification.PRIORITY_HIGH);
-            builder.setVibrate(VIBRATE_APPROVAL);
-        }
-
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(title)
-                .setContentText(body)
-                .setStyle(new Notification.BigTextStyle().bigText(fullText))
-                .setContentIntent(openPending)
-                .setAutoCancel(true)
-                .setVisibility(Notification.VISIBILITY_SECRET)
-                .setColor(Color.parseColor("#0EA5E9"))
-                .addAction(new Notification.Action.Builder(0, "Aceptar", approvePending).build())
-                .addAction(new Notification.Action.Builder(0, "Rechazar", rejectPending).build());
-
-        nm.notify(notifId, builder.build());
-    }
 
     /**
      * Muestra notificacion de autorizacion de nuevo dispositivo con botones Aceptar y Rechazar.

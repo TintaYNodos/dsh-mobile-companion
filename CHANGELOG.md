@@ -3,62 +3,65 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
-## 4.5.10 — `versionCode` 37
+## 5.0.0 — `versionCode` 38
 
-Security hardening, mobile client refactor and documentation.
+Versión mayor: cambia el modelo de confianza y el flujo de emparejamiento, así que
+**no es compatible hacia atrás** con la 4.x. Un teléfono que venía funcionando debe
+emparejarse otra vez si el kill switch rotó la clave.
 
-### Security
+### Breaking changes
 
-- The remote terminal is **disabled by default** (`DSH_ENABLE_TERMINAL=1` to enable it) and, when
-  enabled, only accepts loopback requests.
-- Device approval endpoints (`/dsh-companion/action`, `notification-action`) are loopback-only: a
-  paired phone can no longer approve other devices.
-- `isCompanionRequestTrusted` is now **fail-closed**: without `DSH_COMPANION_TOKEN` it returns
-  `false` and the sync route demands a verifiable credential.
-- The panel no longer has a permanent token: entry is a **single-use ticket** (2 minutes) exchanged
-  for an `HttpOnly`, `SameSite=Strict` session cookie held in memory. Nothing is written to
-  `companion-panel-url.txt` any more.
-- The Android client stores the access keys **encrypted with AES-256-GCM in the Android Keystore**,
-  with automatic migration of plaintext values.
-- `CleartextPolicy` blocks every non-HTTPS request that is not aimed at the configured bunker or a
-  private/loopback address, and the network security config forbids cleartext to the public services
-  the app talks to. `usesCleartextTraffic` is gone.
-- Anonymous `/dsh-companion/status` returns a minimal payload and no longer computes telemetry, which
-  removed an unauthenticated CPU/DoS vector.
-- `DSH_ACCESS_DISABLE=1` refuses to start unless the bridge is bound to loopback.
-- Device lifetime (`DSH_DEVICE_TTL_DAYS`) is now **enforced server-side**: expired devices are
-  rejected and purged instead of being authorised forever.
-- The access key is no longer written in full to `bridge.log` (last four characters only).
-- Kill switch now also **rotates the access key**.
+- **Identidad de dispositivo por cookie, no por IP.** Un equipo que hereda una
+  dirección de la VPN ya no hereda la sesión.
+- **El kill switch rota la clave de acceso**, además de revocar dispositivos: lo que
+  estaba emparejado deja de servir hasta volver a aprobarse.
+- **La terminal remota está apagada por defecto** (`DSH_ENABLE_TERMINAL=1` para
+  activarla) y, aun activada, solo acepta peticiones desde loopback.
+- **El panel no usa token maestro**: la entrada es un boleto de un solo uso que se
+  canjea por una cookie de sesión `HttpOnly`. Los enlaces `?t=` guardados dejan de
+  funcionar y ya no se escribe `companion-panel-url.txt`.
+- **`/dsh-companion/action` responde 501** para aprobaciones de herramientas: el
+  puente ya no finge resolverlas. La aprobación de *dispositivos* solo se hace desde
+  el equipo del host.
+- **La caducidad de 30 días se aplica en el servidor**: los dispositivos sin uso se
+  rechazan y se eliminan del registro.
+- **`DSH_ACCESS_DISABLE=1` exige loopback** para arrancar.
 
-### Fixed
+### Seguridad
 
-- **Duplicate "response finished" notifications.** The watcher fired on "the session file stopped
-  growing", which counted every pause of the model or a tool. It now fires on the `turn/end` record
-  of the session log: exactly one notification per turn, with long pauses ignored.
-- **PC notifications never arrived.** The foreground service asked for the access key from a
-  preference that nobody wrote and never sent the device cookie, so the bridge answered 403 in a
-  silent retry loop. It now resolves the active PC key and sends the cookie.
-- Notification channels are created when the service starts, not only when the app opens.
-- Approving from a notification is refused while the device is locked, and approval notifications are
-  hidden from the lock screen.
-- `onRenderProcessGone` rebuilds the WebView instead of letting Android kill the app.
-- Registry writes no longer fail with `EBUSY` when several clients refresh their device stamp.
-- The injected client script had a syntax error that made the whole touch layer dead; the escaping is
-  fixed and the embedded script is validated by the tests.
+- Claves guardadas en Android cifradas con AES-256-GCM en el Android Keystore, con
+  migración automática de los valores en claro.
+- `CleartextPolicy` bloquea cualquier petición que no sea HTTPS o dirigida al búnker
+  configurado o a una dirección privada; fuera `usesCleartextTraffic` y TLS forzado
+  hacia los servicios públicos.
+- El `/status` anónimo devuelve un payload mínimo y ya no calcula telemetría, lo que
+  cerró un vector de CPU no autenticado.
+- La clave de acceso ya no se escribe completa en `bridge.log`.
+- Aprobaciones ocultas en la pantalla de bloqueo y rechazadas con el teléfono bloqueado.
+- `/terminal`, `/open-panel`, `/retry` y `/pair-events` endurecidos; terminal y panel
+  solo por loopback.
 
-### Changed
+### Notificaciones
 
-- **Every source file is now under 400 lines** (was: `MainActivity.java` 4 472,
-  `offline.html` 1 466, `mobile-client.mjs` 1 063, `routes.mjs` 620, `NotificationHelper.java` 601).
-  The Android client is split into focused classes, the injected client into modules, and the offline
-  page into HTML + three stylesheets + three scripts.
-- Duplicated helpers unified: approval card lookup, document title cleanup, haptics, focus loss
-  prevention (which was registered twice), and the detail element lookups in the offline reader.
-- `npm test` runs the ten verification suites (136 checks) against a live bridge. The destructive
-  kill-switch check is opt-in with `DSH_TEST_DESTRUCTIVE=1`.
-- `package.json` added as the single source of the project version, and a `Dockerfile` that copies the
-  new offline assets.
+- Aviso de **respuesta terminada** cuando un turno finaliza en la computadora, con la
+  app cerrada: el puente lo detecta en el registro de sesión (`turn/end`), así que
+  llega **una sola vez por respuesta** aunque el modelo o una herramienta hagan pausas.
+- El servicio en primer plano resuelve la clave del equipo activo y envía la cookie
+  del dispositivo: antes pedía una clave que nadie escribía y el puente respondía 403
+  en un bucle silencioso.
+- Canales separados (respuestas de la PC, servicio, críticos) creados al arrancar.
+
+### Mantenimiento
+
+- **Todos los archivos de código por debajo de 400 líneas**, con un control automático
+  en `tools/audit-repo.mjs` y en la CI.
+- Cliente Android dividido en clases con una responsabilidad; cliente inyectado en
+  módulos; `offline.html` y el simulador en HTML + CSS + JS; `routes` y `panel`
+  separados por responsabilidad.
+- Ayudantes duplicados unificados y mojibake reparado en los módulos publicados.
+- `build-apk.ps1` para construir y firmar el APK sin Gradle ni Android Studio.
+- `RELEASING.md` con el checklist de publicación y `.github/workflows/verify.yml`.
+- README en 7 idiomas, `SECURITY.md`, `CHANGELOG.md` y `AI_SETUP_PROMPT.md`.
 
 ## 4.5.4 — `versionCode` 31
 

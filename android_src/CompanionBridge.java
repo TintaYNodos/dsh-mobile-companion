@@ -37,7 +37,7 @@ public class CompanionBridge {
     public void onApprovalRequested(String key, String toolName, String headline, String detail) {
         if (key == null || key.trim().isEmpty()) return;
         mainHandler.post(() -> {
-            NotificationHelper.notifyApproval(context, key, toolName, headline, detail);
+            NotificationsApproval.notifyApproval(context, key, toolName, headline, detail);
         });
     }
 

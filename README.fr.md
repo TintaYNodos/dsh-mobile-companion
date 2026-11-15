@@ -157,6 +157,8 @@ Deux méthodes équivalentes :
 
 ---
 
+Pour l'arrêter ou le retirer du démarrage automatique : `stop.bat`, `uninstall-autostart.bat` (Windows) ; `uninstall-launchd.sh`, `uninstall-systemd.sh` (macOS/Linux).
+
 ## Variables d'environnement
 
 | Variable | Valeur par défaut | Effet |

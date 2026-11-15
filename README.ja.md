@@ -157,6 +157,8 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 ---
 
+停止または自動起動から外すには：`stop.bat`、`uninstall-autostart.bat`（Windows）、`uninstall-launchd.sh`、`uninstall-systemd.sh`（macOS/Linux）。
+
 ## 環境変数
 
 | 変数 | デフォルト | 効果 |

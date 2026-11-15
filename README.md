@@ -159,6 +159,8 @@ Two equivalent methods:
 
 ---
 
+To stop it or remove it from startup: `stop.bat`, `uninstall-autostart.bat` (Windows); `uninstall-launchd.sh`, `uninstall-systemd.sh` (macOS/Linux). The bridge can also be removed by deleting the folder: it keeps nothing outside `%USERPROFILE%\.dsh` and `synced_chats/`.
+
 ## Environment variables
 
 | Variable | Default | Effect |

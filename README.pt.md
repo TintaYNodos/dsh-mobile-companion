@@ -157,6 +157,8 @@ Dois métodos equivalentes:
 
 ---
 
+Para pará-lo ou removê-lo da inicialização: `stop.bat`, `uninstall-autostart.bat` (Windows); `uninstall-launchd.sh`, `uninstall-systemd.sh` (macOS/Linux).
+
 ## Variáveis de ambiente
 
 | Variável | Padrão | Efeito |

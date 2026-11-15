@@ -69,3 +69,8 @@ de la suite sigue igual.
 `node tools/audit-repo.mjs` y `node test/verify_config_guard.mjs` en cada push o
 pull request. Las pruebas que necesitan un puente vivo **no** corren en CI: ese
 es el límite conocido de la suite y se documenta aquí en vez de disimularlo.
+
+## utilidades manuales
+
+- `bench_latency.mjs` — banco de latencia contra el puente vivo (no forma parte de `run-all.mjs`):
+  `node test/bench_latency.mjs`. Sirve para medir el proxy, no para verificar.

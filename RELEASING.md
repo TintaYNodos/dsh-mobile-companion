@@ -91,6 +91,10 @@ El tag debe apuntar al commit que se publica. Si algo se corrige después, o se 
 3. Cuerpo: qué cambia, qué rompe y el SHA-256 del APK. Sin descripciones vacías.
 4. Adjunta `DSH-Companion.apk` y publica.
 
+## 5b. Presentación del repositorio
+
+En *Settings → Social preview* sube `docs/images/social-preview.png` (1280×640). En *About* revisa la descripción y los topics; el release de la serie 5 debe quedar como *latest* y los 5.2.x como *pre-release*.
+
 ## 6. Comprobar lo publicado
 
 ```bash

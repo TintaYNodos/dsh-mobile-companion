@@ -157,6 +157,8 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 ---
 
+停止或移除开机自启：`stop.bat`、`uninstall-autostart.bat`（Windows）；`uninstall-launchd.sh`、`uninstall-systemd.sh`（macOS/Linux）。
+
 ## 环境变量
 
 | 变量 | 默认值 | 作用 |

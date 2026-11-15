@@ -157,6 +157,8 @@ Dos métodos equivalentes:
 
 ---
 
+Para detenerlo o quitarlo del arranque: `stop.bat`, `uninstall-autostart.bat` (Windows); `uninstall-launchd.sh`, `uninstall-systemd.sh` (macOS/Linux). El puente tampoco deja nada fuera de `%USERPROFILE%\.dsh` y `synced_chats/`: borrar la carpeta lo elimina del todo.
+
 ## Variables de entorno
 
 | Variable | Valor predeterminado | Efecto |

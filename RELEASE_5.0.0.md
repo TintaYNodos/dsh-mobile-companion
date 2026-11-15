@@ -46,4 +46,4 @@ Si el kill switch rotó la clave en tu instalación, vuelve a emparejar el telé
 
 Descarga `DSH-Companion.apk` (210 952 bytes, `minSdk` 26). Se instala encima de la versión anterior: la firma no cambia.
 
-**SHA-256:** `5f5ea33b83dbd41f3489f123ec745b9025588e3576ae34bafbc50b73938bbfe9`
+**SHA-256:** `a0f48b49251c3f72fe059175065b9d9fed11db01b491e1c2d6e07d7b6fc6b511`

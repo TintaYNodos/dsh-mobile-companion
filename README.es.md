@@ -308,6 +308,12 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ---
 
+## Estabilidad
+
+**La 5.1.2 es la base congelada de la serie 5.** No recibe funciones nuevas; solo un fallo de seguridad crítico produciría una 5.1.3. Lo siguiente sale como **pre-release** (5.2.0-pre.1 y siguientes) hasta estabilizarse. La rama `stable/5` conserva exactamente este árbol.
+
+![Lector offline](docs/images/offline.png)
+
 ## Aviso de proyecto comunitario
 
 > **Aviso:** DSH Mobile Companion es un cliente móvil complementario desarrollado por la comunidad para facilitar el acceso remoto seguro a DeepSeek Harness a través de redes privadas (ZeroTier / Tailscale). No es un producto oficial de DeepSeek ni está afiliado, patrocinado o respaldado por DeepSeek. Todas las marcas y logotipos mencionados pertenecen a sus respectivos propietarios.

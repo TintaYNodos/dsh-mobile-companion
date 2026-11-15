@@ -308,6 +308,12 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ---
 
+## Stability
+
+**5.1.2 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.3. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
+
+![Offline reader](docs/images/offline.png)
+
 ## Community project notice
 
 > **Notice:** DSH Mobile Companion is a companion mobile client developed by the community to facilitate secure remote access to DeepSeek Harness over private networks (ZeroTier / Tailscale). It is not an official DeepSeek product, nor is it affiliated with, sponsored by, or endorsed by DeepSeek. All referenced trademarks and logos belong to their respective owners.

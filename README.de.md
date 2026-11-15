@@ -289,6 +289,10 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ---
 
+## Stabilität
+
+**5.1.2 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.3 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
+
 ## Hinweis zum Gemeinschaftsprojekt
 
 > **Hinweis:** DSH Mobile Companion ist ein von der Gemeinschaft entwickelter mobiler Begleitclient, der sicheren Fernzugriff auf DeepSeek Harness über private Netzwerke (ZeroTier / Tailscale) erleichtert. Es ist kein offizielles DeepSeek-Produkt und weder mit DeepSeek verbunden noch von DeepSeek gesponsert oder unterstützt. Alle genannten Marken und Logos gehören ihren jeweiligen Inhabern.

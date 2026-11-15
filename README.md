@@ -10,7 +10,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **5.1.1** (`versionCode` 41).
+Current version: **5.1.2** (`versionCode` 42).
 
 ---
 
@@ -252,7 +252,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **5.1.1**, `versionCode` 41, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
@@ -290,7 +290,7 @@ The suite talks to a **live bridge** (it is not a mock): start the bridge first.
 
 ---
 
-> **Satellite mode (optional):** the offline page can send a conversation to `api.deepseek.com` using the API key you configure on the phone. It is the only feature that leaves your private network; it is opt-in, it requires that key, and since 5.1.1 it can only be triggered from the main frame of the bunker.
+> **Satellite mode (optional):** the offline page can send a conversation to `api.deepseek.com` using the API key you configure on the phone. It is the only feature that leaves your private network; it is opt-in, it requires that key, and since 5.1.2 it can only be triggered from the main frame of the bunker.
 
 ## Honest limitations
 

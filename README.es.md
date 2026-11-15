@@ -10,7 +10,7 @@ La aplicación móvil no reimplementa la interfaz: muestra la propia Web GUI de 
 
 Edición endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versión actual: **5.1.1** (`versionCode` 41).
+Versión actual: **5.1.2** (`versionCode` 42).
 
 ---
 
@@ -252,7 +252,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión **5.1.1**, `versionCode` 41, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión **5.1.2**, `versionCode` 42, `minSdk` 26, `targetSdk` 35.
 - Sin AndroidX y sin Kotlin: bytecode Java puro, alrededor de 210 KB.
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, DeepSeek). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.
@@ -290,7 +290,7 @@ La suite habla con un **puente en vivo** (no es un mock): inicia el puente prime
 
 ---
 
-> **Modo satélite (opcional):** la página offline puede enviar una conversación a `api.deepseek.com` con la clave de API que configures en el teléfono. Es la única función que sale de tu red privada; es opcional, exige esa clave y desde la 5.1.1 solo puede dispararla el frame principal del búnker.
+> **Modo satélite (opcional):** la página offline puede enviar una conversación a `api.deepseek.com` con la clave de API que configures en el teléfono. Es la única función que sale de tu red privada; es opcional, exige esa clave y desde la 5.1.2 solo puede dispararla el frame principal del búnker.
 
 ## Limitaciones honestas
 

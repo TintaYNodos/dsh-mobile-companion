@@ -131,9 +131,22 @@ export function requestAccess(remoteAddress, userAgent) {
     const sameAddress = current.pending.find((entry) => entry.address === address);
     if (sameAddress && (!sameAddress.claimToken || isLoopback(address))) existing = sameAddress;
   }
+  // P57: la pantalla de espera se sirve en "/" y sondea "/dsh-companion/status".
+  // La cookie de canje esta acotada a /dsh-companion, asi que las peticiones a
+  // "/" llegaban sin token y creaban una solicitud nueva en cada reintento: el
+  // panel acababa con decenas de "Telefono Android" imposibles de identificar.
+  // Se reutiliza la solicitud del mismo equipo (misma IP y mismo user-agent).
+  if (!existing && !presented) {
+    const sameAgent = current.pending.find(
+      (entry) => entry.address === address && entry.agent === String(userAgent || "").slice(0, 120)
+    );
+    if (sameAgent) existing = sameAgent;
+  }
 
   if (existing) {
     let changed = false;
+    existing.requestedAt = new Date(now).toISOString();
+    changed = true;
     if (!existing.claimToken) {
       existing.claimToken = newClaimToken();
       changed = true;

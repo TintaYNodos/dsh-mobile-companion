@@ -96,8 +96,23 @@ export function clearDenied(address) {
 }
 
 export const pendingRequests = () => {
-  prune(loadRegistry(), Date.now());
-  return loadRegistry().pending.map((entry) => ({ ...entry }));
+  const current = prune(loadRegistry(), Date.now());
+  // P57: una sola tarjeta por equipo. Si quedan solicitudes repetidas de la
+  // misma IP y user-agent (versiones anteriores al arreglo), se muestra la mas
+  // reciente; las demas siguen en el registro hasta caducar y se pueden aprobar
+  // por su id, pero dejan de llenar la pantalla.
+  const dedupePending = (list) => {
+    const byDevice = new Map();
+    for (const entry of list) {
+      const key = entry.address + "|" + (entry.agent || "");
+      const previous = byDevice.get(key);
+      const stamp = Date.parse(entry.requestedAt || 0) || 0;
+      const previousStamp = previous ? (Date.parse(previous.requestedAt || 0) || 0) : -1;
+      if (!previous || stamp >= previousStamp) byDevice.set(key, entry);
+    }
+    return [...byDevice.values()];
+  };
+  return dedupePending(current.pending).map((entry) => ({ ...entry }));
 };
 
 const approvalListeners = new Set();

@@ -3,6 +3,20 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.2 — `versionCode` 42
+
+### Corregido
+
+- **El panel se llenaba de solicitudes duplicadas del mismo teléfono.** La pantalla de
+  espera se sirve en `/` y sondea `/dsh-companion/status`; la cookie de canje está
+  acotada a `/dsh-companion`, así que las peticiones a `/` llegaban sin token y cada
+  reintento creaba una solicitud nueva (15 seguidas en la captura del usuario). Ahora
+  se reutiliza la solicitud del mismo equipo (IP + user-agent) y el reloj se refresca
+  al reintentar.
+- **El panel agrupa duplicados.** Aunque queden solicitudes repetidas de una versión
+  anterior, se muestra una sola tarjeta por equipo: la más reciente.
+- Limpiadas las solicitudes acumuladas en el registro al aplicar el arreglo.
+
 ## 5.1.1 — `versionCode` 41
 
 Cierre de los residuales del informe y de los opcionales de repositorio.

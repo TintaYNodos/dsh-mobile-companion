@@ -291,7 +291,7 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ## Community project notice
 
-> **Notice:** DSH Mobile Companion is an open-source companion mobile client developed by the community to facilitate secure remote access to DeepSeek Harness over private networks (ZeroTier / Tailscale). It is not an official DeepSeek product, nor is it affiliated with, sponsored by, or endorsed by DeepSeek. All referenced trademarks and logos belong to their respective owners.
+> **Notice:** DSH Mobile Companion is a companion mobile client developed by the community to facilitate secure remote access to DeepSeek Harness over private networks (ZeroTier / Tailscale). It is not an official DeepSeek product, nor is it affiliated with, sponsored by, or endorsed by DeepSeek. All referenced trademarks and logos belong to their respective owners.
 
 ## License
 

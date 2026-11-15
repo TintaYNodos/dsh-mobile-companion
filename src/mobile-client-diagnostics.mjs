@@ -23,7 +23,7 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
       if (key !== lastApprovalKey) {
         lastApprovalKey = key;
         var headlineEl = card.querySelector('[class*="headline"], h2, h3, header') || card.querySelector('[data-card="approval"] [class*="headline"]');
-        var headline = headlineEl ? headlineEl.textContent.trim() : 'AprobaciÃ³n requerida';
+        var headline = headlineEl ? headlineEl.textContent.trim() : 'Aprobación requerida';
         var detailEl = card.querySelector('[class*="command"], [class*="description"], code, pre') || card.querySelector('[class*="command"]') || card.querySelector('[class*="description"]');
         var detail = detailEl ? detailEl.textContent.trim() : '';
 
@@ -72,7 +72,7 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
           var lastMsg = messages[messages.length - 1];
           var text = (lastMsg.textContent || '').trim();
           if (text) {
-            snippet = text.length > 150 ? text.substring(0, 150) + 'â€¦' : text;
+            snippet = text.length > 150 ? text.substring(0, 150) + '…' : text;
           }
         }
         var docTitle = cleanDocTitle();

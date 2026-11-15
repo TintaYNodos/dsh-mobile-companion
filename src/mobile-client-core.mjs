@@ -31,7 +31,7 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
   }
 
   function cleanDocTitle() {
-    return (document.title || '').replace(/^DeepSeek Harness\\s*[-Â·]?\\s*/i, '').trim();
+    return (document.title || '').replace(/^DeepSeek Harness\\s*[-·]?\\s*/i, '').trim();
   }
 
   function preventFocusLoss(button) {
@@ -48,9 +48,9 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
   if (window.AndroidCompanion && typeof window.AndroidCompanion.copyToClipboard === 'function') {
     try {
       // navigator.clipboard solo existe en contexto seguro; en http:// de la LAN
-      // no estÃ¡. Se define con defineProperty porque el getter es de solo
-      // lectura: una asignaciÃ³n directa fallaba en silencio y "copiar" no hacÃ­a
-      // nada sin ningÃºn aviso.
+      // no está. Se define con defineProperty porque el getter es de solo
+      // lectura: una asignación directa fallaba en silencio y "copiar" no hacía
+      // nada sin ningún aviso.
       var writeText = function(text) {
         try {
           window.AndroidCompanion.copyToClipboard(String(text != null ? text : ''));

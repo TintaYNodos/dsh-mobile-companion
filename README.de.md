@@ -291,7 +291,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Hinweis zum Gemeinschaftsprojekt
 
-> **Hinweis:** DSH Mobile Companion ist ein von der Gemeinschaft entwickelter mobiler Open-Source-Begleitclient, der sicheren Fernzugriff auf DeepSeek Harness über private Netzwerke (ZeroTier / Tailscale) erleichtert. Es ist kein offizielles DeepSeek-Produkt und weder mit DeepSeek verbunden noch von DeepSeek gesponsert oder unterstützt. Alle genannten Marken und Logos gehören ihren jeweiligen Inhabern.
+> **Hinweis:** DSH Mobile Companion ist ein von der Gemeinschaft entwickelter mobiler Begleitclient, der sicheren Fernzugriff auf DeepSeek Harness über private Netzwerke (ZeroTier / Tailscale) erleichtert. Es ist kein offizielles DeepSeek-Produkt und weder mit DeepSeek verbunden noch von DeepSeek gesponsert oder unterstützt. Alle genannten Marken und Logos gehören ihren jeweiligen Inhabern.
 
 ## Lizenz
 

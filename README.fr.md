@@ -291,7 +291,7 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 ## Avis de projet communautaire
 
-> **Avis :** DSH Mobile Companion est un client mobile compagnon open source développé par la communauté pour faciliter l'accès distant sécurisé à DeepSeek Harness via des réseaux privés (ZeroTier / Tailscale). Ce n'est pas un produit officiel de DeepSeek, et il n'est ni affilié à DeepSeek, ni sponsorisé, ni approuvé par DeepSeek. Toutes les marques et logos cités appartiennent à leurs propriétaires respectifs.
+> **Avis :** DSH Mobile Companion est un client mobile compagnon développé par la communauté pour faciliter l'accès distant sécurisé à DeepSeek Harness via des réseaux privés (ZeroTier / Tailscale). Ce n'est pas un produit officiel de DeepSeek, et il n'est ni affilié à DeepSeek, ni sponsorisé, ni approuvé par DeepSeek. Toutes les marques et logos cités appartiennent à leurs propriétaires respectifs.
 
 ## Licence
 

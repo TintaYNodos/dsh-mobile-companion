@@ -85,10 +85,10 @@ export const MOBILE_CLIENT_EDITOR = `  /**
     }
   };
 
-  // Control de comportamiento de tecla Enter (â†µ): Salto de lÃ­nea vs Enviar mensaje.
-  // Se consulta el sentido directo ("Â¿Enter envÃ­a?") cuando el puente lo ofrece:
-  // asÃ­ el lado web no invierte nada y no puede quedar al revÃ©s respecto a
-  // Ajustes. El mÃ©todo antiguo queda solo como respaldo.
+  // Control de comportamiento de tecla Enter (↵): Salto de línea vs Enviar mensaje.
+  // Se consulta el sentido directo ("¿Enter envía?") cuando el puente lo ofrece:
+  // así el lado web no invierte nada y no puede quedar al revés respecto a
+  // Ajustes. El método antiguo queda solo como respaldo.
   window.__DSH_ENTER_NEWLINE__ = true;
   try {
     var bridgeSends = null;
@@ -150,13 +150,13 @@ export const MOBILE_CLIENT_EDITOR = `  /**
     return null;
   }
 
-  // Interceptar tecla Enter en fase de captura para convertirla en salto de lÃ­nea si estÃ¡ activado
+  // Interceptar tecla Enter en fase de captura para convertirla en salto de línea si está activado
   window.addEventListener('keydown', function(event) {
     if (!window.__DSH_ENTER_NEWLINE__) return;
     if (event.key === 'Enter' || event.keyCode === 13) {
       var target = composerTargetFor(event);
       if (target) {
-        // Permitir envÃ­o explÃ­cito con Ctrl+Enter o Cmd+Enter si hay teclado fÃ­sico
+        // Permitir envío explícito con Ctrl+Enter o Cmd+Enter si hay teclado físico
         if (event.ctrlKey || event.metaKey) return;
 
         // Si ya trae shiftKey, dejar pasar normalmente

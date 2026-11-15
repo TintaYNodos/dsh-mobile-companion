@@ -16,7 +16,7 @@ export const MOBILE_CLIENT_UI = `  var observer = new MutationObserver(debounced
     var btn = ev.target && ev.target.closest ? ev.target.closest('button') : null;
     if (btn) {
       var txt = (btn.textContent || '').trim();
-      var isPlus = txt === '+' || btn.getAttribute('aria-label') === 'AÃ±adir' || btn.getAttribute('aria-label') === 'Add';
+      var isPlus = txt === '+' || btn.getAttribute('aria-label') === 'Añadir' || btn.getAttribute('aria-label') === 'Add';
       if (isPlus) {
         var active = document.activeElement;
         if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) {
@@ -26,7 +26,7 @@ export const MOBILE_CLIENT_UI = `  var observer = new MutationObserver(debounced
     }
 
     // Solo se intercepta un enlace que realmente apunte al APK. Antes bastaba
-    // con que cualquier boton dijera "Abrir" o "Descargar" y que la pÃ¡gina
+    // con que cualquier boton dijera "Abrir" o "Descargar" y que la página
     // mencionara DSH-Companion.apk en algun sitio (incluido el chat) para
     // lanzar la instalacion por error.
     var apkLink = ev.target && ev.target.closest

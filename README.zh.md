@@ -291,7 +291,7 @@ npm test
 
 ## 社区项目声明
 
-> **声明：** DSH Mobile Companion 是由社区开发的开源伴随移动客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全地远程访问 DeepSeek Harness。它不是 DeepSeek 的官方产品，也与 DeepSeek 不存在隶属、赞助或背书关系。文中提及的所有商标和徽标均归其各自所有者所有。
+> **声明：** DSH Mobile Companion 是由社区开发的伴随移动客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全地远程访问 DeepSeek Harness。它不是 DeepSeek 的官方产品，也与 DeepSeek 不存在隶属、赞助或背书关系。文中提及的所有商标和徽标均归其各自所有者所有。
 
 ## 许可证
 

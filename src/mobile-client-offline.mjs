@@ -9,7 +9,7 @@
  * temporizadores periodicos del cliente.
  */
 export const MOBILE_CLIENT_OFFLINE = `  /**
-   * Copia de respaldo para el modo sin conexiÃ³n (offline.html la lee).
+   * Copia de respaldo para el modo sin conexión (offline.html la lee).
    *
    * Antes se hacia cada 10 s con el chat completo: escritura periodica en
    * localStorage de una conversacion entera. Ahora solo se guarda cuando la

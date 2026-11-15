@@ -5,6 +5,25 @@ Android `versionCode` increments once per published build.
 
 ## Sin publicar
 
+### Corregido (informe externo, puntos verificados)
+
+- **P7: el simulador ya no es público.** `/simulator` se servía con 200 a cualquiera en la red
+  privada; ahora exige un dispositivo emparejado o la clave de acceso.
+- **P55: el simulador estaba roto.** Su HTML cargaba `simulator-base.css`,
+  `simulator-components.css` y `simulator.js`, que el puente no servía (403). Añadidos a los
+  estáticos con su tipo MIME.
+- **P23:** el puerto del panel (57421) ya no está entre los candidatos del backend de Harness.
+- **P6: sin ventana del panel para peticiones proxificadas.** Con cabeceras de proxy (Cloudflare,
+  nginx) el puente ya no abre la ventana del panel en el escritorio del host.
+
+### Descartados tras verificar el código (no aplican)
+
+- **P33**: `focusPanelWindow` ya tiene espera de 60 s en `panel.mjs`.
+- **P40**: `NetCredentials` limpia cookies y credenciales HTTP al eliminar una PC (con el límite
+  de Android documentado).
+- **P45**: el SSE solo emite `{type, turn, at}`; no difunde nombres de espacio ni sesión.
+- **P52**: `/pair` responde 403 solo cuando el boleto ya no es válido; es el comportamiento correcto.
+
 ### Añadido
 
 - **Licencia más clara para empresas**: el *Additional Use Grant* permite ahora uso interno en

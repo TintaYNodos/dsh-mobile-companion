@@ -105,7 +105,7 @@ companion/
 ├── RELEASING.md               release checklist
 ├── .github/workflows/verify.yml   CI: syntax + audit on every push
 ├── SECURITY.md                how to report a vulnerability
-└── CHANGELOG.md               version history
+├── CHANGELOG.md               version history
 └── synced_chats/              persisted conversations (.md and .json)
 ```
 
@@ -139,7 +139,7 @@ Follow these steps autonomously and in order:
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-Node.js 20 or newer, no npm dependencies.
+Node.js 22.15 or newer, no npm dependencies.
 
 1. Set an access key (strongly recommended; see below).
 2. Install automatic startup with `install-autostart.bat` (silent task at Windows logon).
@@ -292,7 +292,7 @@ The suite talks to a **live bridge** (it is not a mock): start the bridge first.
 
 ---
 
-> **Satellite mode (optional):** the offline page can send a conversation to `api.deepseek.com` using the API key you configure on the phone. It is the only feature that leaves your private network; it is opt-in, it requires that key, and since 5.1.2 it can only be triggered from the main frame of the bunker.
+> **Satellite mode (optional):** the offline page can send a conversation to `api.deepseek.com` using the API key you configure on the phone. It is the only feature that leaves your private network; it is opt-in, it requires that key, and since 5.1.0 it can only be triggered from the main frame of the bunker.
 
 ## Honest limitations
 

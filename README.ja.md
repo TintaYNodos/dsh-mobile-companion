@@ -132,7 +132,7 @@ companion/
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-Node.js 20 以降が必要です。npm の依存関係はありません。
+Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 1. アクセスキーを設定します（強く推奨。詳細は後述）。
 2. `install-autostart.bat` で自動起動をインストールします（Windows ログオン時のサイレントタスク）。

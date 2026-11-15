@@ -132,7 +132,7 @@ Siga estes passos de forma autônoma e em ordem:
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-Node.js 20 ou mais recente, sem dependências de npm.
+Node.js 22.15 ou mais recente, sem dependências de npm.
 
 1. Defina uma chave de acesso (fortemente recomendado; veja abaixo).
 2. Instale a inicialização automática com `install-autostart.bat` (tarefa silenciosa ao fazer logon no Windows).

@@ -24,6 +24,23 @@ Android `versionCode` increments once per published build.
 - **P45**: el SSE solo emite `{type, turn, at}`; no difunde nombres de espacio ni sesión.
 - **P52**: `/pair` responde 403 solo cuando el boleto ya no es válido; es el comportamiento correcto.
 
+### Corregido (informe externo, puntos verificados)
+
+- **P7: el simulador ya no es publico.** `/simulator` se servia con 200 a cualquiera en la red
+  privada; ahora exige un dispositivo emparejado o la clave de acceso.
+- **P55: el simulador estaba roto.** Su HTML cargaba los CSS y el JS del simulador, que el puente
+  no servia (403). Anadidos a los estaticos con su tipo MIME.
+- **P23:** el puerto del panel (57421) ya no esta entre los candidatos del backend de Harness.
+- **P6: sin ventana del panel para peticiones proxificadas.** Con cabeceras de proxy el puente ya
+  no abre la ventana del panel en el escritorio del host.
+
+### Descartados tras verificar el codigo (no aplican)
+
+- **P33**: `focusPanelWindow` ya tiene espera de 60 s en `panel.mjs`.
+- **P40**: `NetCredentials` limpia cookies y credenciales HTTP al eliminar una PC.
+- **P45**: el SSE solo emite `{type, turn, at}`; no difunde espacios ni sesiones.
+- **P52**: `/pair` responde 403 solo cuando el boleto ya no es valido; es correcto.
+
 ### Añadido
 
 - **Licencia más clara para empresas**: el *Additional Use Grant* permite ahora uso interno en

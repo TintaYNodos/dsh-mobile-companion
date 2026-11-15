@@ -9,6 +9,16 @@
 
 Only the current release receives security fixes.
 
+## Verifying a build
+
+Only install APKs whose signature matches the release certificate:
+
+```bash
+apksigner verify --print-certs DSH-Companion.apk
+```
+
+Release certificate SHA-256: `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
+
 ## Reporting a vulnerability
 
 **Please do not open a public issue for a security problem.**

@@ -1,4 +1,4 @@
-# DSH Mobile Companion 5.1.6 (versionCode 46) — base estable de la serie 5
+# DSH Mobile Companion 5.1.7 (versionCode 47) — base estable de la serie 5
 
 Esta es la **base congelada** de la serie 5. A partir de aquí el proyecto avanza con mejoras
 menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
@@ -49,25 +49,38 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 - **Rotación de `bridge.log` en caliente** (`DSH_LOG_MAX_MB` 5, `DSH_LOG_KEEP` 3).
 
 ### 5.1.6 — actualización desde la PC arreglada
-- **La actualización desde la PC instalaba el APK equivocado**: el puente servía la
-  copia de la **raíz** (`../DSH-Companion.apk`, a veces atrasada) mientras `/status`
-  anunciaba la versión recién compilada. Ahora sirve el APK de **su propio
-  directorio** (el que acaba de compilar) y el teléfono verifica que coincide.
-- **SHA-256 del APK en `/status`** (`apkSha256`): la actualización desde la PC ya no
-  se instala sin verificar.
-- **GitHub como vía sin túnel**: si el puente no responde, la app consulta los
-  releases sin esperar la caché de 6 horas.
-- El `versionCode` solo sube cuando cambia el código Android.
+- **La actualización desde la PC instalaba el APK equivocado**: el puente servía la copia de la
+  raíz (atrasada) mientras `/status` anunciaba la versión compilada. Ahora sirve su propio APK.
+- **SHA-256 del APK en `/status`** y verificación en el teléfono.
+- **GitHub como vía sin túnel**: se fuerza la consulta si el puente no responde.
+
+### 5.1.7 — firma de release
+- **El APK se firma con un keystore de release** (RSA 4096, 30 años), no con el de depuración.
+  Certificado SHA-256: `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`.
+- `build-release.ps1` compila y firma leyendo la contraseña de un archivo fuera del repositorio;
+  `build-apk.ps1` queda para desarrollo.
+- Sección "Firma del APK" en los 7 README, verificación en `SECURITY.md` y aviso de respaldo en
+  `RELEASING.md`.
+
+## ⚠️ Antes de instalar
+
+**Cambió la firma.** Los APK hasta la 5.1.6 usaban el certificado de depuración y Android rechaza
+una actualización firmada con otra clave. Para esta versión:
+
+1. Desinstala la app anterior (tus chats y la sesión del navegador se pierden; el emparejamiento
+   con la PC hay que rehacerlo).
+2. Instala esta 5.1.7.
+3. A partir de aquí las actualizaciones se instalan encima normalmente.
 
 ## Verificación de este binario
 
 | Parámetro | Valor |
 | --- | --- |
 | Archivo | `DSH-Companion.apk` |
-| Versión | `versionCode 46` / `versionName 5.1.6` |
-| Tamaño | 215 048 bytes (210 KB) |
-| SHA-256 | `9458e747afd355c8263086510d27520710f76921734c9ff19d77b3e3d7b18c6d` |
-| Firma | APK Signature Scheme v2 + v3 |
+| Versión | `versionCode 47` / `versionName 5.1.7` |
+| Tamaño | 223 240 bytes (218 KB) |
+| SHA-256 | `fad7749b9bfa1c4eb130b02d5e37334056e3cc6bf54b7118fd4b130dd1c9ab98` |
+| Firma | APK Signature Scheme v2 + v3, certificado de release RSA 4096 |
 | Requisitos | Android 8.0 (SDK 26) o superior |
 
 Comprobado en la corrida previa al empaquetado: **154/154** comprobaciones en 11 suites,
@@ -76,7 +89,7 @@ auditoría del repositorio sin hallazgos, un solo aviso por turno, `pendingList`
 
 ## Política de esta línea
 
-- **5.1.6 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.7.
+- **5.1.7 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.8.
 - Lo siguiente sale como **pre-release** (5.2.0-pre.1...) hasta estabilizarse.
 - La rama `stable/5` conserva exactamente este árbol.
 

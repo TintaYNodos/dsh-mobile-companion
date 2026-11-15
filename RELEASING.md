@@ -58,6 +58,20 @@ zstd con `node:zlib`.
 
 ## 3. Construir el APK
 
+Hay dos formas:
+
+- **Release (la buena)**: `powershell -ExecutionPolicy Bypass -File build-release.ps1`.
+  Firma con el keystore del proyecto en `~/.dsh/release-keys/dsh-companion-release.keystore`.
+  La contraseña se lee de `~/.dsh/release-keys/keystore-password.txt`, fuera del repositorio.
+- **Desarrollo**: `build-apk.ps1` a secas; firma con el keystore de depuración.
+
+> **El keystore de release no se versiona y no se puede perder.** Sin él no puedes publicar
+> actualizaciones que se instalen encima. Guárdalo en un lugar seguro y con copia de respaldo.
+> Certificado: SHA-256 `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23` (SHA-1 `76:CF:AF:A2:74:5F:8A:B2:D9:E4:B2:92:E6:1E:F1:7A:3B:9C:83:D5`).
+>
+> Cambiar de firma obliga a desinstalar la app una vez: Android rechaza una actualización
+> firmada con otra clave. Avísalo en las notas del release.
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File build-apk.ps1
 ```

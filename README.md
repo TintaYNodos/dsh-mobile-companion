@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.6-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-181%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.7-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-181%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** **[English](README.md)** · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **5.1.6** (`versionCode` 46).
+Current version: **5.1.7** (`versionCode` 47).
 
 ---
 
@@ -273,7 +273,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **5.1.6**, `versionCode` 46, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.7**, `versionCode` 47, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
@@ -298,6 +298,17 @@ powershell -ExecutionPolicy Bypass -File build-apk.ps1
 It reads the version from `src/config.mjs`, compiles `android_src/` with `javac`, dexes with
 `d8`, injects `classes.dex` and signs with `%USERPROFILE%\.android\debug.keystore` (override with
 `-KeyStore`, `-Alias`, `-StorePass`). Details in [RELEASING.md](RELEASING.md).
+
+## APK signature
+Release builds are signed with the project release keystore, not the debug one. Verify with:
+
+```bash
+apksigner verify --print-certs DSH-Companion.apk
+```
+
+Release certificate SHA-256: `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
+
+The 5.1.6 and earlier APKs were signed with the debug certificate. **The signature changed in 5.1.7**: uninstall the previous version once, then install this build; later updates install over it normally.
 
 ## Testing
 
@@ -331,7 +342,7 @@ This design is intended for **personal use**: one operator, their trusted device
 
 ## Stability
 
-**5.1.6 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.6. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
+**5.1.7 is the frozen baseline of the 5 series.** It receives no new features; only a critical security fix would produce 5.1.7. Everything after that ships as **pre-release** (5.2.0-pre.1 and so on) until it settles. The `stable/5` branch keeps exactly this tree.
 
 
 ## Screenshots

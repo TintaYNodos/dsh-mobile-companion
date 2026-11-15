@@ -3,6 +3,24 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.7 — `versionCode` 47
+
+### Cambiado
+
+- **El APK se firma con un keystore de release**, no con el de depuración. Certificado nuevo
+  (SHA-256 `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`), RSA 4096, válido 30 años. Cualquiera puede verificar con
+  `apksigner verify --print-certs`.
+- `build-release.ps1` compila y firma leyendo la contraseña desde
+  `~/.dsh/release-keys/keystore-password.txt`: el keystore y la contraseña **no** viven en el
+  repositorio. `build-apk.ps1` sigue existiendo para desarrollo (firma de depuración).
+- Documentación: sección "Firma del APK" en los 7 README, procedimiento y aviso de respaldo en
+  `RELEASING.md`, verificación en `SECURITY.md`.
+
+### Aviso
+
+- **Cambió la firma**: los APK 5.1.6 y anteriores usaban el certificado de depuración. Android
+  rechaza una actualización firmada con otra clave, así que **hay que desinstalar la app una vez**
+  e instalar la 5.1.7. A partir de ahí las actualizaciones se instalan encima normalmente.
 ## 5.1.6 — `versionCode` 46
 
 ### Corregido

@@ -74,3 +74,9 @@ INFORME_ESCANEO_*.md
 
 # Bandera del supervisor (stop.bat)
 companion.stop
+
+# Keystores y contrasenas de firma (NUNCA al repositorio)
+*.keystore
+*.jks
+keystore-password*
+release-keys/

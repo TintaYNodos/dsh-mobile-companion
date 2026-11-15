@@ -57,6 +57,13 @@ class IntentRouter {
         }
 
         if (intent.hasExtra("shortcut_action")) {
+            // P18: MainActivity es exportada; un intent de otra app con
+            // shortcut_action no debe abrir diálogos internos. Los atajos y el
+            // widget firman el extra con el token privado de la instalación.
+            if (!IntentGuard.isTrusted(a, intent)) {
+                android.util.Log.w("DshIntent", "shortcut_action ignorado: intent sin firma de la app");
+                return;
+            }
             String scAction = intent.getStringExtra("shortcut_action");
             if ("new_chat".equals(scAction)) {
                 a.ui.postDelayed(() -> {
@@ -81,14 +88,17 @@ class IntentRouter {
             Intent newChatIntent = new Intent(a, MainActivity.class)
                     .setAction(Intent.ACTION_VIEW)
                     .putExtra("shortcut_action", "new_chat");
+            IntentGuard.sign(a, newChatIntent);
 
             Intent telemetryIntent = new Intent(a, MainActivity.class)
                     .setAction(Intent.ACTION_VIEW)
                     .putExtra("shortcut_action", "telemetry");
+            IntentGuard.sign(a, telemetryIntent);
 
             Intent networkIntent = new Intent(a, MainActivity.class)
                     .setAction(Intent.ACTION_VIEW)
                     .putExtra("shortcut_action", "network");
+            IntentGuard.sign(a, networkIntent);
 
             ShortcutInfo sc1 = new ShortcutInfo.Builder(a, "sc_new_chat")
                     .setShortLabel("Nuevo chat")

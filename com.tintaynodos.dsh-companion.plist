@@ -1,23 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent de referencia para macOS.
+
+  El instalador real es install-launchd.sh: escribe este mismo servicio en
+  ~/Library/LaunchAgents/com.tintaynodos.dsh-companion.plist con la ruta
+  absoluta del proyecto y la del Node que encuentre.
+
+  Aquí se usa /bin/sh como lanzador por dos razones: launchd NO expande `~` ni
+  `$HOME` dentro de las cadenas del plist, y así los logs pueden ir a
+  ~/Library/Logs del usuario que lo instala y se puede elegir el Node presente
+  aunque launchd arranque con un PATH mínimo. Rutas reales de Node:
+  /opt/homebrew/bin/node (Apple Silicon) y /usr/local/bin/node (Intel).
+-->
 <plist version="1.0">
 <dict>
     <key>Label</key>
     <string>com.tintaynodos.dsh-companion</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/local/bin/node</string>
-        <string>REPLACE_BRIDGE_PATH</string>
+        <string>/bin/sh</string>
+        <string>-c</string>
+        <string>NODE=/opt/homebrew/bin/node; [ -x "$NODE" ] || NODE=/usr/local/bin/node; [ -x "$NODE" ] || NODE="$(command -v node)"; exec "$NODE" "$HOME/dsh-companion/bridge.mjs" >>"$HOME/Library/Logs/dsh-companion.log" 2>>"$HOME/Library/Logs/dsh-companion.error.log"</string>
     </array>
-    <key>WorkingDirectory</key>
-    <string>REPLACE_WORKDIR</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/dsh-companion.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/dsh-companion.error.log</string>
+    <key>ProcessType</key>
+    <string>Background</string>
 </dict>
 </plist>

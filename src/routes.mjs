@@ -6,15 +6,17 @@
 import { spawn } from "node:child_process";
 import { config } from "./config.mjs";
 import { isClientAuthorized, normalizeAddress, resolveTargetPort, probePort } from "./network.mjs";
-import { hasValidAccessKey, isCompanionRequestTrusted } from "./crypto.mjs";
+import { hasValidAccessKey } from "./crypto.mjs";
 import {
   pendingRequests,
   requestAccess,
+  touchDevice,
 } from "./devices.mjs";
-import { hasAmbiguousFraming, isJsonRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { hasAmbiguousFraming, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { isPanelTabOpen } from "./panel.mjs";
 import { handlePairingRoutes, handlePendingApprovalGate, resolveDevice } from "./routes-pairing.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
-import { handleSync, handleListChats, handleGetChat, handleAbsorbSatellite } from "./sync.mjs";
+import { handleDataRoutes } from "./routes-data.mjs";
 import { hasStaticRoute, serveStatic } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
@@ -45,6 +47,43 @@ export const buildStatusPayload = async () => {
     systemStats: collectSystemStats(),
     time: Date.now(),
   };
+};
+
+/**
+ * P6: estado por IP de los sondeos de /status sin credencial.
+ *
+ * El telefono sondea mientras espera aprobacion. La solicitud se conserva
+ * porque es el flujo de emparejamiento, pero no se abre una ventana del panel
+ * en cada sondeo: se abre a lo sumo una vez por IP y nunca si ya hay una
+ * pestana del panel abierta. La solicitud pendiente se reutiliza (requestAccess
+ * ya devuelve la existente para la misma IP); aqui solo se cuenta el intento.
+ */
+const pairingPolls = new Map();
+const PAIRING_POLL_TTL_MS = 30 * 60 * 1000;
+
+const trackPairingPoll = (remoteAddress, userAgent) => {
+  const now = Date.now();
+  for (const [address, previous] of pairingPolls) {
+    if (now - previous.at > PAIRING_POLL_TTL_MS) pairingPolls.delete(address);
+  }
+
+  const key = normalizeAddress(remoteAddress || "desconocida");
+  const { entry, created, denied } = requestAccess(remoteAddress, userAgent);
+  const previous = pairingPolls.get(key);
+  const sameRequest = Boolean(entry) && previous?.requestId === entry.id;
+  const state = {
+    requestId: entry ? entry.id : "",
+    attempts: entry ? (sameRequest ? previous.attempts + 1 : 1) : 0,
+    panelOpened: Boolean(previous?.panelOpened),
+    at: now,
+  };
+  pairingPolls.set(key, state);
+  // Marca visible en la solicitud: el esquema del registro lo administra
+  // devices.mjs (fuera de este bloque), asi que el contador se adjunta aqui en
+  // memoria. La fuente de verdad para no duplicar la solicitud sigue siendo
+  // requestAccess, que reutiliza la pendiente de la misma IP.
+  if (entry) entry.attempts = state.attempts;
+  return { entry, created, denied, state };
 };
 
 export async function dispatchRequest(req, res, context) {
@@ -96,8 +135,16 @@ export async function dispatchRequest(req, res, context) {
       // Sin autorizacion no se calcula nada caro: buildStatusPayload() lanza
       // collectSystemStats() (PowerShell cada pocos segundos) y era un DoS
       // trivial desde la LAN con solo pedir /status en bucle.
-      const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
-      if (created) openPanelWindow();
+      //
+      // P6: el panel se abre como maximo una vez por IP y nunca si ya hay una
+      // pestana del panel abierta/enfocada (su SSE mantiene isPanelTabOpen en
+      // verdadero). La solicitud pendiente se reutiliza y solo se cuentan los
+      // intentos, en vez de crear una solicitud nueva por sondeo.
+      const poll = trackPairingPoll(remoteAddress, req.headers["user-agent"]);
+      if (!poll.state.panelOpened && !isPanelTabOpen()) {
+        poll.state.panelOpened = true;
+        openPanelWindow();
+      }
       sendJson(res, 200, {
         service: "dsh-companion",
         version: config.version,
@@ -106,10 +153,17 @@ export async function dispatchRequest(req, res, context) {
         status: "pairing",
         dshOnline: false,
         targetPort: null,
+        requestAttempts: poll.state.attempts,
         time: now,
       });
       return;
     }
+
+    // P47: un dispositivo autorizado que consulta el estado esta vivo. Antes
+    // solo se refrescaba en el flujo documental; con DSH_ACCESS_DISABLE=1
+    // ningun camino lo hacia y el dispositivo caducaba por TTL aunque se usara
+    // a diario. Refrescar aqui no cambia la autorizacion.
+    if (device) touchDevice(device);
 
     const payload = await buildStatusPayload();
     sendJson(res, 200, payload);
@@ -281,55 +335,10 @@ export async function dispatchRequest(req, res, context) {
     }
   }
 
-  if (pathname === "/dsh-companion/sync") {
-    if (req.method !== "POST") {
-      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "POST" });
-      return;
-    }
-    if (!isJsonRequest(req)) {
-      sendJson(res, 415, { error: "Se requiere Content-Type application/json" });
-      req.resume();
-      return;
-    }
-    // `isCompanionRequestTrusted` es fail-closed: sin DSH_COMPANION_TOKEN ya
-    // no autoriza por si solo. Se conservan las dos puertas verificables:
-    //   - con token configurado, la sincronizacion sigue exigiendo ESE token;
-    //   - sin token configurado, exige cookie de dispositivo o clave de acceso
-    //     (nunca la mera pertenencia a la red privada).
-    if (config.companionToken) {
-      if (!isCompanionRequestTrusted(req)) {
-        sendJson(res, 401, { error: "Token de companion ausente o invalido" });
-        return;
-      }
-    } else {
-      const syncDevice = resolveDevice(req, res, remoteAddress);
-      if (!syncDevice && !hasValidAccessKey(req)) {
-        sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
-        return;
-      }
-    }
-    await handleSync(req, res, remoteAddress);
-    return;
-  }
-
-  if (pathname === "/dsh-companion/absorb-satellite") {
-    if (req.method !== "POST") {
-      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "POST" });
-      return;
-    }
-    if (!isJsonRequest(req)) {
-      sendJson(res, 415, { error: "Se requiere Content-Type application/json" });
-      req.resume();
-      return;
-    }
-    const device = resolveDevice(req, res, remoteAddress);
-    if (!device && !hasValidAccessKey(req) && !isCompanionRequestTrusted(req)) {
-      sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
-      return;
-    }
-    await handleAbsorbSatellite(req, res, remoteAddress);
-    return;
-  }
+  // Rutas de datos: /dsh-companion/sync y /dsh-companion/absorb-satellite
+  // (escritura) y /dsh-companion/chats y /dsh-companion/chat/:id (lectura) se
+  // despachan en routes-data.mjs, en el mismo orden que tenian aqui.
+  if (await handleDataRoutes(req, res, { url, pathname, remoteAddress })) return;
 
   if (pathname === "/dsh-companion/pc-events" && (req.method === "GET" || req.method === "HEAD")) {
     if (!consumeAllowance(`pc-events:${remoteAddress}`, { capacity: 20, refillPerSecond: 0.2 })) {
@@ -355,26 +364,6 @@ export async function dispatchRequest(req, res, context) {
     startPcWatcher();
     const listeners = emitTestEvent();
     sendJson(res, 200, { ok: true, listeners });
-    return;
-  }
-
-  if (pathname === "/dsh-companion/chats") {
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "GET, HEAD" });
-      return;
-    }
-    await handleListChats(req, res, remoteAddress);
-    return;
-  }
-
-  if (pathname.startsWith("/dsh-companion/chat/")) {
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "GET, HEAD" });
-      return;
-    }
-    const id = pathname.slice("/dsh-companion/chat/".length).trim();
-    const format = url.searchParams.get("format") || (req.headers.accept?.includes("text/markdown") ? "md" : "json");
-    await handleGetChat(req, res, id, remoteAddress, format);
     return;
   }
 

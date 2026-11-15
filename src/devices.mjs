@@ -6,29 +6,22 @@
 import crypto from "node:crypto";
 import { config } from "./config.mjs";
 import { log } from "./log.mjs";
-import { loadRegistry, saveRegistry, recordEvent, registryFile } from "./registry.mjs";
+import { loadRegistry, saveRegistry, recordEvent } from "./registry.mjs";
+import { normalize, prune, readCookie } from "./device-claim.mjs";
 
-const COOKIE = "dsh-companion-device";
+// El canje por token/cookie vive en device-claim.mjs; se reexporta aqui para
+// conservar la API publica que usan routes-pairing.mjs y bridge.mjs.
+export {
+  claimApprovedDevice,
+  deviceCookieHeader,
+  deviceCookieMaxAge,
+  readCookie,
+  requestAccess,
+  runWithRequestContext,
+} from "./device-claim.mjs";
+
 const MAX_DEVICES = 8;
-const MAX_PENDING = 16;
-const DENIED_TTL_MS = 30 * 60 * 1000;
 const ONLINE_WINDOW_MS = 3 * 60 * 1000;
-
-const normalize = (addr) => String(addr || "").replace(/^::ffff:/, "");
-
-export const readCookie = (req) => {
-  const header = String(req?.headers?.cookie || "");
-  for (const chunk of header.split(";")) {
-    const trimmed = chunk.trim();
-    if (trimmed.startsWith(`${COOKIE}=`)) return trimmed.slice(COOKIE.length + 1);
-  }
-  return null;
-};
-
-export const deviceCookieMaxAge = () => config.deviceTtlDays * 24 * 3600;
-
-export const deviceCookieHeader = (id) =>
-  `${COOKIE}=${id}; Path=/; Max-Age=${deviceCookieMaxAge()}; HttpOnly; SameSite=Lax`;
 
 /**
  * Un dispositivo caduca si lleva mas de `deviceTtlDays` sin aparecer. Antes el
@@ -91,19 +84,6 @@ export function touchDevice(device) {
   return needsRefresh;
 }
 
-const prune = (current, now) => {
-  const beforePending = current.pending.length;
-  current.pending = current.pending.filter(
-    (entry) => now - Number(new Date(entry.requestedAt)) < config.pendingTtlMs
-  );
-
-  const beforeDenied = current.denied.length;
-  current.denied = current.denied.filter((row) => now - Number(new Date(row.at)) < DENIED_TTL_MS);
-
-  if (current.pending.length !== beforePending || current.denied.length !== beforeDenied) saveRegistry();
-  return current;
-};
-
 export const isDenied = (address) =>
   loadRegistry().denied.some((row) => row.address === normalize(address));
 
@@ -113,43 +93,6 @@ export function clearDenied(address) {
   const target = normalize(address);
   current.denied = current.denied.filter((row) => row.address !== target);
   if (current.denied.length !== before) saveRegistry();
-}
-
-export function requestAccess(remoteAddress, userAgent) {
-  const now = Date.now();
-  const current = prune(loadRegistry(), now);
-  const address = normalize(remoteAddress || "desconocida");
-
-  if (current.denied.some((row) => row.address === address)) {
-    return { entry: null, created: false, denied: true };
-  }
-
-  // Un equipo que ya tiene dispositivo pero llega SIN su cookie no se da por
-  // aprobado: puede ser otro aparato con la misma IP. Se crea la solicitud para
-  // que el panel decida; aprobar reemplaza el dispositivo de esa direccion.
-  const existing = current.pending.find((entry) => entry.address === address);
-  if (existing) return { entry: existing, created: false, denied: false };
-
-  const taken = new Set(current.pending.map((item) => item.code).filter(Boolean));
-  let code = "";
-  for (let attempt = 0; attempt < 40 && (!code || taken.has(code)); attempt += 1) {
-    code = String(crypto.randomInt(1000, 10000));
-  }
-
-  const entry = {
-    id: crypto.randomBytes(9).toString("base64url"),
-    code,
-    address,
-    agent: String(userAgent || "").slice(0, 120),
-    requestedAt: new Date(now).toISOString(),
-  };
-
-  current.pending.push(entry);
-  while (current.pending.length > MAX_PENDING) current.pending.shift();
-  saveRegistry();
-
-  log("pair", `Solicitud de acceso desde ${address} (codigo ${code})`);
-  return { entry, created: true, denied: false };
 }
 
 export const pendingRequests = () => {
@@ -190,6 +133,11 @@ export function approveRequest(id) {
     lastSeen: null,
     lastRefresh: null,
     claimed: false,
+    // P42: el canje se resuelve con estas credenciales de la solicitud, no con
+    // la IP. `claimToken` viaja en la cookie de canje y `code` es el que el
+    // usuario ve en la pantalla de espera.
+    claimToken: entry.claimToken || null,
+    code: entry.code || "",
   };
   current.devices.push(device);
   while (current.devices.length > MAX_DEVICES) current.devices.shift();
@@ -246,33 +194,6 @@ export function revokeAll() {
   const persisted = saveRegistry();
   if (persisted) recordEvent("revoke-all", `${removed} dispositivo${removed === 1 ? "" : "s"}`);
   return persisted ? removed : -1;
-}
-
-/**
- * Entrega la cookie de dispositivo a un equipo recien aprobado.
- *
- * Se usa UNA sola vez por dispositivo: es el paso en el que el telefono, que
- * acaba de ser aprobado desde el panel, recibe su credencial. A partir de ahi
- * la autorizacion exige esa cookie, no la direccion IP, para que nadie que
- * herede la IP (DHCP, otra maquina de la VPN) entre sin credencial.
- */
-export function claimApprovedDevice(remoteAddress) {
-  const current = loadRegistry();
-  const address = normalize(remoteAddress);
-  if (!address) return null;
-
-  const device = current.devices.find((entry) => entry.address === address);
-  if (!device) return null;
-  // Todavia no tiene cookie: se le entrega ahora (una sola vez).
-  if (device.claimed === true) return null;
-
-  device.claimed = true;
-  device.lastRefresh = new Date().toISOString();
-  device.lastSeen = device.lastRefresh;
-  saveRegistry();
-
-  log("pair", `Dispositivo vinculado: ${address}`);
-  return device;
 }
 
 export const deviceSummary = () =>

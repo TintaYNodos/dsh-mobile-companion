@@ -78,8 +78,13 @@ $sources = @("out\gen\com\tintaynodos\dshcompanion\R.java") + (Get-ChildItem and
 if ($LASTEXITCODE -ne 0) { Fail "javac fallo" }
 
 Write-Host "-- dex (d8)" -ForegroundColor DarkCyan
-$classes = Get-ChildItem -Recurse out\classes -Filter *.class | ForEach-Object { $_.FullName }
-& $d8 --min-api 26 --lib $platform --output out\dex $classes
+# d8 recibe un jar, no cientos de rutas: con 70+ clases la linea de comandos de
+# Windows se pasa de largo ("La linea de comandos es demasiado larga").
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$classesJar = Join-Path (Get-Location).Path "out\classes.jar"
+if (Test-Path $classesJar) { Remove-Item $classesJar -Force }
+[System.IO.Compression.ZipFile]::CreateFromDirectory((Resolve-Path "out\classes").Path, $classesJar)
+& $d8 --min-api 26 --lib $platform --output out\dex $classesJar
 if ($LASTEXITCODE -ne 0) { Fail "d8 fallo" }
 
 Write-Host "-- inyectar classes.dex" -ForegroundColor DarkCyan

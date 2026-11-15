@@ -6,9 +6,13 @@
 import http from "node:http";
 import net from "node:net";
 import os from "node:os";
-import { execSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
 import { config } from "./config.mjs";
 import { log, warn } from "./log.mjs";
+
+const execFileAsync = promisify(execFile);
 
 const VPN_INTERFACE = /zerotier|tailscale|wireguard|openvpn|^zt[a-z0-9]|^ts[0-9]|^wg[0-9]|^tun[0-9]|^tap[0-9]/i;
 
@@ -194,22 +198,108 @@ export function probeDshPort(port, host = config.targetHost, timeoutMs = 400) {
   });
 }
 
-function discoverListeningPorts() {
-  const ports = [];
-  try {
-    const output = execSync("netstat -ano -p tcp", { encoding: "utf8", timeout: 1500 });
-    for (const line of output.split("\n")) {
-      const match = line.match(/^\s*TCP\s+127\.0\.0\.1:(\d+)\s+0\.0\.0\.0:0\s+LISTENING/i);
-      if (match) {
-        const p = Number.parseInt(match[1], 10);
-        if (p > 1024 && p !== config.panelPort && p !== config.listenPort) {
-          ports.push(p);
-        }
-      }
-    }
-  } catch {
+/**
+ * P11: en Linux y macOS no habia descubrimiento dinamico (solo el netstat de
+ * Windows) y ademas era sincrono: `execSync` congelaba el event loop hasta
+ * 1.5 s en cada barrido, con los tuneles y peticiones en curso esperando.
+ * Ahora hay una fuente por sistema (en Linux /proc/net/tcp, que ni siquiera
+ * lanza proceso hijo) y los binarios se ejecutan con execFile asincrono.
+ * Se conserva la misma politica de siempre: solo loopback 127.0.0.1, puertos
+ * > 1024 y fuera de los puertos propios del puente.
+ */
+const DISCOVERY_TIMEOUT_MS = 1_500;
+const DISCOVERY_MAX_BUFFER = 1024 * 1024;
+
+const isCandidatePort = (port) =>
+  Number.isInteger(port) && port > 1024 && port !== config.panelPort && port !== config.listenPort;
+
+const portsFromLines = (lines, pattern) => {
+  const ports = new Set();
+  for (const line of lines) {
+    const match = pattern.exec(line);
+    if (!match) continue;
+    const port = Number.parseInt(match[1], 10);
+    if (isCandidatePort(port)) ports.add(port);
   }
-  return Array.from(new Set(ports));
+  return [...ports];
+};
+
+/** /proc/net/tcp: local_address en hex little-endian y estado 0A = LISTEN. */
+export function parseProcNetTcp(text) {
+  const ports = new Set();
+  for (const line of String(text || "").split("\n").slice(1)) {
+    const fields = line.trim().split(/\s+/);
+    if (fields.length < 4 || fields[3] !== "0A") continue;
+    const [address, portHex] = fields[1].split(":");
+    if (address !== "0100007F") continue; // 127.0.0.1
+    const port = Number.parseInt(portHex, 16);
+    if (isCandidatePort(port)) ports.add(port);
+  }
+  return [...ports];
+}
+
+/** ss -ltn (Linux). */
+export function parseSsListening(text) {
+  return portsFromLines(
+    String(text || "").split("\n"),
+    /^\s*LISTEN\s+\d+\s+\d+\s+127\.0\.0\.1:(\d+)(?:\s|$)/
+  );
+}
+
+/** lsof -nP -iTCP -sTCP:LISTEN -F n (macOS): una linea `n127.0.0.1:PUERTO`. */
+export function parseLsofListening(text) {
+  return portsFromLines(String(text || "").split("\n"), /^n127\.0\.0\.1:(\d+)$/);
+}
+
+/** netstat -ano -p tcp (Windows): se mantiene el formato aceptado de siempre. */
+export function parseNetstatWindows(text) {
+  return portsFromLines(
+    String(text || "").split("\n"),
+    /^\s*TCP\s+127\.0\.0\.1:(\d+)\s+0\.0\.0\.0:0\s+LISTENING/i
+  );
+}
+
+/** netstat -an -p tcp (macOS): `tcp4 0 0 127.0.0.1.52710 *.* LISTEN`. */
+export function parseNetstatMac(text) {
+  return portsFromLines(
+    String(text || "").split("\n"),
+    /^\s*tcp[46]\s+\d+\s+\d+\s+127\.0\.0\.1\.(\d+)\s+\S+\s+LISTEN/i
+  );
+}
+
+const runForOutput = async (command, args) => {
+  try {
+    const { stdout } = await execFileAsync(command, args, {
+      encoding: "utf8",
+      timeout: DISCOVERY_TIMEOUT_MS,
+      maxBuffer: DISCOVERY_MAX_BUFFER,
+      windowsHide: true,
+    });
+    return stdout;
+  } catch {
+    // Binario ausente, salida distinta de cero o timeout: esa fuente no aporta.
+    return "";
+  }
+};
+
+export async function discoverListeningPorts() {
+  if (process.platform === "win32") {
+    return parseNetstatWindows(await runForOutput("netstat", ["-ano", "-p", "tcp"]));
+  }
+
+  if (process.platform === "darwin") {
+    // lsof viene con macOS; netstat queda como respaldo si faltara.
+    const viaLsof = parseLsofListening(await runForOutput("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN", "-F", "n"]));
+    if (viaLsof.length > 0) return viaLsof;
+    return parseNetstatMac(await runForOutput("netstat", ["-an", "-p", "tcp"]));
+  }
+
+  try {
+    return parseProcNetTcp(await readFile("/proc/net/tcp", "utf8"));
+  } catch {
+    // Sin /proc (contenedor minimo): queda `ss` como respaldo.
+  }
+  return parseSsListening(await runForOutput("ss", ["-ltn"]));
 }
 
 let resolvedPort = config.targetPort;
@@ -247,7 +337,7 @@ async function resolveOnce(now) {
     }
   }
 
-  const discovered = discoverListeningPorts();
+  const discovered = await discoverListeningPorts();
   for (const candidate of discovered) {
     if (candidate === resolvedPort || config.targetCandidates.includes(candidate)) continue;
     if (await probeDshPort(candidate, config.targetHost, 250)) {

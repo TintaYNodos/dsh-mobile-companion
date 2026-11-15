@@ -9,46 +9,17 @@
  * See companion/LICENSE or LICENSE for license terms.
  */
 
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.mjs";
 import { readBody, sendJson } from "./http.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
+import { neutralizeMarkdown, renderMarkdown, slugify, uniqueBase } from "./sync-format.mjs";
+import { SAFE_ID_RE, assertInside, ensureIndex, getSyncedChat, listSyncedChats, writeAtomic } from "./sync-index.mjs";
+import { pruneSyncedChatsSafe } from "./sync-retention.mjs";
 
-const SAFE_ID_RE = /^[a-zA-Z0-9_-]{1,120}$/;
-
-const escapeHtml = (value) =>
-  String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
-const neutralizeMarkdown = (value) => escapeHtml(value).replace(/([[\]()*_`~\\])/g, "\\$1");
-
-const slugify = (value) => {
-  const normalized = String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  const slug = normalized.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-  return (slug || "chat").slice(0, 40);
-};
-
-const uniqueBase = () => {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const entropy = crypto.randomBytes(3).toString("hex");
-  return `sync_${stamp}_${entropy}`;
-};
-
-const assertInside = (directory, candidate) => {
-  const resolved = path.resolve(directory, candidate);
-  const prefix = directory.endsWith(path.sep) ? directory : directory + path.sep;
-  if (!resolved.startsWith(prefix)) throw new Error("Ruta fuera del directorio de sincronizacion");
-  return resolved;
-};
+// La API de lectura sigue viviendo en sync.mjs para no romper a sus consumidores.
+export { getSyncedChat, listSyncedChats } from "./sync-index.mjs";
 
 const validatePayload = (payload) => {
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
@@ -72,23 +43,12 @@ const validatePayload = (payload) => {
   return { title: String(sessionTitle ?? "chat-movil").slice(0, 120), messages: normalized, now };
 };
 
-const renderMarkdown = (title, isoDate, messages) => {
-  const parts = [`# Sesion sincronizada: ${escapeHtml(title)}\n\n- Fecha: ${isoDate}\n- Mensajes: ${messages.length}\n\n---\n`];
-  for (const m of messages) {
-    parts.push(`### ${m.role === "assistant" ? "Asistente" : "Usuario"}\n\n${neutralizeMarkdown(m.content)}\n\n---\n`);
-  }
-  return parts.join("\n");
-};
-
-const writeAtomic = async (filePath, contents) => {
-  const temporary = `${filePath}.${crypto.randomBytes(4).toString("hex")}.tmp`;
-  await fs.promises.writeFile(temporary, contents, { encoding: "utf8", mode: 0o600 });
-  await fs.promises.rename(temporary, filePath);
-};
-
 async function persistConversation(payload) {
   const { title, messages, now } = validatePayload(payload);
   await fs.promises.mkdir(config.syncDir, { recursive: true });
+  // P9: si index.jsonl desaparecio, se reconstruye antes de anadir la entrada
+  // nueva para no dejarlo incompleto.
+  await ensureIndex();
 
   const base = `${uniqueBase()}_${slugify(title)}`;
   const jsonPath = assertInside(config.syncDir, `${base}.json`);
@@ -98,7 +58,7 @@ async function persistConversation(payload) {
   const isoDate = new Date(now).toISOString();
   const document = {
     id: base,
-    sessionTitle: escapeHtml(title),
+    sessionTitle: neutralizeMarkdown(title),
     syncedAt: isoDate,
     syncedTimestamp: now,
     messageCount: messages.length,
@@ -117,12 +77,16 @@ async function persistConversation(payload) {
   const indexEntry = JSON.stringify({
     id: base,
     savedAt: now,
-    title: escapeHtml(title),
+    title: neutralizeMarkdown(title),
     messageCount: messages.length,
     json: `${base}.json`,
     markdown: `${base}.md`,
   });
   await fs.promises.appendFile(indexPath, `${indexEntry}\n`, "utf8");
+
+  // P9: aplica la retencion despues de guardar, nunca antes (si no, el chat
+  // recien sincronizado podria ser el primero en caer con topes pequenos).
+  await pruneSyncedChatsSafe();
 
   return { ok: true, syncedCount: messages.length, id: base };
 }
@@ -182,77 +146,6 @@ export async function handleSync(req, res, remoteAddress) {
   } catch (error) {
     sendError(res, error);
   }
-}
-
-export async function listSyncedChats() {
-  await fs.promises.mkdir(config.syncDir, { recursive: true });
-  const entries = await fs.promises.readdir(config.syncDir, { withFileTypes: true });
-  const jsonFiles = entries
-    .filter((d) => d.isFile() && d.name.endsWith(".json") && d.name !== "index.jsonl" && !d.name.includes(".tmp"))
-    .map((d) => d.name);
-
-  const chats = [];
-  for (const filename of jsonFiles) {
-    try {
-      const fullPath = assertInside(config.syncDir, filename);
-      const raw = await fs.promises.readFile(fullPath, "utf8");
-      const parsed = JSON.parse(raw);
-      const id = parsed.id || path.basename(filename, ".json");
-      chats.push({
-        id,
-        title: parsed.sessionTitle || id,
-        syncedAt: parsed.syncedAt || new Date(parsed.syncedTimestamp || 0).toISOString(),
-        savedAt: parsed.syncedTimestamp || 0,
-        messageCount: Number.isInteger(parsed.messageCount)
-          ? parsed.messageCount
-          : (Array.isArray(parsed.messages) ? parsed.messages.length : 0),
-        markdownFile: `${id}.md`,
-        jsonFile: `${id}.json`,
-      });
-    } catch {}
-  }
-
-  chats.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
-  return chats;
-}
-
-export async function getSyncedChat(id, format = "json") {
-  if (!id || !SAFE_ID_RE.test(id)) {
-    throw Object.assign(new Error("Identificador invalido"), { statusCode: 400 });
-  }
-
-  const jsonPath = assertInside(config.syncDir, `${id}.json`);
-  const mdPath = assertInside(config.syncDir, `${id}.md`);
-
-  let jsonRaw;
-  try {
-    jsonRaw = await fs.promises.readFile(jsonPath, "utf8");
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      throw Object.assign(new Error("Conversacion no encontrada"), { statusCode: 404 });
-    }
-    throw error;
-  }
-
-  if (format === "md" || format === "markdown") {
-    try {
-      const mdRaw = await fs.promises.readFile(mdPath, "utf8");
-      return { type: "markdown", content: mdRaw };
-    } catch {
-      const parsed = JSON.parse(jsonRaw);
-      const md = renderMarkdown(parsed.sessionTitle, parsed.syncedAt, parsed.messages || []);
-      return { type: "markdown", content: md };
-    }
-  }
-
-  const chat = JSON.parse(jsonRaw);
-  try {
-    chat.markdown = await fs.promises.readFile(mdPath, "utf8");
-  } catch {
-    chat.markdown = renderMarkdown(chat.sessionTitle, chat.syncedAt, chat.messages || []);
-  }
-
-  return { type: "json", chat };
 }
 
 export async function handleListChats(req, res, remoteAddress) {
@@ -327,8 +220,8 @@ export async function persistSatelliteNote(payload) {
   const document = {
     absorbedId: base,
     satelliteId: safeId,
-    title: escapeHtml(title),
-    summary: escapeHtml(summary),
+    title: neutralizeMarkdown(title),
+    summary: neutralizeMarkdown(summary),
     absorbedAt: isoDate,
     absorbedTimestamp: now,
     messageCount: messages.length,
@@ -340,13 +233,13 @@ export async function persistSatelliteNote(payload) {
   };
 
   const mdParts = [
-    `# Nota Satélite: ${escapeHtml(title)}\n`,
+    `# Nota Satélite: ${neutralizeMarkdown(title)}\n`,
     `- ID Satélite: ${safeId}`,
     `- Fecha de absorción: ${isoDate}`,
     `- Mensajes: ${messages.length}\n`,
   ];
   if (summary) {
-    mdParts.push(`## Resumen\n\n${escapeHtml(summary)}\n`);
+    mdParts.push(`## Resumen\n\n${neutralizeMarkdown(summary)}\n`);
   }
   mdParts.push("---\n");
   for (const m of messages) {
@@ -357,6 +250,9 @@ export async function persistSatelliteNote(payload) {
     writeAtomic(jsonPath, JSON.stringify(document, null, 2)),
     writeAtomic(mdPath, mdParts.join("\n")),
   ]);
+
+  // P9: las notas satelite tambien entran en la retencion de synced_chats/.
+  await pruneSyncedChatsSafe();
 
   return { ok: true, absorbedId: base };
 }

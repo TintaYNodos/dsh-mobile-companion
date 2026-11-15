@@ -10,7 +10,8 @@
  *
  * Variables: DSH_TEST_HOST (por defecto 127.0.0.1), DSH_TEST_PORT (57420),
  * DSH_PANEL_PORT (57421). Necesita que el puente este corriendo: las pruebas
- * hablan con la instancia real, no con un doble.
+ * hablan con la instancia real, no con un doble. La excepcion es
+ * verify_config_guard.mjs, que trabaja con subprocesos y funciones puras.
  */
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -19,6 +20,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const FILES = [
+  "verify_config_guard.mjs",
   "verify_injection.mjs",
   "verify_access_key.mjs",
   "verify_registry_safety.mjs",

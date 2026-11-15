@@ -212,10 +212,12 @@ export function queryBattery() {
   return lastBattery;
 }
 
-// Inicialización temprana para detectar presencia de batería al arrancar
-try {
-  queryBattery();
-} catch {}
+// P32: la sonda de bateria NO se ejecuta al importar el modulo. Antes habia
+// aqui un `queryBattery()` de arranque que lanzaba powershell.exe con
+// spawnSync (hasta 2,5 s en Windows) y retrasaba el arranque del puente solo
+// por cargar este modulo. Ahora la recoleccion es perezosa: la primera llamada
+// a collectSystemStats() (o a queryBattery() directamente) hace la sonda y el
+// resultado queda cacheado como antes.
 
 export function collectSystemStats() {
   const cpuPercent = calculateCpuPercent();

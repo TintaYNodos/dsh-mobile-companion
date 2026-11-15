@@ -96,6 +96,8 @@ public class CompanionWidget extends AppWidgetProvider {
             newChatIntent.setAction(Intent.ACTION_VIEW);
             newChatIntent.putExtra("shortcut_action", "new_chat");
             newChatIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            // P18: el atajo debe ir firmado para que MainActivity lo acepte.
+            IntentGuard.sign(context, newChatIntent);
             PendingIntent newChatPending = PendingIntent.getActivity(context, 201, newChatIntent, flags);
             views.setOnClickPendingIntent(btnId, newChatPending);
         }

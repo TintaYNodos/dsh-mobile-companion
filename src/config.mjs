@@ -22,13 +22,29 @@ const positiveInt = (value, fallback) => {
 
 const text = (value) => String(value ?? "").trim();
 
+/**
+ * P48: DSH_ACCESS_DISABLE solo significa algo con "1" (desactivar) o con
+ * "0"/vacio (mantener). Un "true" o un "yes" se interpretaba en silencio como
+ * "no desactivar", justo lo contrario de lo que cree quien lo escribe. Se
+ * valida al importar este modulo, que en bridge.mjs ocurre antes de
+ * server.listen(): un valor invalido detiene el arranque con un mensaje claro
+ * en vez de fallar mas tarde dentro del callback de listen.
+ */
+const accessDisableRaw = text(process.env.DSH_ACCESS_DISABLE);
+if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== "1") {
+  throw new Error(
+    `Configuracion invalida: DSH_ACCESS_DISABLE="${accessDisableRaw}". ` +
+      "Usa 1 para desactivar la clave de acceso, o 0 (o dejarlo vacio) para mantenerla."
+  );
+}
+
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.0.1",
-  apkVersion: "5.0.1",
-  apkVersionCode: 39,
-  previousApkVersion: "5.0.0",
-  previousApkVersionCode: 38,
+  version: "5.1.0",
+  apkVersion: "5.1.0",
+  apkVersionCode: 40,
+  previousApkVersion: "5.0.1",
+  previousApkVersionCode: 39,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
@@ -58,7 +74,7 @@ export const config = Object.freeze({
 
   companionToken: text(process.env.DSH_COMPANION_TOKEN),
   accessKey: text(process.env.DSH_ACCESS_KEY),
-  accessKeyDisabled: text(process.env.DSH_ACCESS_DISABLE) === "1",
+  accessKeyDisabled: accessDisableRaw === "1",
 
   // Terminal remota: apagada salvo que se pida explicitamente. Es shell
   // arbitrario en la PC a peticion de cualquier dispositivo emparejado.
@@ -72,6 +88,14 @@ export const config = Object.freeze({
   allowCidrs: text(process.env.DSH_ALLOW_CIDR)
     .split(",")
     .map((entry) => entry.trim())
+    .filter(Boolean),
+
+  // P12: nombres DNS extra aceptados en la cabecera Host (MagicDNS de
+  // Tailscale, nombre de ZeroTier, etc.). Lista separada por comas; vacia =
+  // solo las IP/loopback que arma bridge.mjs, que es el comportamiento previo.
+  allowedHosts: text(process.env.DSH_ALLOWED_HOSTS)
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean),
 
   dshHome: text(process.env.DSH_HOME) || path.join(process.env.USERPROFILE || os.homedir(), ".dsh"),

@@ -89,6 +89,8 @@ class Cleanup {
         }
 
         if (MainActivity.sInstance == a) MainActivity.sInstance = null;
+        // P1: la sesión JS desaparece con la vista; el nonce deja de ser válido.
+        BridgeGuard.revoke();
         a.ui.removeCallbacks(a.disconnectionWatchdog);
         a.ui.removeCallbacks(a.deviceCheckPoll);
         a.pollExecutor.shutdownNow();

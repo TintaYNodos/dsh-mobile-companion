@@ -98,14 +98,38 @@ public class CompanionBridge {
         });
     }
 
+    /**
+     * P1: arma el puente para la página actual. El cliente JS del búnker debe
+     * llamarlo con el valor de `window.__DSH_BRIDGE_TOKEN__`. Devuelve true si
+     * el nonce y el origen del frame principal son correctos; reintentar es
+     * seguro (la inyección del token puede llegar unos ms después que el JS).
+     */
     @JavascriptInterface
-    public void installUpdate() {
+    public boolean armBridge(String nonce) {
+        MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.arm(instance, nonce)) {
+            BridgeGuard.logRejected("armBridge");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * P1: instalar una actualización exige el nonce de la página. La firma
+     * cambió de `installUpdate()` a `installUpdate(String nonce)`; el cliente
+     * inyectado (bloque F) pasa `window.__DSH_BRIDGE_TOKEN__`.
+     */
+    @JavascriptInterface
+    public boolean installUpdate(String nonce) {
+        final MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.authorize(instance, nonce)) {
+            BridgeGuard.logRejected("installUpdate");
+            return false;
+        }
         mainHandler.post(() -> {
-            MainActivity instance = MainActivity.getInstance();
-            if (instance != null) {
-                instance.downloadAndInstallApk();
-            }
+            if (instance != null) instance.downloadAndInstallApk();
         });
+        return true;
     }
 
     @JavascriptInterface
@@ -189,29 +213,45 @@ public class CompanionBridge {
         });
     }
 
+    /**
+     * P1: la firma cambió a `confirmCriticalApproval(String nonce, String key,
+     * String toolName)`; el cliente inyectado pasa el token de la página.
+     */
     @JavascriptInterface
-    public void confirmCriticalApproval(String key, String toolName) {
+    public boolean confirmCriticalApproval(String nonce, String key, String toolName) {
+        final MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.authorize(instance, nonce)) {
+            BridgeGuard.logRejected("confirmCriticalApproval");
+            return false;
+        }
         mainHandler.post(() -> {
-            MainActivity instance = MainActivity.getInstance();
-            if (instance != null) {
-                instance.requestCriticalBiometricApproval(key, toolName);
-            }
+            if (instance != null) instance.requestCriticalBiometricApproval(key, toolName);
         });
+        return true;
     }
 
+    /**
+     * P1: la firma cambió a `startSatelliteQuery(String nonce, String payload)`;
+     * el cliente inyectado pasa el token de la página.
+     */
     @JavascriptInterface
-    public void startSatelliteQuery(String payload) {
+    public boolean startSatelliteQuery(String nonce, String payload) {
+        final MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.authorize(instance, nonce)) {
+            BridgeGuard.logRejected("startSatelliteQuery");
+            return false;
+        }
         cancelSatelliteQuery();
 
         String apiKey = KeyStoreVault.getDeepSeekApiKey(context);
         if (apiKey == null || apiKey.trim().isEmpty()) {
             mainHandler.post(() -> {
-                MainActivity instance = MainActivity.getInstance();
-                if (instance != null) {
-                    instance.dispatchSatelliteError("Clave API de DeepSeek no configurada en el almacén seguro (Ajustes -> Modo Satélite)");
+                MainActivity current = MainActivity.getInstance();
+                if (current != null) {
+                    current.dispatchSatelliteError("Clave API de DeepSeek no configurada en el almacén seguro (Ajustes -> Modo Satélite)");
                 }
             });
-            return;
+            return true;
         }
 
         activeSatelliteClient = new CloudSatelliteClient();
@@ -219,9 +259,9 @@ public class CompanionBridge {
             @Override
             public void onChunk(String text) {
                 mainHandler.post(() -> {
-                    MainActivity instance = MainActivity.getInstance();
-                    if (instance != null) {
-                        instance.dispatchSatelliteChunk(text);
+                    MainActivity current = MainActivity.getInstance();
+                    if (current != null) {
+                        current.dispatchSatelliteChunk(text);
                     }
                 });
             }
@@ -229,9 +269,9 @@ public class CompanionBridge {
             @Override
             public void onComplete(String fullText) {
                 mainHandler.post(() -> {
-                    MainActivity instance = MainActivity.getInstance();
-                    if (instance != null) {
-                        instance.dispatchSatelliteComplete(fullText);
+                    MainActivity current = MainActivity.getInstance();
+                    if (current != null) {
+                        current.dispatchSatelliteComplete(fullText);
                     }
                 });
             }
@@ -239,13 +279,14 @@ public class CompanionBridge {
             @Override
             public void onError(String error) {
                 mainHandler.post(() -> {
-                    MainActivity instance = MainActivity.getInstance();
-                    if (instance != null) {
-                        instance.dispatchSatelliteError(error);
+                    MainActivity current = MainActivity.getInstance();
+                    if (current != null) {
+                        current.dispatchSatelliteError(error);
                     }
                 });
             }
         });
+        return true;
     }
 
     @JavascriptInterface

@@ -44,6 +44,9 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
 class CompanionWebViewClient extends WebViewClient {
 
     private final MainActivity a;
+    /** Evita abrir el navegador en bucle si el búnker redirige a un externo. */
+    private String lastExternalUrl = null;
+    private long lastExternalOpenAt = 0L;
 
     CompanionWebViewClient(MainActivity a) {
         this.a = a;
@@ -67,11 +70,77 @@ class CompanionWebViewClient extends WebViewClient {
 
     @Override
     public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+        // P17: shouldOverrideUrlLoading no cubre los redirects de servidor; sin
+        // esta comprobación una redirección podía cargar un origen externo
+        // dentro del WebView (con el puente JS y sus credenciales al alcance).
+        boolean originKnown = a.activeUrl != null && !a.activeUrl.trim().isEmpty();
+        if (view != null && !CompanionWebViewClient.isBunkerPage(a, url)) {
+            BridgeGuard.revoke();
+            // Si aún no hay búnker activo (restauración de estado) no se puede
+            // decidir el origen: se deja cargar sin puente en lugar de abrir el
+            // navegador por error.
+            if (originKnown && CompanionWebViewClient.isWebUrl(url)) {
+                a.pageLoading = false;
+                a.mainFrameFailed = false;
+                try {
+                    view.stopLoading();
+                } catch (Throwable ignored) {
+                }
+                Uri external = Uri.parse(url);
+                long now = System.currentTimeMillis();
+                boolean repeat = url.equals(lastExternalUrl) && now - lastExternalOpenAt < 15000L;
+                if (!repeat) {
+                    lastExternalUrl = url;
+                    lastExternalOpenAt = now;
+                    UrlTools.openExternally(a, external);
+                }
+                // Se deja la vista en blanco para que el contenido externo no
+                // llegue a renderizarse y se reintenta el búnker.
+                try {
+                    view.loadUrl("about:blank");
+                } catch (Throwable ignored) {
+                }
+                a.attempts = 0;
+                ConnectionController.markRetrying(a);
+                ConnectionController.scheduleReconnect(a, 800);
+            }
+            return;
+        }
         a.pageLoading = true;
         a.mainFrameFailed = false;
+        WebBridge.beginBridgePage(a, url);
         WebBridge.applyThemeToWeb(a);
         WebBridge.applyEnterBehaviorToWeb(a);
+        WebBridge.applyOfflineCopyToWeb(a);
         WebBridge.applyOutboxInterceptorToWeb(a);
+    }
+
+    /**
+     * P1: refuerza la inyección del nonce cuando el documento ya es visible;
+     * onPageStarted puede ejecutarse antes de que el contexto JS de la página
+     * nueva esté listo.
+     */
+    @Override
+    public void onPageCommitVisible(WebView view, String url) {
+        if (CompanionWebViewClient.isBunkerPage(a, url)) {
+            WebBridge.ensureBridgeTokenForPage(a, url);
+        }
+    }
+
+    /** true si la URL es un documento del mismo origen que el búnker activo. */
+    private static boolean isBunkerPage(MainActivity a, String url) {
+        if (url == null) return false;
+        try {
+            return UrlTools.isSameBunker(a, Uri.parse(url));
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isWebUrl(String url) {
+        if (url == null) return false;
+        String lower = url.toLowerCase(java.util.Locale.ROOT);
+        return lower.startsWith("http://") || lower.startsWith("https://");
     }
 
     @Override
@@ -84,6 +153,11 @@ class CompanionWebViewClient extends WebViewClient {
         if (url == null) return;
         Uri parsed = Uri.parse(url);
         if (!UrlTools.isSameBunker(a, parsed)) return;
+
+        // P1: repite la inyección del nonce (por si onPageStarted llegó antes
+        // que el documento) y conserva el mismo valor para no desarmar al
+        // cliente que ya llamó a armBridge.
+        WebBridge.ensureBridgeTokenForPage(a, url);
 
         // La pantalla de espera es del mismo origen que la app: si se
         // marcara "en linea" el indicador mentiria mientras se aprueba.
@@ -100,6 +174,7 @@ class CompanionWebViewClient extends WebViewClient {
         ActionDispatcher.checkAndDispatchPendingAction(a);
         WebBridge.applyThemeToWeb(a);
         WebBridge.applyEnterBehaviorToWeb(a);
+        WebBridge.applyOfflineCopyToWeb(a);
         WebBridge.applyOutboxInterceptorToWeb(a);
         WebBridge.injectSharedTextIfReady(a);
     }
@@ -133,6 +208,8 @@ class CompanionWebViewClient extends WebViewClient {
                                        android.webkit.RenderProcessGoneDetail detail) {
         boolean crashed = detail != null && detail.didCrash();
         android.util.Log.w("DshWebView", "render process " + (crashed ? "crashed" : "killed by system"));
+        // P1: el contexto JS murió; el nonce de esa página ya no sirve.
+        BridgeGuard.revoke();
         try {
             if (a.root != null && view != null) a.root.removeView(view);
             if (view != null) view.destroy();

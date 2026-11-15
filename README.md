@@ -10,7 +10,7 @@ The mobile app does not reimplement the interface: it renders DeepSeek Harness's
 
 Hardened edition by Ismael Muñoz Reyes for Tinta y Nodos.
 
-Current version: **5.0.1** (`versionCode` 39).
+Current version: **5.1.0** (`versionCode` 40).
 
 ---
 
@@ -94,7 +94,7 @@ companion/
 │   ├── KeyStoreVault.java    Android Keystore encryption for stored keys
 │   └── …                     discovery, telemetry, satellite, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           ten verification suites (136 checks)
+│   ├── verify_*.mjs           eleven verification suites (155 checks)
 │   ├── _harness.mjs           shared client
 │   └── run-all.mjs            `npm test`
 ├── tools/
@@ -254,7 +254,7 @@ The manual access key remains available as a fallback for standard browser acces
 
 **Native application (Android)**
 
-- `DSH-Companion.apk` — version **5.0.1**, `versionCode` 39, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.0**, `versionCode` 40, `minSdk` 26, `targetSdk` 35.
 - No AndroidX and no Kotlin: pure Java bytecode, around 210 KB.
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, DeepSeek). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
@@ -286,7 +286,7 @@ It reads the version from `src/config.mjs`, compiles `android_src/` with `javac`
 npm test
 ```
 
-Ten suites, **136 checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, satellite hand-off, device registry TTL, panel flow and the kill switch.
+Eleven suites, **155 checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, satellite hand-off, device registry TTL, panel flow and the kill switch.
 
 The suite talks to a **live bridge** (it is not a mock): start the bridge first. The real kill-switch run is destructive — it revokes devices and rotates the key — so it is opt-in with `DSH_TEST_DESTRUCTIVE=1`.
 

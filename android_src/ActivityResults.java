@@ -63,9 +63,22 @@ class ActivityResults {
             return;
         }
         if (requestCode == REQUEST_INSTALL_PERMISSION) {
+            // P19: reanuda la descarga con la misma procedencia (GitHub o
+            // búnker) que se solicitó antes de pedir el permiso de instalación.
+            String pendingUrl = a.prefs.getString("pending_apk_url", "");
+            String pendingName = a.prefs.getString("pending_apk_name", "");
+            String pendingTitle = a.prefs.getString("pending_apk_title", "");
+            a.prefs.edit()
+                    .remove("pending_apk_url")
+                    .remove("pending_apk_name")
+                    .remove("pending_apk_title")
+                    .apply();
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 if (a.getPackageManager().canRequestPackageInstalls()) {
-                    UpdateInstaller.downloadAndInstallApk(a);
+                    UpdateInstaller.downloadAndInstallApk(a,
+                            pendingUrl == null || pendingUrl.isEmpty() ? null : pendingUrl,
+                            pendingName == null || pendingName.isEmpty() ? null : pendingName,
+                            pendingTitle == null || pendingTitle.isEmpty() ? null : pendingTitle);
                 }
             }
             return;

@@ -1,4 +1,9 @@
 # Verificación continua. Sin dependencias externas: el puente no usa npm.
+#
+# Node 22.15 es el mínimo real del proyecto: los avisos por turno leen frames
+# zstd con `node:zlib`, que no existe en versiones anteriores. Las pruebas que
+# necesitan un puente vivo no corren aquí; su límite está documentado en
+# test/README.md.
 name: verify
 
 on:
@@ -16,7 +21,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Sintaxis de todos los módulos
         run: |
@@ -28,3 +33,6 @@ jobs:
 
       - name: Auditoría del repositorio
         run: node tools/audit-repo.mjs
+
+      - name: Guardas de configuración (sin puente)
+        run: node test/verify_config_guard.mjs

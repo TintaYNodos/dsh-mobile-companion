@@ -148,8 +148,32 @@
         .map(m => ({ role: m.role, content: m.content }))
     };
 
-    if (window.AndroidCompanion && typeof window.AndroidCompanion.startSatelliteQuery === 'function') {
-      window.AndroidCompanion.startSatelliteQuery(JSON.stringify(payload));
+    // P1: el puente exige el nonce de la pagina para las operaciones sensibles
+    // (startSatelliteQuery gasta la clave de API). Se arma y se pasa primero; con
+    // un APK antiguo que no tenga armBridge se cae a la firma de un argumento.
+    var bridge = window.AndroidCompanion;
+    if (bridge && typeof bridge.startSatelliteQuery === 'function') {
+      var token = window.__DSH_BRIDGE_TOKEN__;
+      var started = false;
+      try {
+        if (token && typeof bridge.armBridge === 'function') bridge.armBridge(token);
+        if (token) started = bridge.startSatelliteQuery(token, JSON.stringify(payload)) !== false;
+      } catch (e) {
+        started = false;
+      }
+      if (!started) {
+        try {
+          bridge.startSatelliteQuery(JSON.stringify(payload));
+          started = true;
+        } catch (e2) {
+          started = false;
+        }
+      }
+      if (!started) {
+        setTimeout(function () {
+          handleAssistantError('No se pudo iniciar el modo satélite: abre la app de DSH Companion y vuelve a intentarlo.');
+        }, 300);
+      }
     } else {
       setTimeout(() => {
         handleAssistantError('Modo Satélite requiere la aplicación Android DSH Companion para conexión directa a DeepSeek.');

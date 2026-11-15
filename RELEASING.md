@@ -5,13 +5,31 @@ Gradle ni Android Studio.
 
 ## 1. Subir la versión
 
-Hay tres sitios que deben coincidir y uno que se deriva de ellos:
+**La única fuente de verdad de la versión es [`src/config.mjs`](src/config.mjs).** No hay
+otro sitio que se edite a mano:
 
-| Archivo | Qué cambia |
+| Campo de `src/config.mjs` | Significado |
 | --- | --- |
-| `src/config.mjs` | `version`, `apkVersion`, `apkVersionCode`, y `previousApkVersion`/`previousApkVersionCode` |
-| `android_src/AndroidManifest.xml` | `android:versionCode`, `android:versionName` |
-| `package.json` | `version` (debe ser igual a `config.version`) |
+| `version` | Versión del proyecto (`MAJOR.MINOR.PATCH`). |
+| `apkVersion` | Versión que anuncia el APK; debe ser igual a `version`. |
+| `apkVersionCode` | Entero que sube de uno en uno en cada build publicado. |
+| `previousApkVersion` / `previousApkVersionCode` | Versión anterior real, para poder revertir. |
+
+Los demás archivos son **espejos** que se actualizan a partir de esos campos:
+
+- `package.json` (`version`) — igual a `config.version`.
+- `android_src/AndroidManifest.xml` (`android:versionCode` y `android:versionName`) — iguales a
+  `config.apkVersionCode` y `config.apkVersion`.
+- `README*.md` (los 7 idiomas), `SECURITY.md` y `CHANGELOG.md` — texto para personas; se copian
+  los valores de `config.mjs` al publicar y no se inventan cifras nuevas.
+
+**Cómo se valida:** [`tools/audit-repo.mjs`](tools/audit-repo.mjs) lee los tres archivos de código y
+falla si `package.json` no coincide con `config.version`, si `apkVersion` no coincide con
+`versionName` o si `apkVersionCode` no coincide con `versionCode`. Cuando todo está bien imprime
+`versión coherente: <version> / versionCode <código>`. Los README y `SECURITY.md` no los comprueba
+la máquina: son texto que se copia del código en el paso anterior. La auditoría completa corre en la
+CI (`.github/workflows/verify.yml`, Node 22) en cada push y en cada pull request, así que una
+versión desincronizada entre código y manifiesto no pasa el control.
 
 Regla de numeración (SemVer):
 
@@ -28,12 +46,15 @@ Después actualiza `README*.md` (versión y `versionCode`), `SECURITY.md` (versi
 ## 2. Verificar
 
 ```bash
-npm test          # 136 comprobaciones contra un puente en marcha
+node test/run-all.mjs       # la suite contra un puente en marcha
 node tools/audit-repo.mjs   # texto, sintaxis, enlaces, versiones
+node test/verify_config_guard.mjs   # guardas de configuración, sin puente
 ```
 
 La suite necesita el puente arrancado (`start.bat` o `run-hidden.vbs`) y habla con la instancia
-real: vacía el registro de dispositivos antes de correrla y restáuralo después.
+real; su contrato, variables de entorno y pruebas destructivas están en
+[`test/README.md`](test/README.md). Requiere **Node >= 22.15.0**: los avisos por turno leen frames
+zstd con `node:zlib`.
 
 ## 3. Construir el APK
 
@@ -54,19 +75,19 @@ excluye `*.apk` a propósito, porque los binarios van como assets del release.
 
 ```bash
 git add -A
-git commit -m "release: 5.0.0 (versionCode 38)"
-git tag -a v5.0.0 -m "DSH Mobile Companion 5.0.0 (versionCode 38)"
+git commit -m "release: <version> (versionCode <código>)"
+git tag -a v<version> -m "DSH Mobile Companion <version> (versionCode <código>)"
 git push origin main
-git push origin v5.0.0
+git push origin v<version>
 ```
 
 El tag debe apuntar al commit que se publica. Si algo se corrige después, o se mueve el tag
-(`git push --force origin v5.0.0`) o se publica como versión nueva: lo segundo es lo normal.
+(`git push --force origin v<version>`) o se publica como versión nueva: lo segundo es lo normal.
 
 ## 5. Release en GitHub
 
 1. *Releases* → *Draft a new release* → elige el tag que acabas de subir.
-2. Título: `DSH Mobile Companion 5.0.0 (versionCode 38)`.
+2. Título: `DSH Mobile Companion <version> (versionCode <código>)`.
 3. Cuerpo: qué cambia, qué rompe y el SHA-256 del APK. Sin descripciones vacías.
 4. Adjunta `DSH-Companion.apk` y publica.
 

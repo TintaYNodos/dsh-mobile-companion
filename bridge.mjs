@@ -10,14 +10,14 @@
  */
 
 import http from "node:http";
-import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { config } from "./src/config.mjs";
-import { log, warn } from "./src/log.mjs";
+import { log, warn, rotateBridgeLog } from "./src/log.mjs";
 import { findVpnAddress, isClientAuthorized, resolveTargetPort } from "./src/network.mjs";
-import { accessKeyEnabled, hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mjs";
-import { deviceSummary, findPairedDevice } from "./src/devices.mjs";
+import { hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mjs";
+import { deviceSummary, findPairedDevice, runWithRequestContext } from "./src/devices.mjs";
 import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPanel } from "./src/panel.mjs";
 import { isSameOriginRequest, sendText } from "./src/http.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
@@ -25,19 +25,22 @@ import { dispatchRequest } from "./src/routes.mjs";
 
 /**
  * P25: bridge.log lo escribe la redireccion de run-hidden.vbs y crecia sin
- * limite. Al arrancar, si pasa de 5 MB se rota a bridge.log.1.
+ * limite. Se rota aqui, antes de la primera linea de log del proceso, y
+ * src/log.mjs resuelve el caso de Windows en el que cmd.exe mantiene
+ * bridge.log abierto mientras corre node (el `rename` desde dentro da EBUSY):
+ * copia a bridge.log.1 y sigue escribiendo sobre el archivo ya abierto.
  */
-const rotateLogFile = () => {
-  try {
-    const logFile = path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "bridge.log");
-    if (!fs.existsSync(logFile)) return;
-    if (fs.statSync(logFile).size < 5 * 1024 * 1024) return;
-    const previous = logFile + ".1";
-    if (fs.existsSync(previous)) fs.unlinkSync(previous);
-    fs.renameSync(logFile, previous);
-  } catch {}
-};
-rotateLogFile();
+const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
+const rotation = rotateBridgeLog(path.join(bridgeDir, "bridge.log"));
+if (rotation.rotated && rotation.mode === "rename") {
+  // Sin redireccion el aviso va a la consola: no hay archivo nuevo que recibirlo.
+  console.log(`[bridge] bridge.log rotado a bridge.log.1 (${rotation.bytes} bytes)`);
+} else if (!rotation.rotated && rotation.error) {
+  warn(
+    "bridge",
+    `bridge.log (${rotation.bytes} bytes) no se pudo rotar: ${rotation.error}. Se seguira escribiendo en el archivo actual.`
+  );
+}
 
 const binding = findVpnAddress();
 const bindHost = binding.address;
@@ -46,6 +49,25 @@ if (bindHost === "0.0.0.0") {
   console.error("Enlace en 0.0.0.0 rechazado por politica de seguridad.");
   process.exit(1);
 }
+
+/**
+ * P48: la configuracion de acceso se valida ANTES de crear o enlazar el
+ * servidor. Antes `resolveAccessKey()` se llamaba dentro del callback de
+ * `listen`, asi que el error de DSH_ACCESS_DISABLE saltaba con el puerto ya
+ * abierto y como excepcion no capturada (traza completa). Ahora se sale con un
+ * mensaje legible y codigo 1.
+ */
+let accessKey = "";
+try {
+  accessKey = resolveAccessKey();
+} catch (error) {
+  console.error(`DSH Companion no puede arrancar: ${error?.message || error}`);
+  console.error(
+    "Revise DSH_ACCESS_DISABLE (solo se permite con el puente enlazado a 127.0.0.1), DSH_ACCESS_KEY o el adaptador de red."
+  );
+  process.exit(1);
+}
+const accessKeyOn = accessKey.length > 0;
 
 const bindPrefix = binding.prefix ?? 24;
 const allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
@@ -89,13 +111,20 @@ const routeContext = {
   openPanelWindow,
 };
 
-const server = http.createServer((req, res) => {
-  dispatchRequest(req, res, routeContext).catch((error) => {
+/**
+ * P42: cada peticion se atiende dentro de un AsyncLocalStorage con su req/res.
+ * devices.mjs lo usa para leer la cookie de canje y emitir la Set-Cookie de la
+ * solicitud sin cambiar las firmas de las rutas existentes.
+ */
+const handleRequest = (req, res) => {
+  runWithRequestContext(req, res, () => dispatchRequest(req, res, routeContext)).catch((error) => {
     warn("bridge", `Peticion fallida: ${error.message}`);
     if (!res.headersSent) sendText(res, 500, "Fallo interno del puente");
     else if (!res.destroyed) res.destroy();
   });
-});
+};
+
+const server = http.createServer(handleRequest);
 
 server.headersTimeout = config.headersTimeoutMs;
 server.requestTimeout = config.requestTimeoutMs;
@@ -110,7 +139,7 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
 
-  if (accessKeyEnabled() && !hasValidAccessKey(req) && !findPairedDevice(req)) {
+  if (accessKeyOn && !hasValidAccessKey(req) && !findPairedDevice(req)) {
     log("ws", `rechazado sin credencial valida: ${remote}`);
     socket.end("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: " + REALM + "\r\nConnection: close\r\n\r\n");
     return;
@@ -172,11 +201,10 @@ server.listen(config.listenPort, bindHost, () => {
   log("bridge", `Interfaz ${binding.iface} -> http://${bindHost}:${config.listenPort}`);
   log("bridge", `Backend DeepSeek Harness en ${config.targetHost}:${config.targetPort}`);
 
-  if (accessKeyEnabled()) {
+  if (accessKeyOn) {
     log("bridge", `Dispositivos autorizados: ${deviceSummary().length}`);
     // Nunca la clave completa: este log acaba en copias de soporte y respaldos.
-    const key = resolveAccessKey();
-    log("bridge", `Clave manual de respaldo: ****${key.slice(-4)}`);
+    log("bridge", `Clave manual de respaldo: ****${accessKey.slice(-4)}`);
   } else {
     warn("bridge", "Clave de acceso desactivada por DSH_ACCESS_DISABLE=1");
     warn("bridge", "Cualquier dispositivo de la red privada puede abrir esta sesion");
@@ -189,13 +217,7 @@ server.listen(config.listenPort, bindHost, () => {
 
 let loopbackServer = null;
 if (!bindHost.startsWith("127.")) {
-  loopbackServer = http.createServer((req, res) => {
-    dispatchRequest(req, res, routeContext).catch((error) => {
-      warn("bridge", `Peticion fallida: ${error.message}`);
-      if (!res.headersSent) sendText(res, 500, "Fallo interno del puente");
-      else if (!res.destroyed) res.destroy();
-    });
-  });
+  loopbackServer = http.createServer(handleRequest);
 
   loopbackServer.headersTimeout = config.headersTimeoutMs;
   loopbackServer.requestTimeout = config.requestTimeoutMs;

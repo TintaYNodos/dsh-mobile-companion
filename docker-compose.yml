@@ -7,7 +7,10 @@
 #   2. El directorio de DeepSeek Harness con su .credentials.yaml y el registro
 #      de sesiones (de ahí salen los avisos de "respuesta terminada").
 #
-# Antes de arrancar: define DSH_HOME si tu DSH no está en ~/.dsh.
+# Antes de arrancar: DSH_HOME es obligatorio y debe ser una RUTA ABSOLUTA.
+# Compose no expande `~`: con el valor por defecto anterior Docker creaba un
+# directorio llamado literalmente `~` y el puente arrancaba sin credenciales.
+# Una ruta relativa se resuelve contra este directorio, no contra tu home.
 #
 #   DSH_HOME=/home/tu-usuario/.dsh docker compose up -d
 #
@@ -29,7 +32,9 @@ services:
 
     volumes:
       # Credenciales, clave de acceso y registro de dispositivos.
-      - ${DSH_HOME:-~/.dsh}:/home/node/.dsh
+      # Ruta absoluta obligatoria: sin DSH_HOME, compose aborta con un mensaje
+      # claro en vez de montar un directorio inexistente en silencio.
+      - "${DSH_HOME:?define DSH_HOME con la ruta absoluta de tu directorio .dsh}:/home/node/.dsh"
       # Conversaciones sincronizadas, legibles desde el host.
       - ./synced_chats:/app/synced_chats:z
 
@@ -42,12 +47,20 @@ services:
       # Descomenta para arrancar sin clave de acceso: solo válido en loopback.
       # - DSH_ACCESS_DISABLE=1
       #
+      # Nombres DNS extra aceptados en la cabecera Host (MagicDNS de Tailscale,
+      # nombre de ZeroTier). Lista separada por comas; vacío = solo IP/loopback.
+      # - DSH_ALLOWED_HOSTS=pc.tailnet-xxxx.ts.net
+      #
       # La terminal remota está apagada por defecto: el puente es un proxy de la
       # GUI, no un shell. Actívala solo si sabes lo que implica.
       # - DSH_ENABLE_TERMINAL=1
 
+    # P49: healthcheck real contra /dsh-companion/status: es la unica ruta que
+    # responde 200 sin credenciales a un cliente que no pide HTML (el resto,
+    # como /offline, devuelve 403 o la pagina de espera de aprobacion). Se
+    # valida tambien que el cuerpo sea del puente y no un 200 ajeno.
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:57420/dsh-companion/status', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:57420/dsh-companion/status', (r) => { let b = ''; r.setEncoding('utf8'); r.on('data', (c) => b += c); r.on('end', () => process.exit(r.statusCode === 200 && b.includes('dsh-companion') ? 0 : 1)); }).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3

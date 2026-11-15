@@ -87,6 +87,29 @@ const readPanelCookie = (req) => {
 
 const isAuthorized = (req) => sessionValid(readPanelCookie(req));
 
+/**
+ * P13: el panel solo atiende peticiones cuyo `Host` sea el de este mismo
+ * equipo. Sin esta comprobacion, un dominio externo resuelto a 127.0.0.1 (DNS
+ * rebinding) podia hablar con el panel con sus propias cabeceras; la cookie
+ * SameSite=Strict ya frena el CSRF, pero validar el Host es la defensa directa
+ * y barata. Se admiten 127.0.0.1:puerto, localhost:puerto, [::1]:puerto y el
+ * host configurado (DSH_BIND_HOST), todos con el puerto real del panel.
+ */
+const isAllowedPanelHost = (req) => {
+  const host = String(req.headers.host || "").trim().toLowerCase();
+  if (!host) return false;
+
+  const allowed = new Set([
+    `127.0.0.1:${activePort}`,
+    `localhost:${activePort}`,
+    `[::1]:${activePort}`,
+  ]);
+  const configured = String(config.bindHost || "").trim().toLowerCase();
+  if (configured) allowed.add(`${configured}:${activePort}`);
+
+  return allowed.has(host);
+};
+
 const panelCookie = (sessionId) =>
   `${PANEL_COOKIE}=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`;
 
@@ -159,6 +182,13 @@ const runAction = (pathname, form) => {
 const handler = async (req, res) => {
   const remote = String(req.socket.remoteAddress || "");
   if (!remote.startsWith("127.") && remote !== "::1") {
+    html(res, notLocalPage(), 403);
+    return;
+  }
+
+  // P13: un Host ajeno (DNS rebinding) recibe 403 antes de tocar boletos,
+  // sesiones o cualquier ruta del panel.
+  if (!isAllowedPanelHost(req)) {
     html(res, notLocalPage(), 403);
     return;
   }

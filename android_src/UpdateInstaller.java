@@ -59,75 +59,64 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Descarga e instalacion del APK propio y comprobacion de versiones.
  */
 class UpdateInstaller {
+    /** Consulta de releases y digests de GitHub (implementado en UpdateRelease). */
     static void checkGitHubReleases(MainActivity a) {
-        // Se consulta como mucho una vez cada 6 horas: antes cada apertura del hub
-        // gastaba datos y agotaba el límite de 60 peticiones por hora de GitHub.
-        long lastCheck = a.prefs.getLong("github_checked_at", 0L);
-        if (System.currentTimeMillis() - lastCheck < 6L * 60L * 60L * 1000L) return;
-
-        new Thread(() -> {
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL("https://api.github.com/repos/TintaYNodos/dsh-mobile-companion/releases?per_page=2");
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(4000);
-                conn.setReadTimeout(5000);
-                conn.setRequestProperty("User-Agent", "DSH-Companion-Android");
-                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-
-                if (conn.getResponseCode() == 200) {
-                    java.io.InputStream is = conn.getInputStream();
-                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                    byte[] buf = new byte[1024];
-                    int n;
-                    while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
-                    String json = baos.toString("UTF-8");
-                    is.close();
-                    a.prefs.edit().putLong("github_checked_at", System.currentTimeMillis()).apply();
-
-                    org.json.JSONArray releases = new org.json.JSONArray(json);
-                    if (releases.length() > 0) {
-                        org.json.JSONObject latest = releases.getJSONObject(0);
-                        String latestTag = latest.optString("tag_name", "").replaceAll("^v", "");
-                        String latestUrl = UpdateInstaller.findApkAssetUrl(latest);
-
-                        a.prefs.edit()
-                                .putString("github_latest_version", latestTag)
-                                .putString("github_latest_url", latestUrl)
-                                .apply();
-
-                        if (releases.length() > 1) {
-                            org.json.JSONObject prev = releases.getJSONObject(1);
-                            String prevTag = prev.optString("tag_name", "").replaceAll("^v", "");
-                            String prevUrl = UpdateInstaller.findApkAssetUrl(prev);
-
-                            a.prefs.edit()
-                                    .putString("github_previous_version", prevTag)
-                                    .putString("github_previous_url", prevUrl)
-                                    .apply();
-                        }
-                    }
-                }
-            } catch (Throwable ignored) {
-            } finally {
-                if (conn != null) conn.disconnect();
-            }
-        });
+        UpdateRelease.checkGitHubReleases(a);
     }
 
-    static String findApkAssetUrl(org.json.JSONObject release) {
-        if (!release.has("assets")) return "";
+    /**
+     * P19: decide si el APK descargado puede instalarse. Si GitHub publica un
+     * digest, debe coincidir; si el release no lo trae, se avisa y NO se
+     * instala. Las descargas desde el búnker (APK local recién compilado) no
+     * tienen un digest de GitHub que aplicar.
+     */
+    static void handleDigestDecision(MainActivity a, File targetFile, String decision,
+                                     String expected, String actual) {
+        if (a == null || targetFile == null) return;
+        if (ApkDigest.DECISION_OK.equals(decision)) {
+            Toast.makeText(a, "SHA-256 del APK verificado", Toast.LENGTH_SHORT).show();
+            UpdateInstaller.installDownloadedApk(a, targetFile);
+            return;
+        }
+        if (ApkDigest.DECISION_NO_ANCHOR.equals(decision)) {
+            // Descarga desde el propio búnker: no hay digest remoto de GitHub.
+            android.util.Log.i("DshUpdate", "instalando APK del búnker sin digest de GitHub");
+            UpdateInstaller.installDownloadedApk(a, targetFile);
+            return;
+        }
+        // missing / mismatch: no se instala.
         try {
-            org.json.JSONArray assets = release.getJSONArray("assets");
-            for (int i = 0; i < assets.length(); i++) {
-                org.json.JSONObject asset = assets.getJSONObject(i);
-                String name = asset.optString("name", "");
-                if (name.endsWith(".apk")) {
-                    return asset.optString("browser_download_url", "");
-                }
-            }
-        } catch (Exception ignored) {}
-        return "";
+            if (targetFile.exists()) targetFile.delete();
+        } catch (Throwable ignored) {}
+        if (a.isFinishing()) {
+            android.util.Log.w("DshUpdate", "APK no verificado y actividad cerrada: " + decision);
+            return;
+        }
+        String title;
+        String message;
+        if (ApkDigest.DECISION_MISSING.equals(decision)) {
+            title = "Sin verificación de integridad";
+            message = "El release de GitHub no publica el SHA-256 del APK (campo digest), "
+                    + "así que no se puede verificar la descarga. Por seguridad no se instalará. "
+                    + "Instálala manualmente desde la página del release cuando incluya el digest.";
+        } else {
+            title = "APK no verificado";
+            message = "El SHA-256 del APK descargado no coincide con el publicado en GitHub. "
+                    + "La descarga pudo alterarse o corromperse; no se instalará.\n\n"
+                    + "Esperado: " + (expected == null ? "?" : expected) + "\n"
+                    + "Obtenido: " + (actual == null || actual.isEmpty() ? "?" : actual);
+        }
+        AlertDialog dialog = new AlertDialog.Builder(a)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton("Entendido", null)
+                .create();
+        UiKit.styleDialog(a, dialog);
+        try {
+            dialog.show();
+        } catch (Throwable ignored) {
+            android.util.Log.w("DshUpdate", "no se pudo mostrar el aviso de digest: " + decision);
+        }
     }
 
     static boolean isVersionNewer(String remote, String local) {
@@ -153,6 +142,14 @@ class UpdateInstaller {
     static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!a.getPackageManager().canRequestPackageInstalls()) {
+                // P19: recuerda la procedencia para que, al volver del permiso,
+                // no se degrade una instalación de GitHub a la descarga del
+                // búnker (que no tiene digest SHA-256 con el que verificar).
+                a.prefs.edit()
+                        .putString("pending_apk_url", customUrl == null ? "" : customUrl)
+                        .putString("pending_apk_name", customFilename == null ? "" : customFilename)
+                        .putString("pending_apk_title", titleText == null ? "" : titleText)
+                        .apply();
                 Toast.makeText(a, "Permite a DSH Companion instalar actualizaciones", Toast.LENGTH_LONG).show();
                 try {
                     Intent permIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + a.getPackageName()));
@@ -253,6 +250,9 @@ class UpdateInstaller {
 
                 // Cierre garantizado: si read() falla a mitad, los descriptores se
                 // escapaban y tras varios intentos aparecía "Too many open files".
+                // P19: el SHA-256 se calcula mientras se escribe, sin recargar
+                // el APK completo en memoria.
+                java.security.MessageDigest sha256 = java.security.MessageDigest.getInstance("SHA-256");
                 try (java.io.InputStream input = conn.getInputStream();
                      java.io.OutputStream output = new java.io.FileOutputStream(targetFile)) {
                     byte[] data = new byte[4096];
@@ -260,6 +260,7 @@ class UpdateInstaller {
                     int count;
                     while ((count = input.read(data)) != -1) {
                         total += count;
+                        sha256.update(data, 0, count);
                         if (fileLength > 0) {
                             final int percent = (int) (total * 100 / fileLength);
                             final long kb = total / 1024;
@@ -273,9 +274,14 @@ class UpdateInstaller {
                     output.flush();
                 }
 
+                final String actualDigest = ApkDigest.hex(sha256.digest());
+                final String expectedDigest = UpdateRelease.expectedDigestFor(a, apkUrl);
+                final String digestDecision = ApkDigest.decision(expectedDigest, actualDigest);
+
                 a.ui.post(() -> {
                     progressDialog.dismiss();
-                    UpdateInstaller.installDownloadedApk(a, targetFile);
+                    UpdateInstaller.handleDigestDecision(a, targetFile, digestDecision,
+                            expectedDigest, actualDigest);
                 });
             } catch (Exception e) {
                 a.ui.post(() -> {

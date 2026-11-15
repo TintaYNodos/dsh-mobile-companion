@@ -5,7 +5,7 @@
  */
 import { config } from "./config.mjs";
 import { normalizeAddress } from "./network.mjs";
-import { accessKeyEnabled, hasValidAccessKey, rotateAccessKey } from "./crypto.mjs";
+import { accessKeyEnabled, hasValidAccessKey, isCompanionRequestTrusted, rotateAccessKey } from "./crypto.mjs";
 import {
   approveRequest,
   claimApprovedDevice,
@@ -259,7 +259,24 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
 export async function handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context }) {
   const { bindHost, openPanelWindow } = context;
 
-  if (accessKeyEnabled() && !hasValidAccessKey(req)) {
+  // P47: con DSH_ACCESS_DISABLE=1 no hay clave de acceso, asi que el filtro de
+  // abajo se saltaba por completo y ningun dispositivo refrescaba su lastSeen:
+  // acababan caducando por TTL aunque se usaran a diario. Se refresca al
+  // atender una peticion que trae una cookie de dispositivo valida. La
+  // autorizacion no cambia (este modo solo se permite con enlace local).
+  if (!accessKeyEnabled()) {
+    const device = resolveDevice(req, res, remoteAddress);
+    if (device && touchDevice(device)) res.setHeader("Set-Cookie", deviceCookieHeader(device.id));
+    return false;
+  }
+
+  // P43: `DSH_COMPANION_TOKEN` es la credencial documentada de la API
+  // `/dsh-companion/sync`. Este filtro de aprobacion no la conoce y respondia
+  // 403 antes de llegar a la ruta; se deja pasar SOLO esa ruta, que vuelve a
+  // validar el token (o una credencial verificable) por su cuenta.
+  if (pathname === "/dsh-companion/sync" && isCompanionRequestTrusted(req)) return false;
+
+  if (!hasValidAccessKey(req)) {
     const device = resolveDevice(req, res, remoteAddress);
 
     if (!device) {

@@ -4,6 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 import crypto from "node:crypto";
+import { config } from "./config.mjs";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -91,6 +92,31 @@ export const originOf = (value) => {
 };
 
 /**
+ * P12: DSH_ALLOWED_HOSTS permite alcanzar el puente por un nombre DNS estable
+ * (MagicDNS de Tailscale, nombre de ZeroTier, CNAME) en vez de la IP literal.
+ * Sin esto, por nombre la pagina carga pero los POST y el WebSocket fallan con
+ * 403 porque el Host/Origin no estaba en el conjunto estricto.
+ *
+ * Entradas: `host` o `host:puerto`, separadas por comas. Se precalculan los
+ * alias de Host y los Origin http derivados. Con la variable vacia ambos
+ * conjuntos quedan vacios y la validacion es exactamente la de antes.
+ */
+const extraHostAliases = new Set(config.allowedHosts);
+const extraOrigins = new Set();
+for (const entry of config.allowedHosts) {
+  // Un IPv6 literal entre corchetes no trae puerto si termina en "]".
+  const hasPort = entry.startsWith("[") ? !entry.endsWith("]") : entry.includes(":");
+  if (!hasPort) {
+    extraHostAliases.add(`${entry}:${config.listenPort}`);
+    extraOrigins.add(`http://${entry}:${config.listenPort}`);
+  }
+  extraOrigins.add(`http://${entry}`);
+}
+
+const hostAllowed = (host, allowedHosts) => allowedHosts.has(host) || extraHostAliases.has(host);
+const originAllowed = (origin, allowedOrigins) => allowedOrigins.has(origin) || extraOrigins.has(origin);
+
+/**
  * Frontera de origen con criterio cerrado.
  *
  * Reglas, en orden:
@@ -104,7 +130,7 @@ export const originOf = (value) => {
  */
 export function isSameOriginRequest(req, allowedOrigins, allowedHosts) {
   const host = String(req.headers.host || "").trim().toLowerCase();
-  if (!host || !allowedHosts.has(host)) return false;
+  if (!host || !hostAllowed(host, allowedHosts)) return false;
 
   const site = String(req.headers["sec-fetch-site"] || "").trim().toLowerCase();
   if (site && site !== "same-origin" && site !== "none") return false;
@@ -113,13 +139,13 @@ export function isSameOriginRequest(req, allowedOrigins, allowedHosts) {
   if (origin !== undefined) {
     const value = String(origin).trim().toLowerCase();
     if (!value || value === "null") return false;
-    return allowedOrigins.has(value);
+    return originAllowed(value, allowedOrigins);
   }
 
   const referer = req.headers.referer;
   if (referer) {
     const parsed = originOf(referer);
-    return parsed ? allowedOrigins.has(parsed.toLowerCase()) : false;
+    return parsed ? originAllowed(parsed.toLowerCase(), allowedOrigins) : false;
   }
 
   // Sin Origin ni Referer: navegación directa o cliente sin navegador.

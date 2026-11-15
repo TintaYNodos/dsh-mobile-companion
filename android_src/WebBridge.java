@@ -38,6 +38,75 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Puente JS del cliente: tema, Enter, outbox offline, satelite y compositor.
  */
 class WebBridge {
+
+    /**
+     * P1: genera el nonce de la navegación principal y lo inyecta en el frame
+     * raíz. Un iframe cross-origin no puede leer esta propiedad del padre, así
+     * que no puede armar el puente ni aportar el token a los métodos sensibles.
+     */
+    static void beginBridgePage(MainActivity a, String pageUrl) {
+        if (a.webView == null) return;
+        String nonce = BridgeGuard.rotateForPage(pageUrl);
+        WebBridge.evalBridgeToken(a, nonce);
+        WebBridge.applyOfflinePageShim(a, pageUrl, nonce);
+    }
+
+    /** Re-inyecta el mismo nonce (carrera de carga) o lo crea si no hay. */
+    static void ensureBridgeTokenForPage(MainActivity a, String pageUrl) {
+        if (a.webView == null) return;
+        BridgeGuard.confirmPageUrl(pageUrl);
+        String nonce = BridgeGuard.currentNonce();
+        if (nonce == null) nonce = BridgeGuard.rotateForPage(pageUrl);
+        WebBridge.evalBridgeToken(a, nonce);
+        WebBridge.applyOfflinePageShim(a, pageUrl, nonce);
+    }
+
+    private static void evalBridgeToken(MainActivity a, String nonce) {
+        if (a.webView == null || nonce == null) return;
+        String js = ";(function(){ window.__DSH_BRIDGE_TOKEN__ = '" + nonce + "'; })();";
+        a.webView.evaluateJavascript(js, null);
+    }
+
+    /**
+     * P1: adaptador para la página estática /offline, que no carga el cliente
+     * inyectado (no llama a armBridge ni conoce la firma nueva de
+     * startSatelliteQuery). Se inyecta una sola vez, solo en esa ruta y solo en
+     * el frame principal: el shim arma el puente con el nonce y adapta la
+     * llamada antigua `startSatelliteQuery(payload)` a la nueva
+     * `startSatelliteQuery(nonce, payload)`. offline.html no contiene iframes y
+     * es contenido propio del búnker, así que armarlo ahí no abre el puente a
+     * terceros.
+     */
+    static void applyOfflinePageShim(MainActivity a, String pageUrl, String nonce) {
+        if (a.webView == null || nonce == null || pageUrl == null) return;
+        if (!WebBridge.isOfflineRoute(pageUrl)) return;
+        String js = ";(function(){"
+                + " var token = window.__DSH_BRIDGE_TOKEN__;"
+                + " var bridge = window.AndroidCompanion;"
+                + " if (!token || !bridge) return;"
+                + " try { if (typeof bridge.armBridge === 'function') bridge.armBridge(token); } catch (e) {}"
+                + " if (window.__DSH_OFFLINE_BRIDGE_SHIM__) return;"
+                + " var original = bridge.startSatelliteQuery;"
+                + " if (typeof original !== 'function') return;"
+                + " window.__DSH_OFFLINE_BRIDGE_SHIM__ = true;"
+                + " bridge.startSatelliteQuery = function(payload) {"
+                + "   try { if (typeof bridge.armBridge === 'function') bridge.armBridge(token); } catch (e) {}"
+                + "   return original.call(bridge, token, payload);"
+                + " };"
+                + "})();";
+        a.webView.evaluateJavascript(js, null);
+    }
+
+    private static boolean isOfflineRoute(String url) {
+        try {
+            String path = android.net.Uri.parse(url).getPath();
+            if (path == null) return false;
+            return path.equals("/offline") || path.endsWith("/offline.html");
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     static void applyThemeToWeb(MainActivity a) {
         if (a.webView == null) return;
         int m = ThemePalette.themeMode(a);
@@ -86,6 +155,22 @@ class WebBridge {
 
     static boolean isQuickActionsEnabled(MainActivity a) {
         return a.prefs == null || a.prefs.getBoolean(KEY_SHOW_QUICK_ACTIONS, true);
+    }
+
+    /** Interruptor de Ajustes: copia del chat en localStorage para el lector offline. */
+    static boolean isOfflineCopyEnabled(MainActivity a) {
+        return a.prefs == null || a.prefs.getBoolean(KEY_OFFLINE_COPY, true);
+    }
+
+    /**
+     * P54 (bloque F): comunica al cliente inyectado si debe guardar la copia
+     * del chat para el lector sin conexión. Se reaplica en cada carga de página.
+     */
+    static void applyOfflineCopyToWeb(MainActivity a) {
+        if (a.webView == null) return;
+        String js = "(function(){ if (window.__DSH_SET_OFFLINE_COPY__) { window.__DSH_SET_OFFLINE_COPY__("
+                + WebBridge.isOfflineCopyEnabled(a) + "); } })();";
+        a.webView.evaluateJavascript(js, null);
     }
 
     static boolean isCodeKeysEnabled(MainActivity a) {

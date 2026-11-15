@@ -8,9 +8,11 @@
  * Observadores de la pagina: latido por mutaciones, enlaces de APK,
  * boton de cerrar vista previa, sincronia de tema y extraccion del chat.
  */
-export const MOBILE_CLIENT_UI = `  var observer = new MutationObserver(debouncedCheckState);
+export const MOBILE_CLIENT_UI = `  // El latido periodico de checkState ya no tiene temporizador propio: el
+  // planificador unico (P53, en mobile-client-offline.mjs) lo ejecuta cada
+  // 2500 ms. Aqui quedan solo las reacciones inmediatas a mutaciones del DOM.
+  var observer = new MutationObserver(debouncedCheckState);
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
-  setInterval(checkState, 2500);
 
   document.addEventListener('click', function(ev) {
     var btn = ev.target && ev.target.closest ? ev.target.closest('button') : null;
@@ -36,11 +38,25 @@ export const MOBILE_CLIENT_UI = `  var observer = new MutationObserver(debounced
       var href = apkLink.getAttribute('href') || '';
       ev.preventDefault();
       ev.stopPropagation();
-      if (window.AndroidCompanion && window.AndroidCompanion.installUpdate) {
-        window.AndroidCompanion.installUpdate();
-      } else {
+      // P1: installUpdate recibe el nonce de pagina en el APK con guardián. Solo
+      // el frame principal lo invoca (un iframe no puede leer el nonce del
+      // padre); en un iframe se deja la navegacion normal del enlace.
+      if (!isTopFrame()) {
         window.location.href = href || '/DSH-Companion.apk';
+        return;
       }
+      // Si el puente rechaza la accion (nonce caducado, origen no valido...), se
+      // rearma una vez dentro de callBridgeSensitive y, si aun asi falla, se
+      // avisa en pantalla en vez de fingir que empezo la instalacion.
+      if (window.AndroidCompanion && typeof window.AndroidCompanion.installUpdate === 'function') {
+        if (callBridgeSensitive('installUpdate', [])) return;
+        haptic('reject');
+        try {
+          showDiagnosis('No se pudo autorizar la actualizacion. Recarga la app e intentalo de nuevo.', 'warning');
+        } catch (e) {}
+        return;
+      }
+      window.location.href = href || '/DSH-Companion.apk';
       return;
     }
   }, true);

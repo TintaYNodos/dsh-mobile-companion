@@ -60,6 +60,9 @@ class PrefKeys {
     static final String KEY_ENTER_SEND = "enter_sends_message";
     static final String KEY_SHOW_QUICK_ACTIONS = "composer_quick_actions";
     static final String KEY_SHOW_CODE_KEYS = "composer_code_keys";
+    static final String KEY_BIOMETRIC_LOCK = "biometric_lock_enabled";
+    static final String KEY_SECURE_SCREEN = "secure_screen_enabled";
+    static final String KEY_OFFLINE_COPY = "offline_copy_enabled";
 
     static final int PORT = 57420;
     static final int STATE_ONLINE = 0;

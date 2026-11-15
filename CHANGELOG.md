@@ -3,6 +3,61 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.0 — `versionCode` 40
+
+Cierre de los 56 puntos del informe de revisión. Es la versión 5 completa.
+
+### Seguridad
+
+- **P1 — JS bridge blindado por nonce.** `BridgeGuard` rota un nonce por página
+  (128 bits, comparación en tiempo constante) y lo inyecta como
+  `window.__DSH_BRIDGE_TOKEN__`. `installUpdate`, `confirmCriticalApproval` y
+  `startSatelliteQuery` exigen el nonce **y** que la llamada venga del frame
+  principal del búnker: un iframe cross-origin ya no puede gastar la clave de API
+  ni lanzar una instalación.
+- **P17** redirects a orígenes externos se cortan en `onPageStarted`.
+- **P18** los extras de la actividad exportada exigen un token privado firmado.
+- **P19** el APK se verifica contra el `digest` SHA-256 de GitHub antes de instalar.
+- **P34** `FLAG_SECURE` opcional (activo por defecto con bloqueo biométrico).
+- **P40** al borrar una PC se expiran sus cookies y se limpian sus credenciales HTTP.
+- **P42** el canje de dispositivo ya no depende de la IP: cookie de canje de un solo uso.
+- **P24** lista cerrada de métodos en el proxy; **P4** tope de subida de 256 MB.
+- **P36/P37** `CleartextPolicy` fail-closed e incluye CGNAT.
+- **P51** CSP y cabeceras de seguridad en las páginas propias.
+
+### Puente y red
+
+- **P5** el descubrimiento valida el JSON del puente antes de auto-conectar.
+- **P11** descubrimiento de puerto DSH también en Linux y macOS, sin bloquear el bucle.
+- **P12** `DSH_ALLOWED_HOSTS` para Tailscale MagicDNS.
+- **P13** el panel valida la cabecera `Host`.
+- **P6** `/status` anónimo reutiliza la solicitud y abre el panel una sola vez por IP.
+- **P47/P48** `DSH_ACCESS_DISABLE` validado al arrancar y refresca `lastSeen`.
+- **P49** Docker sin `~` y con healthcheck real; **P10** Node ≥ 22.15 (zstd nativo).
+
+### Sincronización y avisos
+
+- **P8** el Markdown se guarda fiel (solo `<` y `&` neutralizados, sin barras invertidas).
+- **P9** retención configurable de `synced_chats/`.
+- **P32** la telemetría ya no lanza PowerShell al importar (arranque 16 ms frente a 1 232 ms).
+- **P45** el SSE de turnos ya no difunde nombres de espacio/sesión.
+- **P46** frames zstd partidos sin atascos ni fugas de memoria.
+- **P53** un solo planificador periódico en el cliente inyectado.
+- **P54** interruptor para la copia del chat en `localStorage`.
+
+### Notificaciones
+
+- **P3** dejan de ofrecer aprobar/rechazar: el puente no puede resolverlo y el aviso
+  indica dónde aprobar. **P2** la suite ya no borra el registro real de dispositivos.
+
+### Pruebas y proyecto
+
+- Suite ampliada a **11 archivos y 155 comprobaciones** (incluye guardas de
+  configuración y el Markdown nuevo).
+- CI en Node 22 con sintaxis + auditoría + guardas de configuración.
+- `.editorconfig`, plantilla de PR y de incidencia.
+- Cleanup: ningún archivo de código por encima de 400 líneas (116 archivos).
+
 ## 5.0.1 — `versionCode` 39
 
 Correcciones sobre la 5.0.0, sin cambios de comportamiento fuera de los listados.
@@ -87,6 +142,112 @@ emparejarse otra vez si el kill switch rotó la clave.
 - `build-apk.ps1` para construir y firmar el APK sin Gradle ni Android Studio.
 - `RELEASING.md` con el checklist de publicación y `.github/workflows/verify.yml`.
 - README en 7 idiomas, `SECURITY.md`, `CHANGELOG.md` y `AI_SETUP_PROMPT.md`.
+
+## 4.5.10 — `versionCode` 37
+
+Cierre de la reescritura 4.4.1 → 4.5.x: endurecimiento, avisos por turno, troceo de
+los archivos que pasaban de 400 líneas y documentación. Es la base de la 5.0.0.
+
+### Seguridad
+
+- **`CleartextPolicy`** (Java puro): `https` siempre; `http` solo contra el búnker
+  configurado o una dirección privada/loopback. Verificada con 18 casos ejecutados
+  con `javac`/`java` fuera del teléfono. Encima, la configuración de red de Android
+  prohíbe cleartext a `deepseek.com`, `github.com`, `githubusercontent.com` y
+  `githubassets.com`.
+- El kill switch avisa con notificación crítica **antes** de ejecutarse y **después**
+  con el resultado real; los avisos críticos ya no pasan por el filtro de "app visible".
+- Avisos por turno leyendo `turn/end` del registro de sesión (frames zstd
+  incrementales): un aviso por respuesta aunque el modelo o una herramienta pausen.
+- El servicio en primer plano manda también la cookie del dispositivo: antes solo
+  enviaba la clave y recibía 403 en bucle si el campo estaba vacío.
+
+### Mantenimiento
+
+- Ningún archivo de código pasa de 400 líneas. Cifras en **líneas de código (sin
+  contar vacías)**, la misma métrica antes y después: `MainActivity.java` 3 943 →
+  328, `offline.html` 1 355 → 126, `mobile-client.mjs` 951 → 35, `routes.mjs` 562 →
+  335, `NotificationHelper.java` 601 → 381. (Antes se mezclaban totales de línea con
+  líneas no vacías, y de ahí salían cifras infladas en la documentación.)
+- Tres archivos que todavía pasaban de 400 líneas divididos en la 5.0.0:
+  `NotificationHelper` → `NotificationsApproval`, `panel.mjs` → `panel-session.mjs`,
+  simulador → HTML + CSS + JS.
+- `build-apk.ps1`, `tools/audit-repo.mjs`, `RELEASING.md` y la CI de verificación.
+- APK firmado con el mismo certificado de depuración: se instala encima sin
+  desinstalar ni perder datos.
+
+## 4.5.9 — `versionCode` 36
+
+Cinco pendientes de seguridad de la revisión externa.
+
+- **`/dsh-companion/action` solo desde el equipo del host**: aprobar o rechazar
+  dispositivos deja de ser posible desde un teléfono ya emparejado; el panel local
+  sigue aprobando por su canal.
+- **`isCompanionRequestTrusted` fail-closed**: sin `DSH_COMPANION_TOKEN` ya no
+  devuelve `true`; exige cookie de dispositivo o clave verificable.
+- **El panel deja de usar token permanente**: boleto de un solo uso (2 minutos) que
+  se canjea por una cookie `HttpOnly` + `SameSite=Strict`. Deja de escribirse
+  `companion-panel-url.txt` y de usarse `?t=` guardado.
+- **Claves del cliente Android cifradas** con AES-256-GCM en el Android Keystore,
+  con migración automática de los valores que estaban en claro.
+- **Cleartext**: `usesCleartextTraffic` fuera; `networkSecurityConfig` prohíbe
+  cleartext a los dominios públicos y lo mantiene para el búnker en IP privada
+  (Android no permite reglas por CIDR, así que el cierre total es el túnel).
+
+## 4.5.8 — `versionCode` 35
+
+Troceo del resto de archivos que pasaban de 400 líneas. **Ningún archivo de código
+queda por encima** (108 archivos revisados; el mayor, `NotificationHelper.java` con 381).
+
+- `MainActivity.java` **3 943 → 328** líneas: 33 clases con una responsabilidad
+  (WebView, registro de PCs, Ajustes, actualizador, kill switch, biométrico, QR,
+  satélite). Sigue siendo la `LAUNCHER` del manifiesto.
+- `mobile-client.mjs` **951 → 35**: ocho módulos que se concatenan en **un solo
+  `<script>`**; misma API `__DSH_*`, mismos intervalos y observadores.
+- `offline.html` **1 355 → 126**: tres hojas CSS y tres JS; misma página, sin
+  `<style>`/`<script>` inline.
+- El `Dockerfile` copia los assets nuevos de `/offline` (si no, servía la página sin
+  estilos) y `verify_registry_safety` reintenta en vez de romper por `EBUSY` en Windows.
+- APK **4.5.8 (35)**, firmado, con las clases nuevas verificadas en el DEX.
+
+## 4.5.7 — `versionCode` 34
+
+- **El 403 intermitente de los avisos**: `PcEventsService` y el botón "Probar desde la
+  PC" solo mandaban la clave de acceso; si el campo estaba vacío no había cabecera y
+  el puente respondía 403 en bucle. Ahora envían también la cookie del dispositivo,
+  como ya hacían el resto de rutas.
+- **El aviso repetido**: el vigía disparaba con "el registro lleva 4 s sin crecer", y
+  cada pausa del modelo contaba como fin. Ahora se emite solo al aparecer un
+  `turn/end` nuevo, leyendo los frames zstd de forma incremental.
+- **Troceo**: `NotificationHelper.java` 601 → **381** (`NotificationChannels.java` y
+  `NotificationsPc.java` nuevos, con las constantes de canal en un solo sitio) y
+  `routes.mjs` 562 → **335** con `routes-pairing.mjs` nuevo. Orden de rutas y
+  respuestas intacto.
+
+## 4.5.6 — `versionCode` 33
+
+Segunda tanda de correcciones de la revisión externa (nueve cambios, siete hallazgos
+cerrados y dos parciales sobre los 37 propuestos).
+
+- `onRenderProcessGone` reconstruye el WebView en vez de dejar que Android mate la app.
+- Aprobaciones ocultas en la pantalla de bloqueo y rechazadas con el teléfono bloqueado.
+- La prueba real del kill switch pasa a **opt-in** con `DSH_TEST_DESTRUCTIVE=1`: una
+  corrida normal ya no revoca dispositivos ni rota la clave.
+- Código muerto eliminado y los tests dejan de apuntar a la IP del autor: usan
+  `127.0.0.1` por defecto.
+- README, `.gitignore` y versión del proyecto sincronizados. Suite **136/136**.
+
+## 4.5.5 — `versionCode` 32
+
+- **Notificaciones que no se pierden**: si Android tiene bloqueadas las notificaciones
+  de la app se avisa con un botón directo a Ajustes (antes se descartaban en silencio),
+  y los avisos críticos ya no pasan por el filtro de "app visible".
+- Canales nuevos: **Respuestas de la PC**, **Avisos críticos** (con sonido) y
+  **Escucha activa** (silencioso, para el servicio en primer plano).
+- **Kill switch**: aviso crítico antes de ejecutarse ("Kill switch autorizado —
+  Procediendo…") y después con el resultado real.
+- Avisos de la PC por SSE (`/dsh-companion/pc-events`) y servicio en primer plano con
+  `foregroundServiceType="dataSync"`, verificado con la suite y con el APK instalado.
 
 ## 4.5.4 — `versionCode` 31
 

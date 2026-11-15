@@ -1,0 +1,34 @@
+# EditorConfig: https://editorconfig.org
+#
+# Reglas mínimas para que un contribuidor no cambie de golpe el encoding, el
+# fin de línea ni los espacios de todo el árbol. La auditoría de la CI exige
+# UTF-8 sin BOM y sin mojibake; esto ayuda a no crearlo.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{mjs,js,json,jsonl,html,css,yml,yaml,md,webmanifest,svg}]
+indent_size = 2
+
+[*.{java,ps1,bat,vbs}]
+indent_size = 4
+
+[*.md]
+# El Markdown conserva los dos espacios finales como salto de línea explícito.
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf
+
+[*.{sh}]
+end_of_line = lf
+indent_size = 2
+
+[*.{plist,xml}]
+indent_size = 4

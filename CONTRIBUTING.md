@@ -24,8 +24,9 @@ Reglas clave para aceptar un PR:
 * **Modularización estricta:** Ningún archivo de código (Node.js o Java) debe superar las **400 líneas**. Si una funcionalidad crece, se desacopla en un módulo con una sola responsabilidad dentro de `src/` o `android_src/`.
 * **Cero dependencias npm externas:** El servidor puente opera 100% sobre APIs nativas de Node.js (`node:http`, `node:crypto`, `node:net`, `node:os`, `node:fs`). No se admiten dependencias añadidas a `package.json`.
 * **Binarios Android compactos (< 250 KB):** El cliente Android debe construirse en Java nativo puro, sin dependencias infladas de AndroidX, Kotlin Runtime ni librerías pesadas de terceros.
-* **Pruebas en verde:** Todo PR debe dejar `npm test` con 136/136 (o más) contra un puente en marcha. La prueba destructiva del kill switch es opt-in con `DSH_TEST_DESTRUCTIVE=1`.
+* **Pruebas en verde:** Todo PR debe dejar `node test/run-all.mjs` sin fallos contra un puente en marcha (requiere **Node >= 22.15.0**). El contrato de la suite, sus variables y la prueba destructiva opt-in (`DSH_TEST_DESTRUCTIVE=1`) están en [test/README.md](test/README.md).
 * **Sin secretos en los cambios:** ni claves, ni tokens, ni direcciones privadas de tu red. El registro de dispositivos y los chats sincronizados no se publican (ver `.gitignore`).
+* **Versión y CI:** no cambies números de versión ni `versionCode` en un PR. La única fuente de verdad es `src/config.mjs` y la auditoría (`.github/workflows/verify.yml`) comprueba que `package.json` y `AndroidManifest.xml` coincidan; el procedimiento está en [RELEASING.md](RELEASING.md).
 
 ---
 
@@ -44,3 +45,16 @@ Apoyamos la investigación ética y de buena fe:
 * Si detectas una vulnerabilidad de seguridad o un fallo en el aislamiento perimétrico, repórtalo de forma privada siguiendo [SECURITY.md](SECURITY.md) (aviso privado de GitHub o correo). **No abras un issue público con el detalle.**
 * Confirmamos recepción en 72 horas y damos una evaluación inicial en 7 días.
 * Tinta y Nodos se compromete a no iniciar acciones legales contra investigadores de seguridad que actúen de buena fe bajo los términos de la Sección 8 de [LICENSE](LICENSE).
+
+---
+
+## 5. Versión única y verificación automática
+
+- **Fuente de verdad:** [`src/config.mjs`](src/config.mjs) (`version`, `apkVersion`, `apkVersionCode`,
+  `previousApkVersion`, `previousApkVersionCode`). `package.json` y `AndroidManifest.xml` son
+  espejos; los README, `SECURITY.md` y `CHANGELOG.md` se copian de ahí al publicar.
+- **Validación:** `node tools/audit-repo.mjs` falla si los tres archivos se desincronizan. La CI
+  (`.github/workflows/verify.yml`) ejecuta además la sintaxis de todos los módulos, la auditoría y
+  `node test/verify_config_guard.mjs` (guardas de `DSH_ACCESS_DISABLE` y `DSH_ALLOWED_HOSTS`, sin
+  necesidad de puente).
+- **Cómo publicar:** el checklist completo, con tag y release, está en [RELEASING.md](RELEASING.md).

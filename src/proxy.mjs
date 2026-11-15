@@ -10,7 +10,9 @@ import { injectSessionHeaders, getAuthority, invalidateSession } from "./crypto.
 import { log } from "./log.mjs";
 import { scrubHeaders, isDocumentRequest, sendJson } from "./http.mjs";
 import { injectMobileShell } from "./mobile.mjs";
-import { invalidateTargetPort } from "./network.mjs";
+// P11: faltaba resolveTargetPort en el import y la ruta de recuperacion tras un
+// cambio de puerto lanzaba ReferenceError (500) en vez de re-resolver destino.
+import { invalidateTargetPort, resolveTargetPort } from "./network.mjs";
 
 export { handleWsProxy } from "./proxy-ws.mjs";
 
@@ -29,6 +31,15 @@ const copyHeaders = (proxyRes) => {
 };
 
 const MAX_UPLOAD_BYTES = 256 * 1024 * 1024;
+
+/**
+ * P24: el proxy reenviaba al backend cualquier metodo, incluso los que la GUI
+ * de DeepSeek Harness no usa (TRACE, PROPFIND, inventados). Lista cerrada; el
+ * resto responde 405 con Allow, sin tocar la sesion ni el backend.
+ */
+const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]);
+const ALLOWED_METHODS_HEADER = [...ALLOWED_METHODS].join(", ");
+
 const upstreamAgent = new http.Agent({
   keepAlive: true,
   keepAliveMsecs: 15_000,
@@ -154,6 +165,14 @@ async function forwardResponse(req, res, proxyReq, proxyRes, { wantsHtml, mobile
 }
 
 export async function handleHttpProxy(req, res, { targetPort, mobileMode }) {
+  // P24: metodo no permitido se corta aqui, antes de inyectar sesion o abrir
+  // una conexion al backend.
+  if (!ALLOWED_METHODS.has(req.method)) {
+    req.resume(); // drenar el cuerpo para no dejar la conexion colgada
+    sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: ALLOWED_METHODS_HEADER });
+    return;
+  }
+
   let authority = getAuthority(config.targetHost, targetPort);
   const wantsHtml = isDocumentRequest(req);
   const wantsEventStream = /text\/event-stream/i.test(String(req.headers.accept || ""));

@@ -260,6 +260,8 @@ public final class NotificationHelper {
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         openIntent.putExtra("trigger_update", true);
+        // P18: firma el extra privilegiado para que MainActivity lo acepte.
+        IntentGuard.sign(context, openIntent);
         PendingIntent openPending = PendingIntent.getActivity(
                 context, notifId, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? PendingIntent.FLAG_IMMUTABLE : 0)

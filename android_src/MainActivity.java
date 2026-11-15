@@ -166,6 +166,9 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         MainActivity.sInstance = this;
         ThemePalette.applySystemBarsTheme(this);
+        // P34: bloqueo de capturas/vista previa, opcional en Ajustes y activo
+        // por defecto cuando el bloqueo biométrico está encendido.
+        ScreenSecurity.apply(this);
         NotificationHelper.initChannels(this);
 
         if (android.os.Build.VERSION.SDK_INT >= 33) {
@@ -255,7 +258,13 @@ public class MainActivity extends Activity {
         }
 
         if (getIntent() != null && getIntent().getBooleanExtra("trigger_update", false)) {
-            ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 800);
+            // P18: MainActivity está exportada; solo la propia app (notificación
+            // de actualización) puede pedir una instalación por extra.
+            if (IntentGuard.isTrusted(this, getIntent())) {
+                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 800);
+            } else {
+                android.util.Log.w("DshIntent", "trigger_update ignorado: intent sin firma de la app");
+            }
         }
 
         IntentRouter.setupDynamicShortcuts(this);
@@ -271,7 +280,11 @@ public class MainActivity extends Activity {
         super.onNewIntent(intent);
         setIntent(intent);
         if (intent != null && intent.getBooleanExtra("trigger_update", false)) {
-            ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 600);
+            if (IntentGuard.isTrusted(this, intent)) {
+                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 600);
+            } else {
+                android.util.Log.w("DshIntent", "trigger_update ignorado: intent sin firma de la app");
+            }
         }
         IntentRouter.handleIncomingIntent(this, intent);
     }
@@ -296,6 +309,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // P34: reaplica FLAG_SECURE por si el usuario lo cambió en Ajustes.
+        ScreenSecurity.apply(this);
         ConnectionController.onResume(this);
     }
 

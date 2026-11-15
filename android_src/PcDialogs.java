@@ -194,9 +194,13 @@ class PcDialogs {
         List<PcEntry> list = PcRegistryStore.getPcList(a);
         if (list.size() > 1) {
             builder.setNeutralButton("Eliminar PC", (d, w) -> {
+                boolean wasActive = PcRegistryStore.getActivePcId(a, list).equals(pc.id);
                 list.removeIf(item -> item.id.equals(pc.id));
                 PcRegistryStore.savePcList(a, list);
-                if (PcRegistryStore.getActivePcId(a, list).equals(pc.id) && !list.isEmpty()) {
+                // P40: al dar de baja el equipo se borran sus cookies y las
+                // credenciales HTTP que quedaron guardadas en la WebView.
+                NetCredentials.clearForPc(a, pc.url);
+                if (wasActive && !list.isEmpty()) {
                     PcRegistryStore.setActivePcId(a, list.get(0).id);
                     ConnectionController.connectTo(a, list.get(0).url);
                 }

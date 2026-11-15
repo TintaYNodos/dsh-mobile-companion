@@ -5,6 +5,11 @@
  */
 package com.tintaynodos.dshcompanion;
 
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -103,5 +108,42 @@ class SettingsNotifications {
         notifyTests.addView(btnTestLocal);
         notifyTests.addView(btnTestPc);
         form.addView(notifyTests);
+
+        // Los avisos "aunque la app este cerrada" dependen del servicio en primer
+        // plano. Samsung y otros fabricantes lo matan si la app no esta exenta de
+        // la optimizacion de bateria, y entonces el aviso deja de llegar sin que
+        // nada lo indique. Aqui se pide la exencion con un toque.
+        form.addView(UiKit.settingSwitchCard(a,
+                "Permitir en segundo plano",
+                "Evita que el telefono mate el servicio de avisos cuando la app esta cerrada.",
+                isBatteryExempt(a),
+                (view, checked) -> {
+                    if (checked && !isBatteryExempt(a)) requestBatteryExemption(a);
+                    else if (checked) Toast.makeText(a, "Ya esta exento de la optimizacion de bateria", Toast.LENGTH_SHORT).show();
+                }));
+    }
+
+    static boolean isBatteryExempt(MainActivity a) {
+        try {
+            PowerManager pm = (PowerManager) a.getSystemService(Context.POWER_SERVICE);
+            return pm != null && pm.isIgnoringBatteryOptimizations(a.getPackageName());
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    static void requestBatteryExemption(MainActivity a) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:" + a.getPackageName()));
+            a.startActivity(intent);
+            Toast.makeText(a, "Acepta la exencion para que los avisos no se corten", Toast.LENGTH_LONG).show();
+        } catch (Throwable error) {
+            try {
+                a.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
+            } catch (Throwable ignored) {
+                Toast.makeText(a, "Abre Ajustes del sistema y exime esta app de la bateria", Toast.LENGTH_LONG).show();
+            }
+        }
     }
 }

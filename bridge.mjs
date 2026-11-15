@@ -37,8 +37,8 @@ if (rotation.rotated && rotation.mode === "rename") {
   );
 }
 
-const binding = findVpnAddress();
-const bindHost = binding.address;
+let binding = findVpnAddress();
+let bindHost = binding.address;
 
 if (bindHost === "0.0.0.0") {
   console.error("Enlace en 0.0.0.0 rechazado por politica de seguridad.");
@@ -64,9 +64,9 @@ try {
 }
 const accessKeyOn = accessKey.length > 0;
 
-const bindPrefix = binding.prefix ?? 24;
-const allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
-const allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
+let bindPrefix = binding.prefix ?? 24;
+let allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
+let allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
 
 for (const alias of ["127.0.0.1", "localhost", "[::1]"]) {
   allowedOrigins.add(`http://${alias}:${config.listenPort}`);
@@ -98,13 +98,15 @@ const openPanelWindow = ({ force = false } = {}) => {
   }
 };
 
-const routeContext = {
-  bindHost,
-  bindPrefix,
-  allowedOrigins,
-  allowedHosts,
-  openPanelWindow,
+const routeContext = {};
+const refreshRouteContext = () => {
+  routeContext.bindHost = bindHost;
+  routeContext.bindPrefix = bindPrefix;
+  routeContext.allowedOrigins = allowedOrigins;
+  routeContext.allowedHosts = allowedHosts;
+  routeContext.openPanelWindow = openPanelWindow;
 };
+refreshRouteContext();
 
 /**
  * P42: cada peticion se atiende dentro de un AsyncLocalStorage con su req/res.
@@ -188,8 +190,44 @@ try {
   process.exit(1);
 }
 
+
+/**
+ * Reparacion en caliente del enlace.
+ *
+ * Al iniciar sesion en Windows el tunel (ZeroTier/Tailscale) muchas veces aun
+ * no tiene direccion, asi que findVpnAddress() devolvia loopback y el puente se
+ * quedaba ahi: el telefono no llegaba hasta reiniciarlo a mano. Cada 15 s se
+ * vuelve a mirar la interfaz y, si cambia la IP privada, se reenlaza solo.
+ */
+const watchBinding = () => {
+  if (String(process.env.DSH_BIND_HOST || "").trim()) return;
+  const timer = setInterval(() => {
+    let next;
+    try { next = findVpnAddress(); } catch { return; }
+    if (!next || !next.address || next.address === "0.0.0.0" || next.address === bindHost) return;
+    const previous = bindHost;
+    binding = next;
+    bindHost = next.address;
+    bindPrefix = next.prefix ?? 24;
+    allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
+    allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
+    refreshRouteContext();
+    log("bridge", `La IP privada cambio: ${previous} -> ${bindHost} (${next.iface}); reenlazando`);
+    server.close(() => {
+      server.listen(config.listenPort, bindHost, () => {
+        log("bridge", `Activo de nuevo en http://${bindHost}:${config.listenPort}`);
+        ensureLoopbackServer();
+      });
+    });
+    if (typeof server.closeAllConnections === "function") server.closeAllConnections();
+  }, 15_000);
+  timer.unref();
+};
+
+
 startPanel();
 void resolveTargetPort(true);
+watchBinding();
 
 server.listen(config.listenPort, bindHost, () => {
   log("bridge", `DSH Companion ${config.version} activo`);
@@ -211,27 +249,24 @@ server.listen(config.listenPort, bindHost, () => {
 });
 
 let loopbackServer = null;
-if (!bindHost.startsWith("127.")) {
+const ensureLoopbackServer = () => {
+  if (bindHost.startsWith("127.") || loopbackServer) return;
   loopbackServer = http.createServer(handleRequest);
-
   loopbackServer.headersTimeout = config.headersTimeoutMs;
   loopbackServer.requestTimeout = config.requestTimeoutMs;
   loopbackServer.keepAliveTimeout = config.keepAliveTimeoutMs;
   loopbackServer.maxConnections = config.maxConnections;
-
   loopbackServer.on("upgrade", (req, socket, head) => {
     server.emit("upgrade", req, socket, head);
   });
-
   loopbackServer.on("error", (error) => {
     warn("bridge", `No se pudo enlazar loopback 127.0.0.1:${config.listenPort}: ${error.message}`);
   });
-
   loopbackServer.listen(config.listenPort, "127.0.0.1", () => {
-    log("bridge", `Loopback local activo en http://127.0.0.1:${config.listenPort}`);
+    log("bridge", `Acceso local en http://127.0.0.1:${config.listenPort}`);
   });
-}
-
+};
+ensureLoopbackServer();
 const shutdown = (signal) => {
   log("bridge", `Cerrando por ${signal}`);
   server.close(() => process.exit(0));
@@ -242,3 +277,11 @@ const shutdown = (signal) => {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("unhandledRejection", (reason) => warn("bridge", `Promesa rechazada: ${reason}`));
+
+// Una excepcion no controlada deja el estado del proceso en duda: se registra y
+// se sale con codigo 1 para que el supervisor (run-hidden.vbs) lo levante de
+// nuevo en vez de dejar el telefono incomunicado.
+process.on("uncaughtException", (error) => {
+  warn("bridge", `Excepcion no controlada: ${error && error.stack ? error.stack : error}`);
+  process.exit(1);
+});

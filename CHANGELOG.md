@@ -3,6 +3,35 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.4 — `versionCode` 44
+
+Tres frentes de disponibilidad que no estaban cubiertos.
+
+### Corregido
+
+- **El puente se quedaba escuchando en loopback si el túnel aún no tenía IP al
+  arrancar** (lo normal al iniciar sesión en Windows, donde ZeroTier/Tailscale
+  conectan después). El teléfono no llegaba hasta reiniciar el puente a mano.
+  Ahora un vigilante revisa la interfaz cada 15 segundos y se reenlaza solo en la
+  nueva IP privada. Si fijas `DSH_BIND_HOST`, no se toca nada.
+- **Supervisor de arranque**: si el puente cae por un fallo, `run-hidden.vbs` lo
+  vuelve a levantar (espera de 5 s, hasta 50 intentos). Antes, un cierre
+  inesperado dejaba el teléfono incomunicado hasta que alguien lo notara.
+  `stop.bat` ahora escribe `companion.stop` para que el supervisor no resucite
+  el servicio mientras se detiene.
+- **Excepciones no controladas**: se registran en `bridge.log` y el proceso sale
+  con código 1 para que el supervisor lo recupere, en lugar de quedar vivo con
+  estado dudoso.
+
+### Añadido
+
+- **Límite de intentos de clave por IP**: 30 fallos en 5 minutos y se responde 401
+  sin calcular el HMAC durante el resto de la ventana. La clave ya era larga y
+  aleatoria, pero sin freno se podía castigar la CPU desde la red privada.
+- **Exención de batería en el teléfono**: Ajustes → *Permitir en segundo plano*.
+  Los fabricantes (Samsung incluido) matan el servicio en primer plano si la app
+  no está exenta y los avisos dejan de llegar sin avisar. Requiere
+  `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` y abre la pantalla del sistema.
 ## 5.1.3 — `versionCode` 43
 
 Correcciones de la auditoría final de publicación. Sin cambios de comportamiento.

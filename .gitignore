@@ -71,3 +71,6 @@ out/
 simulator/captures/
 HOJA_ERRORES_CAPTURAS.md
 INFORME_ESCANEO_*.md
+
+# Bandera del supervisor (stop.bat)
+companion.stop

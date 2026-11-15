@@ -237,12 +237,50 @@ const BASIC_HEADER = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i;
  * Verifica la clave de acceso compartida enviada por HTTP Basic.
  * El usuario es irrelevante; solo se compara la contraseña en tiempo constante.
  */
+// Limite de intentos fallidos por IP: la clave es larga y aleatoria, pero sin
+// freno cualquiera en la red privada podia lanzar miles de Basic auth por
+// segundo y hacer trabajar al HMAC. Al superar el umbral se responde 401 sin
+// comparar la clave durante el resto de la ventana.
+const authFailures = new Map();
+const AUTH_WINDOW_MS = 5 * 60 * 1000;
+const AUTH_MAX_FAILURES = 30;
+
+const clientIp = (req) => String(req?.socket?.remoteAddress || req?.connection?.remoteAddress || "desconocida").replace(/^::ffff:/, "");
+const isLoopbackIp = (ip) => ip.startsWith("127.") || ip === "::1";
+
+export function authThrottled(req) {
+  const ip = clientIp(req);
+  if (isLoopbackIp(ip)) return false;
+  const entry = authFailures.get(ip);
+  if (!entry) return false;
+  if (Date.now() > entry.until) {
+    authFailures.delete(ip);
+    return false;
+  }
+  return entry.count >= AUTH_MAX_FAILURES;
+}
+
+const noteAuthFailure = (req) => {
+  const ip = clientIp(req);
+  if (isLoopbackIp(ip)) return;
+  const now = Date.now();
+  for (const [key, value] of authFailures) if (now > value.until) authFailures.delete(key);
+  const entry = authFailures.get(ip);
+  if (!entry) authFailures.set(ip, { count: 1, until: now + AUTH_WINDOW_MS });
+  else entry.count += 1;
+};
+
 export function hasValidAccessKey(req) {
+  // Sin cabecera Authorization no hay intento de clave: el telefono usa la cookie
+  // de dispositivo y el panel su propia sesion. Contarlos como fallo bloqueaba a
+  // los clientes legitimos.
+  if (!String(req?.headers?.authorization || "").trim()) return false;
+  if (authThrottled(req)) return false;
   const key = resolveAccessKey();
   if (!key) return true;
 
   const match = BASIC_HEADER.exec(String(req.headers.authorization || ""));
-  if (!match) return false;
+  if (!match) { noteAuthFailure(req); return false; }
 
   let decoded;
   try {
@@ -252,7 +290,9 @@ export function hasValidAccessKey(req) {
   }
 
   const separator = decoded.indexOf(":");
-  if (separator === -1) return false;
+  if (separator === -1) { noteAuthFailure(req); return false; }
 
-  return timingSafeEqual(decoded.slice(separator + 1), key);
+  const valid = timingSafeEqual(decoded.slice(separator + 1), key);
+  if (!valid) noteAuthFailure(req);
+  return valid;
 }

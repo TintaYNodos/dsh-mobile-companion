@@ -15,6 +15,7 @@ $ErrorActionPreference = "Continue"
 Set-Location $PSScriptRoot
 
 $fallos = 0
+$portBridge = if ($env:DSH_LISTEN_PORT) { $env:DSH_LISTEN_PORT } else { "57420" }
 $avisos = 0
 function Ok($t)   { Write-Host "  [ OK ] $t" -ForegroundColor Green }
 function Bad($t)  { Write-Host "  [FALLA] $t" -ForegroundColor Red; $script:fallos++ }
@@ -134,6 +135,24 @@ if (-not $privateIp) {
     }
     if ($response -and $response.dshOnline -eq $false) {
         Warn "El puente esta vivo pero DeepSeek Harness no contesta. Abrelo en la computadora."
+    }
+}
+
+Write-Host ""
+Write-Host "== 4b. Firewall de Windows ==" -ForegroundColor Cyan
+if ($IsWindows -or $env:OS -eq "Windows_NT") {
+    try {
+        $portFilter = Get-NetFirewallPortFilter -ErrorAction Stop | Where-Object { $_.LocalPort -eq $portBridge }
+        if ($portFilter) { Ok "Hay regla de firewall para el puerto $portBridge" }
+        else {
+            Warn "No hay ninguna regla de firewall para el puerto $portBridge."
+            Info "Windows puede bloquear la conexion entrante del telefono. Al arrancar el puente por"
+            Info "primera vez suele salir un aviso: elige Permitir en redes privadas. Si no salio,"
+            Info "ejecuta como administrador:"
+            Info "  netsh advfirewall firewall add rule name=\"DSH Companion\" dir=in action=allow protocol=TCP localport=$portBridge"
+        }
+    } catch {
+        Warn "No se pudo consultar el firewall (puede requerir permisos). Si el telefono no conecta, revisa la regla del puerto $portBridge."
     }
 }
 

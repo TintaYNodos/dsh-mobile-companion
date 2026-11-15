@@ -24,6 +24,12 @@ import { dispatchRequest } from "./src/routes.mjs";
  * src/log.mjs resuelve el caso de Windows en el que cmd.exe mantiene
  * bridge.log abierto mientras corre node (el `rename` desde dentro da EBUSY):
  * copia a bridge.log.1 y sigue escribiendo sobre el archivo ya abierto.
+ *
+ * Ademas esta llamada deja instalada la rotacion EN CALIENTE (5.1.5): a partir
+ * de aqui src/log.mjs revisa el tamano en cada escritura (y cada 30 s como red
+ * de seguridad) y rota cuando se alcanza DSH_LOG_MAX_MB, conservando
+ * DSH_LOG_KEEP archivos rotados. Antes solo se rotaba al arrancar y un puente de
+ * semanas llenaba el disco.
  */
 const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
 const rotation = rotateBridgeLog(path.join(bridgeDir, "bridge.log"));

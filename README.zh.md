@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.4-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.5-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.1.4**（`versionCode` 44）。
+当前版本：**5.1.5**（`versionCode` 45）。
 
 ---
 
@@ -180,6 +180,8 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 | `DSH_ALLOW_GENERIC_VPN` | — | `1` 接受通用 tun/tap 接口 |
 | `DSH_SYNC_MAX_FILES` | `200` | 保留的同步会话最大数量 |
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | `synced_chats/` 的最大大小（MB） |
+| `DSH_LOG_MAX_MB` | `5` | `bridge.log` 轮转前的最大大小（MB，最小 1） |
+| `DSH_LOG_KEEP` | `3` | 保留的 `bridge.log.N` 文件数（1–10） |
 
 ### 从电脑进行一次性批准
 
@@ -261,7 +263,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.1.4**、`versionCode` 44、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.1.5**、`versionCode` 45、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 210 KB。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
@@ -316,7 +318,7 @@ npm test
 
 ## 稳定性
 
-**5.1.4 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.4。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
+**5.1.5 是 5 系列的冻结基线。** 不再添加新功能；只有严重安全修复才会发布 5.1.5。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
 
 ## 截图
 

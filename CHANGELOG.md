@@ -3,6 +3,23 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.1.5 — `versionCode` 45
+
+Cierre de los dos huecos que quedaban en ingeniería.
+
+### Añadido
+
+- **La suite corre en CI**: job nuevo en `.github/workflows/verify.yml` que levanta un
+  puente aislado con `DSH_HOME` temporal y un doble de DeepSeek Harness (sin credenciales
+  reales, sin tocar el equipo del usuario) y ejecuta **9 suites · 151 comprobaciones**
+  (`npm run test:ci`). Quedan fuera, documentadas con motivo: `verify_sync_ws` (necesita
+  el WebSocket real), `verify_kill_switch` (destructiva) y `verify_approval` (el boleto
+  del panel es de un solo uso).
+- **Rotación de `bridge.log` en caliente**: ya no crece sin límite. Rota por tamaño
+  (`DSH_LOG_MAX_MB`, 5 MB por defecto) conservando `DSH_LOG_KEEP` (3) archivos, sin perder
+  ni duplicar líneas aunque `cmd.exe` mantenga el archivo abierto (copia + ftruncate del
+  descriptor heredado; `rename` atómico si no hay redirección).
+- Prueba nueva `test/verify_log_rotation.mjs` (**27/27**), con el caso difícil de Windows.
 ## 5.1.4 — `versionCode` 44
 
 Tres frentes de disponibilidad que no estaban cubiertos.

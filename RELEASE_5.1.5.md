@@ -1,4 +1,4 @@
-# DSH Mobile Companion 5.1.4 (versionCode 44) — base estable de la serie 5
+# DSH Mobile Companion 5.1.5 (versionCode 45) — base estable de la serie 5
 
 Esta es la **base congelada** de la serie 5. A partir de aquí el proyecto avanza con mejoras
 menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
@@ -36,23 +36,28 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 - Docker copia los assets del manifest y el healthcheck usa el puerto efectivo.
 
 ### 5.1.4 — disponibilidad y avisos
-- **Se reenlaza solo** cuando el túnel aparece o cambia de IP (antes se quedaba en
-  loopback si el túnel aún no estaba al iniciar sesión, y el teléfono no llegaba).
-- **Supervisor de arranque**: si el puente cae, se vuelve a levantar; `stop.bat` ya
-  no lo resucita porque deja una bandera.
+- **Se reenlaza solo** cuando el túnel aparece o cambia de IP.
+- **Supervisor de arranque**: si el puente cae, se vuelve a levantar; `stop.bat` deja
+  `companion.stop` para que no lo resucite al detenerlo.
 - **Excepciones no controladas** se registran y el supervisor recupera el proceso.
-- **Límite de intentos de clave** por IP (30 en 5 min) sin calcular el HMAC.
-- **Exención de batería** en Ajustes del teléfono para que el fabricante no mate el
-  servicio de avisos.
+- **Límite de intentos de clave** por IP sin calcular el HMAC tras el umbral.
+- **Exención de batería** en Ajustes del teléfono para que no maten el servicio de avisos.
+
+### 5.1.5 — ingeniería cerrada
+- **La suite corre en CI**: job aislado con `DSH_HOME` temporal y un doble de Harness;
+  **9 suites · 151 comprobaciones** en cada push, sin tocar el equipo del usuario.
+- **Rotación de `bridge.log` en caliente** por tamaño (`DSH_LOG_MAX_MB`, 5 MB) con
+  `DSH_LOG_KEEP` (3) archivos, sin perder ni duplicar líneas en Windows.
+- Prueba nueva de rotación: **27/27**.
 
 ## Verificación de este binario
 
 | Parámetro | Valor |
 | --- | --- |
 | Archivo | `DSH-Companion.apk` |
-| Versión | `versionCode 44` / `versionName 5.1.4` |
+| Versión | `versionCode 45` / `versionName 5.1.5` |
 | Tamaño | 215 048 bytes (210 KB) |
-| SHA-256 | `40ce6578df653a638cc405ad39a1ddda740204d9dfb5b5f6d9ef6757934af5ed` |
+| SHA-256 | `2b3928fd8fb62f0f66be1393e1c033e6e8b1b19c742161f16e8889b948aefe36` |
 | Firma | APK Signature Scheme v2 + v3 |
 | Requisitos | Android 8.0 (SDK 26) o superior |
 
@@ -62,7 +67,7 @@ auditoría del repositorio sin hallazgos, un solo aviso por turno, `pendingList`
 
 ## Política de esta línea
 
-- **5.1.4 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.5.
+- **5.1.5 queda congelada.** Solo un fallo de seguridad crítico produciría una 5.1.6.
 - Lo siguiente sale como **pre-release** (5.2.0-pre.1...) hasta estabilizarse.
 - La rama `stable/5` conserva exactamente este árbol.
 

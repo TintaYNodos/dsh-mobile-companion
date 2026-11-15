@@ -1,10 +1,20 @@
 # Pruebas del puente y del cliente
 
-La suite habla con **una instancia real del puente en marcha**: no hay backend de
-mentira, ni mocks, ni un servidor levantado por las pruebas. Eso es intencionado
-(se prueba el binario que se publica), pero hay que saber lo que implica.
+Hay dos formas de ejecutar las pruebas, con propósitos distintos:
 
-## Requisitos
+1. **Suite completa, manual**, contra **una instancia real del puente en marcha**
+   y, en parte, contra un DeepSeek Harness real. Es la que valida el binario que
+   se publica y la compatibilidad con DSH.
+2. **Suite de CI** (`npm run test:ci`), reproducible y aislada: arranca su propio
+   puente temporal y no toca la instalación del usuario. Es la que corre en
+   GitHub Actions y no depende de una computadora concreta ni de un DSH real.
+
+La suite completa no tiene backend de mentira: habla con la instancia real. La
+suite de CI sí usa un **doble mínimo de backend** (ver más abajo) únicamente para
+ejercitar el proxy y la inyección del puente; eso está dicho aquí en vez de
+disimularlo.
+
+## Requisitos de la suite completa
 
 - **Node >= 22.15.0** (`package.json` → `engines`). Los avisos por turno leen
   frames zstd con `node:zlib`, que no existe en versiones anteriores.
@@ -15,7 +25,7 @@ mentira, ni mocks, ni un servidor levantado por las pruebas. Eso es intencionado
 - Un **registro de dispositivos** que puedas respaldar: varias pruebas lo
   escriben y la del kill switch lo revoca.
 
-## Cómo ejecutar
+## Cómo ejecutar la suite completa
 
 ```bash
 node test/run-all.mjs
@@ -28,7 +38,7 @@ También puedes correr uno solo:
 node test/verify_bridge.mjs
 ```
 
-## Variables de entorno
+## Variables de entorno (suite completa)
 
 | Variable | Por defecto | Para qué |
 | --- | --- | --- |
@@ -36,7 +46,7 @@ node test/verify_bridge.mjs
 | `DSH_TEST_PORT` | `57420` | Puerto del puente. |
 | `DSH_PANEL_PORT` | `57421` | Puerto del panel local. |
 | `DSH_ACCESS_KEY` | archivo del HOME | Clave de acceso, si no quieres usar el archivo. |
-| `DSH_PANEL_TOKEN` | archivo del HOME | Boleto del panel (`~/.dsh/companion-panel-token`), para las pruebas de panel y aprobación. |
+| `DSH_PANEL_TOKEN` | archivo del HOME | Boleto de apertura del panel, para las pruebas de panel y aprobación. |
 | `DSH_TEST_DESTRUCTIVE` | sin definir | `1` habilita la prueba del kill switch **real**. |
 
 `_harness.mjs` centraliza el host, el puerto y la cabecera de autenticación, así
@@ -61,16 +71,78 @@ de la suite sigue igual.
   **omite** en lugar de fallar.
 - `verify_config_guard.mjs` **no necesita el puente**: arranca procesos hijos con
   `DSH_ACCESS_DISABLE`/`DSH_ALLOWED_HOSTS` alterados y llama a las funciones de
-  validación. Puede correr en CI.
+  validación.
 
-## CI
+## CI: qué corre y qué no
 
-`.github/workflows/verify.yml` comprueba la sintaxis de todos los `.mjs` y ejecuta
-`node tools/audit-repo.mjs` y `node test/verify_config_guard.mjs` en cada push o
-pull request. Las pruebas que necesitan un puente vivo **no** corren en CI: ese
-es el límite conocido de la suite y se documenta aquí en vez de disimularlo.
+El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
+`npm run test:ci`, que a su vez arranca `test/ci/run-suite.mjs`. El runner:
 
-## utilidades manuales
+- crea un **HOME y un `DSH_HOME` temporales** (nunca lee ni escribe
+  `%USERPROFILE%\.dsh`, `$HOME/.dsh` ni `companion-devices.json` del usuario);
+- escribe un `.credentials.yaml` mínimo válido para `src/crypto.mjs` y lo
+  comprueba con el mismo `loadSecret()` antes de arrancar el puente;
+- elige **puertos libres de loopback** (jamás 57420/57421 ni los candidatos de
+  backend reales) y enlaza el puente a `127.0.0.1`;
+- levanta un **backend DSH mínimo de pruebas** (`test/ci/`) que solo devuelve un
+  documento HTML con `</head>`, viewport, manifiesto y un CSS en `/assets`, más
+  el marcador `__DSH_BOOT__` que `src/network.mjs` usa para reconocerlo;
+- corre cada suite en un proceso hijo, resume `PASS`/`FAIL`/`SKIP` y sale con
+  código 1 si algo falla;
+- al terminar envía **SIGTERM** al puente, limpia el directorio temporal y
+  restaura `synced_chats/` (contenido de `synced_chats/index.jsonl` y archivos
+  de prueba).
+
+### Suites que corren en CI
+
+| Archivo | Qué cubre | Necesita DSH real |
+| --- | --- | --- |
+| `verify_config_guard.mjs` | Guardas de `DSH_ACCESS_DISABLE` / `DSH_ALLOWED_HOSTS`. | No |
+| `verify_injection.mjs` | Inyección del shell móvil en el HTML proxificado. | No (basta el doble) |
+| `verify_access_key.mjs` | Clave de acceso, origen cruzado y pantalla de espera. | No (basta el doble) |
+| `verify_registry_safety.mjs` | Registro de dispositivos ilegible/ausente. | No |
+| `verify_bridge.mjs` | Proxy, sync, chats, cabeceras y frontera de origen. | No (basta el doble) |
+| `verify_satellite_and_battery.mjs` | CSS, batería y persistencia de notas satélite. | No |
+| `verify_subagente_a.mjs` | QR, temas, barra de teclas y rutas retiradas. | No |
+| `verify_panel.mjs` | Aprobación, cookie de dispositivo y revocación. | No (basta el doble) |
+
+### Suites fuera de CI y por qué
+
+- `verify_sync_ws.mjs`: necesita el **WebSocket del backend DeepSeek Harness
+  real**; el doble de CI no implementa WS. Se sigue ejecutando en la suite
+  manual contra un DSH vivo.
+- `verify_kill_switch.mjs`: es **destructiva** (revoca dispositivos y rota la
+  clave). Solo corre manualmente con `DSH_TEST_DESTRUCTIVE=1`.
+- `verify_approval.mjs`: se solapa con `verify_panel.mjs` y usa el boleto del
+  panel, que es de **un solo uso**; dos suites no pueden canjear el mismo
+  `DSH_PANEL_TOKEN` sin reiniciar el puente. Queda para la suite manual.
+
+### Límites conocidos de la suite de CI
+
+- El doble de backend **no valida compatibilidad real con DeepSeek Harness**:
+  comprueba el contrato del puente (proxy, inyección, emparejamiento), no la
+  interfaz real del producto. Esa parte sigue necesitando la suite manual.
+- `verify_bridge.mjs` comprueba el asset CSS proxificado contra el doble; con un
+  DSH real verifica el asset de verdad.
+- La suite de CI **no arranca el kill switch ni el túnel WebSocket**, y no
+  modifica el registro ni la clave reales.
+
+## Cómo ejecutar la suite de CI en tu máquina
+
+```bash
+npm run test:ci
+```
+
+No necesita variables de entorno ni el puente arrancado. Usa puertos efímeros,
+un `DSH_HOME` temporal y limpia al terminar; puedes correrla con tu puente real
+en marcha sin interrumpirlo. Además del resumen, el runner devuelve código 1 si
+alguna suite falla.
+
+Nota: el runner no redirige la salida del puente a `bridge.log`. `bridge.mjs`
+rota `bridge.log` al arrancar si supera 5 MB; es comportamiento del puente, no
+del runner, y en CI ese archivo no existe (está en `.gitignore`).
+
+## Utilidades manuales
 
 - `bench_latency.mjs` — banco de latencia contra el puente vivo (no forma parte de `run-all.mjs`):
   `node test/bench_latency.mjs`. Sirve para medir el proxy, no para verificar.

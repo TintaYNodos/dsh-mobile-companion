@@ -1,9 +1,15 @@
 # Verificación continua. Sin dependencias externas: el puente no usa npm.
 #
 # Node 22.15 es el mínimo real del proyecto: los avisos por turno leen frames
-# zstd con `node:zlib`, que no existe en versiones anteriores. Las pruebas que
-# necesitan un puente vivo no corren aquí; su límite está documentado en
-# test/README.md.
+# zstd con `node:zlib`, que no existe en versiones anteriores.
+#
+# Dos trabajos:
+#   1. audit: sintaxis de todos los .mjs, auditoría del árbol y guardas de
+#      configuración (no necesitan puente).
+#   2. suite: arranca un puente aislado con HOME/DSH_HOME temporales, puertos
+#      libres de loopback y un backend DeepSeek Harness mínimo de pruebas.
+#      Ejecuta las suites que no exigen un DSH real; las que sí lo exigen (o son
+#      destructivas) se omiten con motivo explícito en test/README.md.
 name: verify
 
 on:
@@ -36,3 +42,18 @@ jobs:
 
       - name: Guardas de configuración (sin puente)
         run: node test/verify_config_guard.mjs
+
+  suite:
+    name: Suite del puente (aislada)
+    runs-on: ubuntu-latest
+    needs: audit
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # No hay `npm install`: el proyecto no tiene dependencias.
+      - name: Pruebas del puente sin DeepSeek Harness real
+        run: npm run test:ci

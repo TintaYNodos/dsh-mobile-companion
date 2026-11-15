@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.4-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.5-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-154%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ L'application mobile ne réimplémente pas l'interface : elle affiche la propre 
 
 Édition durcie par Ismael Muñoz Reyes pour Tinta y Nodos.
 
-Version actuelle : **5.1.4** (`versionCode` 44).
+Version actuelle : **5.1.5** (`versionCode` 45).
 
 ---
 
@@ -180,6 +180,8 @@ Pour l'arrêter ou le retirer du démarrage automatique : `stop.bat`, `uninstall
 | `DSH_ALLOW_GENERIC_VPN` | — | `1` accepte une interface tun/tap générique |
 | `DSH_SYNC_MAX_FILES` | `200` | Nombre maximal de conversations conservées |
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | Taille maximale de `synced_chats/` en Mo |
+| `DSH_LOG_MAX_MB` | `5` | Taille maximale de `bridge.log` en Mo avant rotation (minimum 1) |
+| `DSH_LOG_KEEP` | `3` | Fichiers `bridge.log.N` conservés (1–10) |
 
 ### Approbation unique depuis l'ordinateur
 
@@ -261,7 +263,7 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version **5.1.4**, `versionCode` 44, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.1.5**, `versionCode` 45, `minSdk` 26, `targetSdk` 35.
 - Ni AndroidX ni Kotlin : bytecode Java pur, environ 210 Ko.
 - **Cleartext bloqué hors du réseau privé** : `CleartextPolicy` rejette toute requête qui n'est pas en HTTPS ou qui ne pointe pas vers le bunker configuré ou une adresse privée/loopback, et la configuration de sécurité réseau interdit le cleartext vers les services publics avec lesquels l'application communique (GitHub, DeepSeek). Cela est appliqué au-dessus de la WebView, car la configuration de sécurité réseau d'Android ne peut pas exprimer « plages d'IP privées uniquement ».
 - Accès aux fichiers locaux désactivé, contenu mixte bloqué, popups et débogage distant désactivés.
@@ -316,7 +318,7 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 ## Stabilité
 
-**La 5.1.4 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.4. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
+**La 5.1.5 est la base figée de la série 5.** Elle ne reçoit aucune nouvelle fonction ; seul un correctif de sécurité critique donnerait une 5.1.5. La suite sort en **pre-release** (5.2.0-pre.1, etc.). La branche `stable/5` conserve exactement cet arbre.
 
 ## Captures
 

@@ -132,6 +132,24 @@ Después: arranca el puente (install-autostart.bat registra el autoarranque Y lo
 Termina ejecutando doctor.ps1 otra vez e informando: interfaz y IP del túnel, URL del teléfono, versión del puente, panel, estado del emparejamiento y resultado de la prueba de avisos. No digas que funciona sin esa evidencia. No expongas el puente a Internet, no imprimas la clave de acceso y no ejecutes el kill switch sin que te lo pidan.
 ```
 
+### Instalable por un agente (DeepSeek Harness)
+
+El procedimiento completo está empaquetado como skill de DeepSeek Harness en
+[skills/mobile-companion-setup](skills/mobile-companion-setup/): un agente la carga y sigue puertas
+verificables (diagnóstico, túnel, puente, firewall, emparejamiento, avisos, evidencia) en vez de
+improvisar. Cada `FAIL`/`AVISO` de `doctor.ps1` tiene su comando concreto en
+[doctor-fixes.json](doctor-fixes.json).
+
+Instálala en una raíz de skills del proyecto y abre una sesión nueva:
+
+```powershell
+New-Item -ItemType Directory -Force .dsh\skills | Out-Null
+cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
+```
+
+La skill aparece como `mobile-companion-setup` en el catálogo del agente y su procedimiento termina
+con un informe respaldado por evidencia, no con un "hecho" sin pruebas.
+
 ### Método 2: instalación manual
 
 #### Computadora

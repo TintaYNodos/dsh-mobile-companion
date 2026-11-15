@@ -10,6 +10,24 @@ missing (especially the private tunnel), and tell the user their exact phone URL
 
 Copy everything inside the block into the assistant's chat. A Spanish version follows after it.
 
+## Agent-installable skill (DeepSeek Harness)
+
+The whole procedure is also packaged as a DeepSeek Harness skill:
+[skills/mobile-companion-setup](skills/mobile-companion-setup/). A DSH agent loads it and works
+through verifiable gates (diagnose, tunnel, bridge, firewall, pairing, notifications, evidence)
+instead of improvising. Every `FAIL`/`WARN` that `doctor.ps1` can emit is mapped to a concrete
+command in [doctor-fixes.json](doctor-fixes.json).
+
+El procedimiento completo también está empaquetado como skill de DeepSeek Harness:
+[skills/mobile-companion-setup](skills/mobile-companion-setup/). Un agente de DSH la carga y sigue
+puertas verificables (diagnóstico, túnel, puente, firewall, emparejamiento, avisos, evidencia) en
+vez de improvisar. Cada `FAIL`/`AVISO` que puede emitir `doctor.ps1` tiene su comando concreto en
+[doctor-fixes.json](doctor-fixes.json).
+
+Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/skills/`) o de
+usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
+`mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
+
 ---
 
 ## English
@@ -284,6 +302,8 @@ el emparejamiento de dispositivos siguen aplicando.
 ## After the setup
 
 - `doctor.ps1` — the diagnostic above; run it whenever something stops working.
+- [skills/mobile-companion-setup](skills/mobile-companion-setup/) — the same procedure as an
+  installable DSH skill, with the failure-to-fix map in [doctor-fixes.json](doctor-fixes.json).
 - `SECURITY.md` — how to report a vulnerability.
 - `DISPOSITIVOS.md` — device registry, panel, kill switch.
 - `RELEASING.md` — how to build and publish a release.

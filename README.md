@@ -134,6 +134,24 @@ Then: start the bridge (install-autostart.bat registers autostart AND starts it,
 Finish by running doctor.ps1 again and reporting: tunnel interface and IP, phone URL, bridge version, panel, pairing status and notification test. Never say it works without that evidence. Never expose the bridge to the internet, never print the access key, never run the kill switch unless asked.
 ```
 
+### Agent-installable skill (DeepSeek Harness)
+
+The full procedure is packaged as a DeepSeek Harness skill in
+[skills/mobile-companion-setup](skills/mobile-companion-setup/): an agent loads it and works
+through verifiable gates (diagnose, tunnel, bridge, firewall, pairing, notifications, evidence)
+instead of improvising. Every `FAIL`/`WARN` from `doctor.ps1` maps to a concrete command in
+[doctor-fixes.json](doctor-fixes.json).
+
+Install it in a project skill root, then open a new session:
+
+```powershell
+New-Item -ItemType Directory -Force .dsh\skills | Out-Null
+cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
+```
+
+The skill appears as `mobile-companion-setup` in the agent's skill catalog and its procedure ends
+with an evidence-backed report, not with a "done" without proof.
+
 ### Method 2: manual installation
 
 #### Computer

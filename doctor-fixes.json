@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "source": "doctor.ps1",
+  "reportTool": "dsh-companion-doctor",
+  "reportVersion": 1,
+  "language": "es",
+  "verifyCommand": "powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report",
+  "staticCheck": "node skills/mobile-companion-setup/scripts/verify-fixes.mjs static",
+  "reportCheck": "node skills/mobile-companion-setup/scripts/verify-fixes.mjs report doctor-report.json",
+  "contract": {
+    "match": "Texto exacto de la llamada Bad/Warn en doctor.ps1, con sus $variables tal cual. Debe aparecer literalmente en el script: se usa para auditar que ningún mensaje quede sin fix.",
+    "matchRuntime": "Fragmento o lista de fragmentos que deben aparecer en el mensaje real de doctor.ps1 -Json. Con varios fragmentos, todos deben estar contenidos. Si no coincide, el fix no aplica.",
+    "id": "Identificador estable del fix; no cambia aunque cambie el mensaje de doctor.",
+    "command": "Comando concreto que corrige el fallo, o null si requiere una acción humana (instalador gráfico, abrir Harness).",
+    "docs": "Archivo del repo relativo a la raíz, o URL oficial.",
+    "blocking": "true = FAIL (ok=false, doctor sale con código 1). false = AVISO (no bloquea el código de salida, pero puede impedir que el teléfono funcione)."
+  },
+  "notes": [
+    "Mapea los mensajes por matchRuntime, no por checks[].id: el id es un slug generado del propio mensaje y puede incluir rutas, puertos o IPs, así que no es estable entre máquinas.",
+    "Un mensaje sin entrada en este mapa no se arregla improvisando: se detiene el agente, se reporta el mensaje exacto y se añade el fix al mapa.",
+    "Los AVISOS con blocking=false pueden seguir impidiendo el uso real (Harness caído, firewall): se corrigen igual antes de dar el trabajo por terminado."
+  ],
+  "fixes": {
+    "node-missing": {
+      "id": "node-missing",
+      "match": "No encuentro Node.js.",
+      "matchRuntime": "No encuentro Node.js.",
+      "title": "No hay Node.js instalado ni visible en el PATH.",
+      "command": "winget install --id OpenJS.NodeJS.LTS -e",
+      "docs": "https://nodejs.org/en/download",
+      "blocking": true
+    },
+    "node-too-old": {
+      "id": "node-too-old",
+      "match": "Node v$version es antiguo. Hace falta 22.15 o superior (zstd nativo para los avisos).",
+      "matchRuntime": [
+        "es antiguo.",
+        "Hace falta 22.15 o superior"
+      ],
+      "title": "El Node.js instalado es anterior a 22.15 y no trae zstd nativo para los avisos.",
+      "command": "winget install --id OpenJS.NodeJS.LTS -e",
+      "docs": "https://nodejs.org/en/download",
+      "blocking": true
+    },
+    "dsh-home-missing": {
+      "id": "dsh-home-missing",
+      "match": "No existe el directorio de DSH: $dshHome",
+      "matchRuntime": "No existe el directorio de DSH",
+      "title": "No existe el directorio de configuración de DeepSeek Harness (DSH_HOME).",
+      "command": null,
+      "docs": "AI_SETUP_PROMPT.md",
+      "blocking": true
+    },
+    "harness-credentials-missing": {
+      "id": "harness-credentials-missing",
+      "match": "Falta $credentials",
+      "matchRuntime": [
+        "Falta ",
+        ".credentials.yaml"
+      ],
+      "title": "Faltan las credenciales de DeepSeek Harness: hay que abrir Harness e iniciar sesión.",
+      "command": null,
+      "docs": "AI_SETUP_PROMPT.md",
+      "blocking": true
+    },
+    "no-private-tunnel": {
+      "id": "no-private-tunnel",
+      "match": "No hay ninguna interfaz de ZeroTier ni Tailscale con IP privada.",
+      "matchRuntime": "No hay ninguna interfaz de ZeroTier ni Tailscale con IP privada.",
+      "title": "No hay túnel privado: sin ZeroTier o Tailscale el teléfono no puede llegar a esta computadora.",
+      "command": null,
+      "docs": "AI_SETUP_PROMPT.md",
+      "blocking": true
+    },
+    "bridge-wrong-service": {
+      "id": "bridge-wrong-service",
+      "match": "Ese puerto responde, pero no es DSH Companion.",
+      "matchRuntime": "Ese puerto responde, pero no es DSH Companion.",
+      "title": "El puerto del puente responde, pero lo ocupa otro servicio (no DSH Companion).",
+      "command": "Get-NetTCPConnection -LocalPort 57420 -State Listen",
+      "docs": "README.md",
+      "blocking": true
+    },
+    "bridge-unreachable": {
+      "id": "bridge-unreachable",
+      "match": "El puente no responde en $url",
+      "matchRuntime": "El puente no responde en ",
+      "title": "El puente no responde en la URL privada: no está arrancado o no escucha en esa interfaz.",
+      "command": "install-autostart.bat",
+      "docs": "README.md",
+      "blocking": true
+    },
+    "panel-not-listening": {
+      "id": "panel-not-listening",
+      "match": "El panel no esta escuchando en el puerto $panelPort",
+      "matchRuntime": "El panel no esta escuchando en el puerto ",
+      "title": "El panel de emparejamiento no está escuchando en loopback.",
+      "command": "panel.bat",
+      "docs": "DISPOSITIVOS.md",
+      "blocking": true
+    },
+    "access-key-pending": {
+      "id": "access-key-pending",
+      "match": "Aun no hay clave de acceso: se genera en el primer arranque del puente.",
+      "matchRuntime": "Aun no hay clave de acceso",
+      "title": "Todavía no hay clave de acceso del puente: es normal antes del primer arranque.",
+      "command": null,
+      "docs": "DISPOSITIVOS.md",
+      "blocking": false
+    },
+    "bind-host-override": {
+      "id": "bind-host-override",
+      "match": "DSH_BIND_HOST esta fijado a $bindOverride; se usara esa IP en vez de la detectada.",
+      "matchRuntime": "DSH_BIND_HOST esta fijado a ",
+      "title": "DSH_BIND_HOST fuerza la IP de enlace y sustituye a la que detecta doctor.",
+      "command": "Remove-Item Env:DSH_BIND_HOST",
+      "docs": "README.md",
+      "blocking": false
+    },
+    "bridge-unchecked-no-tunnel": {
+      "id": "bridge-unchecked-no-tunnel",
+      "match": "Sin IP privada no se puede comprobar el puente todavia.",
+      "matchRuntime": "Sin IP privada no se puede comprobar el puente",
+      "title": "Sin túnel no se puede comprobar el puente: es un paso pendiente, no un fallo nuevo.",
+      "command": null,
+      "docs": "AI_SETUP_PROMPT.md",
+      "blocking": false
+    },
+    "harness-offline": {
+      "id": "harness-offline",
+      "match": "El puente esta vivo pero DeepSeek Harness no contesta. Abrelo en la computadora.",
+      "matchRuntime": "El puente esta vivo pero DeepSeek Harness no contesta",
+      "title": "El puente está vivo pero DeepSeek Harness no contesta en la computadora.",
+      "command": null,
+      "docs": "AI_SETUP_PROMPT.md",
+      "blocking": false
+    },
+    "firewall-rule-missing": {
+      "id": "firewall-rule-missing",
+      "match": "No hay ninguna regla de firewall para el puerto $portBridge.",
+      "matchRuntime": "No hay ninguna regla de firewall para el puerto ",
+      "title": "Windows puede bloquear la conexión entrante del teléfono: no hay regla de firewall para el puerto del puente.",
+      "command": "netsh advfirewall firewall add rule name=\"DSH Companion\" dir=in action=allow protocol=TCP localport=57420",
+      "docs": "README.md",
+      "blocking": false,
+      "note": "Requiere consola elevada (Ejecutar como administrador). El puerto debe coincidir con DSH_LISTEN_PORT (57420 por defecto)."
+    },
+    "firewall-query-failed": {
+      "id": "firewall-query-failed",
+      "match": "No se pudo consultar el firewall (puede requerir permisos). Si el telefono no conecta, revisa la regla del puerto $portBridge.",
+      "matchRuntime": "No se pudo consultar el firewall",
+      "title": "No se pudo consultar el firewall (normal sin permisos de administrador).",
+      "command": null,
+      "docs": "README.md",
+      "blocking": false,
+      "note": "Si el teléfono no conecta, revisar la regla del puerto del puente en el firewall de Windows."
+    }
+  }
+}

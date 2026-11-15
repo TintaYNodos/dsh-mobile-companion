@@ -66,6 +66,9 @@ tmp/
 temp/
 *.tmp
 
+# Skill del repo instalada localmente en DSH (junction o copia; se versiona en skills/)
+.dsh/
+
 # Artefactos de compilación y capturas locales (no se publican)
 out/
 simulator/captures/

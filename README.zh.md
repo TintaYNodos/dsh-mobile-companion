@@ -88,6 +88,7 @@ companion/
 ├── tools/
 ├── audit-repo.mjs   仓库审计（文本、语法、版本、密钥）
 ├── build-apk.ps1   无需 Gradle 构建并签名 APK
+├── doctor.ps1                  安装诊断（Node、隧道、桥接、面板）
 ├── RELEASING.md   发布检查清单
 ├── .github/workflows/verify.yml   CI：每次推送检查语法与审计
 ├── SECURITY.md   如何报告漏洞
@@ -121,15 +122,14 @@ companion/
 > 完整指南：[AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
 
 ```text
-请充当这台电脑上的技术安装助手。
-你的目标是安装、启用、验证并完整配置“DSH Mobile Companion”（一个安全的伴随桥接服务，可通过 ZeroTier 或 Tailscale 私有网络在移动端访问 DeepSeek Harness），并向我提供清晰、不使用专业术语的说明，以便我连接手机。
+你是安装助手。先运行诊断并展示输出：
 
-请自主地按顺序执行以下步骤：
-1. 检查“%USERPROFILE%\.dsh”，并定位 Node.js（在 PATH 中，或位于“%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe”）。
-2. 如果当前不在该目录中，请克隆：git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
-3. 使用“install-autostart.bat”配置静默自启动，并使用“run-hidden.vbs”启动服务。
-4. 请求 http://127.0.0.1:57420/dsh-companion/status，确认桥接服务返回 200，并报告 DSH 状态。
-5. 提供简洁、不使用专业术语的摘要，包含：我手机使用的 URL（http://<VPN_IP>:57420）、GitHub Releases 中的 APK 下载链接，以及如何从本地面板授权我的手机。
+    powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+若提示“没有隧道”（没有带私有 IP 的 ZeroTier/Tailscale 网卡），请停止：没有私有网络，手机无法访问这台计算机。请说明如何配置 ZeroTier（在 https://my.zerotier.com 建网、PC 与手机安装客户端、设为私有网络并手动授权两个节点）或 Tailscale（两端使用同一账号），然后重新运行 doctor.ps1。
+若 Node 低于 22.15，请安装 Node 22 LTS；若缺少 Harness 凭据，打开 DeepSeek Harness 登录；若桥接未运行，执行 install-autostart.bat。
+然后：启动桥接（install-autostart.bat 会注册开机自启并立即启动，不要再运行 run-hidden.vbs），用 panel.bat 配对手机（面板显示与手机相同的 4 位验证码），并在 设置 -> PC 通知 -> 从 PC 测试 中验证通知。
+最后再次运行 doctor.ps1 并报告：隧道网卡与 IP、手机地址、桥接版本、面板、配对状态和通知测试结果。没有这些证据不要说已成功。不要把桥接暴露到互联网，不要打印访问密钥，未经要求不要执行 kill switch。
 ```
 
 ### 方法 2：手动安装

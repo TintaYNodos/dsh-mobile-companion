@@ -88,6 +88,7 @@ companion/
 ├── tools/
 ├── audit-repo.mjs   Prüfung des Repositorys (Text, Syntax, Versionen, Geheimnisse)
 ├── build-apk.ps1   baut und signiert das APK ohne Gradle
+├── doctor.ps1                  Installationsdiagnose (Node, Tunnel, Bridge, Panel)
 ├── RELEASING.md   Checkliste für Veröffentlichungen
 ├── .github/workflows/verify.yml   CI: Syntax + Prüfung bei jedem Push
 ├── SECURITY.md   wie man eine Schwachstelle meldet
@@ -121,15 +122,14 @@ Wenn Sie einen KI-Agenten oder Programmierassistenten auf Ihrem Rechner verwende
 > Vollständige Anleitung: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
 
 ```text
-Handle als technischer Einrichtungsassistent auf diesem Rechner.
-Dein Ziel ist es, „DSH Mobile Companion“ zu installieren, zu aktivieren, zu überprüfen und vollständig zu konfigurieren (eine sichere Companion-Bridge für mobilen Zugriff auf DeepSeek Harness über ein privates ZeroTier- oder Tailscale-Netzwerk), und mir klare, jargonfreie Anweisungen zur Verbindung meines Telefons zu geben.
+Du bist ein Einrichtungsassistent. Führe zuerst die Diagnose aus und gib die Ausgabe weiter:
 
-Führe die folgenden Schritte autonom und in der angegebenen Reihenfolge aus:
-1. Prüfe "%USERPROFILE%\.dsh" und lokalisiere Node.js (in PATH oder unter "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
-2. Falls du nicht bereits im Verzeichnis bist, klone: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
-3. Konfiguriere den stillen Autostart mit "install-autostart.bat" und starte den Dienst mit "run-hidden.vbs".
-4. Frage http://127.0.0.1:57420/dsh-companion/status ab, um zu prüfen, dass die Bridge mit 200 antwortet, und melde den DSH-Status.
-5. Gib eine einfache, jargonfreie Zusammenfassung mit: der URL für mein Telefon (http://<VPN_IP>:57420), dem APK-Download-Link in den GitHub Releases und der Vorgehensweise, mein Telefon über das lokale Panel zu autorisieren.
+    powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+Meldet sie KEINEN TUNNEL (keine ZeroTier/Tailscale-Schnittstelle mit privater IP), HALTE AN: ohne privates Netz erreicht das Telefon diesen Rechner nicht. Erkläre, wie man ZeroTier (https://my.zerotier.com + Client auf PC und Telefon, privates Netz, beide Knoten autorisieren) oder Tailscale (gleiches Konto auf beiden) einrichtet, und starte doctor.ps1 erneut.
+Ist Node älter als 22.15, installiere Node 22 LTS. Fehlen Harness-Zugangsdaten, öffne DeepSeek Harness und melde dich an. Läuft die Bridge nicht, führe install-autostart.bat aus.
+Dann: Bridge starten (install-autostart.bat registriert den Autostart UND startet sie; run-hidden.vbs nicht erneut ausführen), Telefon mit panel.bat koppeln (das Panel zeigt denselben 4-stelligen Code) und Benachrichtigungen testen (Einstellungen -> PC-Benachrichtigungen -> Vom PC testen).
+Zum Schluss doctor.ps1 erneut ausführen und berichten: Tunnelschnittstelle und IP, Telefon-URL, Bridge-Version, Panel, Kopplungsstatus und Testergebnis. Ohne diese Belege nichts als funktionierend melden. Die Bridge nie ins Internet stellen, den Zugangsschlüssel nie ausgeben und den Kill-Switch nicht ohne Aufforderung ausführen.
 ```
 
 ### Methode 2: manuelle Installation

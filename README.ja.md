@@ -88,6 +88,7 @@ companion/
 ├── tools/
 ├── audit-repo.mjs   リポジトリ監査（テキスト、構文、バージョン、秘密情報）
 ├── build-apk.ps1   Gradle なしで APK をビルドして署名
+├── doctor.ps1                  インストール診断（Node、トンネル、ブリッジ、パネル）
 ├── RELEASING.md   リリース手順
 ├── .github/workflows/verify.yml   CI：push ごとに構文チェックと監査
 ├── SECURITY.md   脆弱性の報告方法
@@ -121,15 +122,14 @@ companion/
 > 詳細ガイド：[AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
 
 ```text
-このマシンの技術セットアップアシスタントとして振る舞ってください。
-目的は「DSH Mobile Companion」（プライベートな ZeroTier または Tailscale ネットワーク経由で DeepSeek Harness へのモバイルアクセスを提供する、安全なコンパニオン・ブリッジ）をインストールし、有効化し、検証し、完全に設定することです。あわせて、スマートフォンを接続するための、専門用語を避けた分かりやすい手順を示してください。
+あなたはセットアップ担当です。まず診断を実行し、その出力を示してください：
 
-以下の手順を自律的に、順番どおりに実行してください：
-1. 「%USERPROFILE%\.dsh」を確認し、Node.js を特定してください（PATH 上、または「%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe」内）。
-2. まだそのディレクトリ内にいない場合はクローンしてください：git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
-3. 「install-autostart.bat」でサイレント自動起動を設定し、「run-hidden.vbs」でサービスを起動してください。
-4. http://127.0.0.1:57420/dsh-companion/status に問い合わせ、ブリッジが 200 を返すことを確認し、DSH のステータスを報告してください。
-5. 専門用語を避けた分かりやすい要約を提示してください。内容は、スマートフォン用の URL（http://<VPN_IP>:57420）、GitHub Releases の APK ダウンロードリンク、ローカルパネルからスマートフォンを承認する方法です。
+    powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+「トンネルなし」（プライベート IP を持つ ZeroTier/Tailscale インターフェースが無い）と出たら、そこで停止してください。プライベートネットワークが無いとスマートフォンはこの PC に到達できません。ZeroTier（https://my.zerotier.com でネットワーク作成、PC とスマートフォンにクライアント導入、プライベート設定、両ノードを承認）または Tailscale（両方で同じアカウント）の設定方法を説明し、doctor.ps1 を再実行してください。
+Node が 22.15 未満なら Node 22 LTS を入れてください。Harness の認証情報が無ければ DeepSeek Harness を開いてログインしてください。ブリッジが停止していれば install-autostart.bat を実行してください。
+次に：ブリッジ起動（install-autostart.bat は自動起動を登録し、その場でも起動します。run-hidden.vbs を再度実行しないでください）、panel.bat でスマートフォンをペアリング（パネルにはスマートフォンと同じ 4 桁コードが出ます）、設定 → PC の通知 → PC からテスト で通知を確認します。
+最後に doctor.ps1 を再実行し、トンネルのインターフェースと IP、スマートフォンの URL、ブリッジのバージョン、パネル、ペアリング状態、通知テストの結果を報告してください。証拠なしに「動いた」と言わないでください。ブリッジをインターネットに公開せず、アクセスキーを表示せず、指示なくキルスイッチを実行しないでください。
 ```
 
 ### 方法 2：手動インストール

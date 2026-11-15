@@ -103,6 +103,7 @@ companion/
 ├── tools/
 │   └── audit-repo.mjs         repository audit (text, syntax, versions, secrets)
 ├── build-apk.ps1              builds and signs the APK without Gradle
+├── doctor.ps1                  install diagnostic (Node, tunnel, bridge, panel)
 ├── RELEASING.md               release checklist
 ├── .github/workflows/verify.yml   CI: syntax + audit on every push
 ├── SECURITY.md                how to report a vulnerability
@@ -120,16 +121,17 @@ If you use an AI agent or coding assistant on your machine (DeepSeek Harness, Cu
 
 > Full guide: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
 
-```text
-Act as a technical setup assistant on this machine.
-Your objective is to install, activate, verify, and completely configure "DSH Mobile Companion" (a secure companion bridge providing mobile access to DeepSeek Harness over a private ZeroTier or Tailscale network), and provide me with clear, jargon-free instructions to connect my phone.
+> The assistant must run `doctor.ps1` first and stop if there is no private tunnel.
 
-Follow these steps autonomously and in order:
-1. Verify "%USERPROFILE%\.dsh" and locate Node.js (in PATH or in "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
-2. If not already inside the directory, clone: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
-3. Configure silent startup with "install-autostart.bat" and start the service with "run-hidden.vbs".
-4. Query http://127.0.0.1:57420/dsh-companion/status to verify the bridge responds 200 and report DSH status.
-5. Provide a simple, jargon-free summary with: the URL for my phone (http://<VPN_IP>:57420), the APK download link in GitHub Releases, and how to authorize my phone from the local panel.
+```text
+You are a setup assistant. First run the diagnostic and paste its output:
+
+    powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+If it reports NO TUNNEL (no ZeroTier/Tailscale interface with a private IP), STOP: the phone cannot reach this computer without a private network. Explain how to install ZeroTier (https://my.zerotier.com + client on PC and phone, private network, authorize both nodes) or Tailscale (same account on PC and phone), then run doctor.ps1 again.
+If Node is older than 22.15, install Node 22 LTS. If Harness credentials are missing, open DeepSeek Harness and sign in. If the bridge is down, run install-autostart.bat.
+Then: start the bridge (install-autostart.bat registers autostart AND starts it, do not run run-hidden.vbs again), pair the phone with panel.bat (the panel shows the same 4-digit code as the phone), and test notifications with Settings -> Notifications from the PC -> Test from PC.
+Finish by running doctor.ps1 again and reporting: tunnel interface and IP, phone URL, bridge version, panel, pairing status and notification test. Never say it works without that evidence. Never expose the bridge to the internet, never print the access key, never run the kill switch unless asked.
 ```
 
 ### Method 2: manual installation
@@ -140,7 +142,7 @@ Follow these steps autonomously and in order:
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-Node.js 22.15 or newer, no npm dependencies.
+Node.js 22.15 or newer, no npm dependencies. Run `doctor.ps1` to verify the environment (Node, Harness credentials, private tunnel) before starting.
 
 1. Set an access key (strongly recommended; see below).
 2. Install automatic startup with `install-autostart.bat`: it registers the silent task **and starts the bridge**. Do not start it again by hand.

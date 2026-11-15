@@ -103,6 +103,7 @@ companion/
 ├── tools/
 │   └── audit-repo.mjs         auditoría del repositorio (texto, sintaxis, versiones, secretos)
 ├── build-apk.ps1              construye y firma el APK sin Gradle
+├── doctor.ps1                  diagnóstico de instalación (Node, túnel, puente, panel)
 ├── RELEASING.md               checklist de publicación
 ├── .github/workflows/verify.yml   CI: sintaxis + auditoría en cada push
 ├── SECURITY.md                cómo reportar una vulnerabilidad
@@ -121,15 +122,14 @@ Si usas un agente de IA o un asistente de programación en tu máquina (DeepSeek
 > Guía completa: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md)
 
 ```text
-Actúa como asistente técnico de configuración en esta máquina.
-Tu objetivo es instalar, activar, verificar y configurar por completo "DSH Mobile Companion" (un puente complementario seguro que da acceso móvil a DeepSeek Harness a través de una red privada ZeroTier o Tailscale) y darme instrucciones claras, sin jerga, para conectar mi teléfono.
+Eres un asistente de instalación. Primero ejecuta el diagnóstico y pega su salida:
 
-Sigue estos pasos de forma autónoma y en orden:
-1. Verifica "%USERPROFILE%\.dsh" y localiza Node.js (en PATH o en "%USERPROFILE%\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe").
-2. Si aún no estás dentro del directorio, clona: git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
-3. Configura el arranque silencioso con "install-autostart.bat" e inicia el servicio con "run-hidden.vbs".
-4. Consulta http://127.0.0.1:57420/dsh-companion/status para verificar que el puente responda 200 y reportar el estado de DSH.
-5. Entrega un resumen sencillo, sin jerga, con: la URL para mi teléfono (http://<VPN_IP>:57420), el enlace de descarga del APK en GitHub Releases y cómo autorizar mi teléfono desde el panel local.
+    powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+Si dice que NO HAY TÚNEL (ninguna interfaz de ZeroTier/Tailscale con IP privada), PÁRATE: sin red privada el teléfono no puede llegar a esta computadora. Explícale cómo instalar ZeroTier (https://my.zerotier.com + cliente en PC y teléfono, red privada, autorizar ambos nodos) o Tailscale (misma cuenta en PC y teléfono), y vuelve a ejecutar doctor.ps1.
+Si Node es anterior a 22.15, instala Node 22 LTS. Si faltan credenciales de Harness, abre DeepSeek Harness e inicia sesión. Si el puente no está levantado, ejecuta install-autostart.bat.
+Después: arranca el puente (install-autostart.bat registra el autoarranque Y lo arranca; no ejecutes run-hidden.vbs otra vez), empareja el teléfono con panel.bat (el panel muestra el mismo código de 4 dígitos que el teléfono) y prueba los avisos en Ajustes -> Notificaciones de la PC -> Probar desde la PC.
+Termina ejecutando doctor.ps1 otra vez e informando: interfaz y IP del túnel, URL del teléfono, versión del puente, panel, estado del emparejamiento y resultado de la prueba de avisos. No digas que funciona sin esa evidencia. No expongas el puente a Internet, no imprimas la clave de acceso y no ejecutes el kill switch sin que te lo pidan.
 ```
 
 ### Método 2: instalación manual
@@ -140,7 +140,7 @@ Sigue estos pasos de forma autónoma y en orden:
 git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 ```
 
-Node.js 22.15 o más reciente, sin dependencias de npm.
+Node.js 22.15 o más reciente, sin dependencias de npm. Ejecuta `doctor.ps1` para verificar el entorno (Node, credenciales de Harness, túnel privado) antes de arrancar.
 
 1. Define una clave de acceso (muy recomendado; ver más abajo).
 2. Instala el arranque automático con `install-autostart.bat`: registra la tarea silenciosa **y arranca el puente**. No lo inicies otra vez a mano.

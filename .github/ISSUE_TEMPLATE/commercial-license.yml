@@ -1,0 +1,54 @@
+name: Licencia comercial
+description: Consulta de una empresa sobre uso comercial o interno en producción de DSH Mobile Companion
+title: "[Licencia comercial] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa este formulario si tu empresa quiere usar DSH Mobile Companion en producción,
+        integrarlo en un producto o servicio, o redistribuirlo.
+
+        La licencia es **Business Source License 1.1**: gratis para uso personal,
+        educativo y no comercial; el uso comercial requiere un permiso aparte. Detalles en
+        [LICENSING.md](../../blob/main/LICENSING.md).
+
+        No pongas secretos, claves, direcciones privadas ni datos de clientes en este
+        formulario: es público.
+  - type: input
+    id: empresa
+    attributes:
+      label: Empresa
+      description: Nombre de la organización y país.
+    validations:
+      required: true
+  - type: textarea
+    id: uso
+    attributes:
+      label: Uso previsto
+      description: Qué quieres hacer con el software (uso interno en producción, producto, servicio alojado, distribución...).
+    validations:
+      required: true
+  - type: input
+    id: equipos
+    attributes:
+      label: Alcance aproximado
+      description: Número de equipos, usuarios o instalaciones previstas.
+  - type: textarea
+    id: soporte
+    attributes:
+      label: Necesidades adicionales
+      description: Soporte, SLA, adaptaciones, auditoría de seguridad, facturación, etc.
+  - type: input
+    id: contacto
+    attributes:
+      label: Contacto
+      description: Correo o forma de contacto que prefieras (o indica que prefieres responder por aquí).
+  - type: checkboxes
+    id: condiciones
+    attributes:
+      label: Confirmación
+      options:
+        - label: Entiendo que el uso comercial requiere una licencia aparte y que este formulario no la concede.
+          required: true
+        - label: Acepto que este formulario es público y no contiene información confidencial.
+          required: true

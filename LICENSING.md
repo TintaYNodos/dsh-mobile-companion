@@ -37,6 +37,16 @@ Escríbenos para hablarlo: **seguridad@tintaynodos.dev**.
 En la Change Date (o a los cuatro años de la primera distribución pública de esa versión, lo que
 ocurra primero), esa versión pasa a MIT y las restricciones de producción comercial desaparecen.
 
+## Uso empresarial
+
+Si tu empresa quiere usar DSH Mobile Companion en producción, integrarlo en un producto o
+servicio, o redistribuirlo, abre una consulta con el formulario **[Licencia comercial](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose)**
+(plantilla *Licencia comercial*). Responde con el alcance: uso interno, producto, servicio
+alojado o distribución; número de equipos; y si necesitas soporte, SLA o una auditoría.
+
+El formulario es público: no incluyas secretos ni datos de clientes. Si necesitas un canal
+privado, dilo en la propia consulta y se acordará una vía.
+
 ## Texto legal
 
 El texto literal e íntegro de la Business Source License 1.1, con los parámetros de este proyecto,

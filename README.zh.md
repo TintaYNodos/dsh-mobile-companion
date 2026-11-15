@@ -330,6 +330,10 @@ npm test
 
 > **声明：** DSH Mobile Companion 是由社区开发的伴随移动客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全地远程访问 DeepSeek Harness。它不是 DeepSeek 的官方产品，也与 DeepSeek 不存在隶属、赞助或背书关系。文中提及的所有商标和徽标均归其各自所有者所有。
 
+## 商业使用
+
+企业生产环境使用、集成到产品或服务以及再分发需要单独许可（Business Source License 1.1）。企业可通过 **Commercial license** 表单提出咨询：[github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose)。详情见 [LICENSING.md](LICENSING.md)。
+
 ## 许可证
 
 Business Source License 1.1 (BUSL-1.1)。个人、教育和非商业用途免费。未经明确授权，禁止商业再分发和商业利用。

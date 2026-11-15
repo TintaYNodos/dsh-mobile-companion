@@ -330,6 +330,10 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 > **Avis :** DSH Mobile Companion est un client mobile compagnon développé par la communauté pour faciliter l'accès distant sécurisé à DeepSeek Harness via des réseaux privés (ZeroTier / Tailscale). Ce n'est pas un produit officiel de DeepSeek, et il n'est ni affilié à DeepSeek, ni sponsorisé, ni approuvé par DeepSeek. Toutes les marques et logos cités appartiennent à leurs propriétaires respectifs.
 
+## Usage professionnel
+
+L'usage en production dans une entreprise, l'intégration dans un produit ou un service et la redistribution nécessitent une licence séparée (Business Source License 1.1). Une entreprise peut ouvrir une demande via le formulaire **Commercial license** : [github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose). Détails dans [LICENSING.md](LICENSING.md).
+
 ## Licence
 
 Business Source License 1.1 (BUSL-1.1). Gratuit pour un usage individuel, éducatif et non commercial. La redistribution commerciale et l'exploitation commerciale sont interdites sans autorisation expresse.

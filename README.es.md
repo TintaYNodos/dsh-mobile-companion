@@ -346,6 +346,10 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 [SECURITY.md](SECURITY.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
+## Uso empresarial
+
+El uso en producción dentro de una empresa, la integración en un producto o servicio y la redistribución requieren una licencia aparte (Business Source License 1.1). Una empresa puede abrir la consulta con la plantilla **Licencia comercial**: [github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose). Detalles en [LICENSING.md](LICENSING.md).
+
 ## Licencia
 
 Business Source License 1.1 (BUSL-1.1). Gratuito para uso individual, educativo y no comercial. Prohibida la redistribución comercial y la explotación comercial sin autorización expresa.

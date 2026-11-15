@@ -165,8 +165,13 @@ for (const f of tracked.filter(isText)) {
 // 11. Licencia: la documentación no debe afirmar "open source" con BSL/PolyForm
 for (const f of tracked.filter((x) => x.endsWith(".md"))) {
   const text = read(f);
-  if (/open[- ]source|código abierto|código aberto|オープンソース|开源|Open-Source/i.test(text)) {
-    F(`afirma "open source" y la licencia es Business Source License 1.1 / PolyForm: ${f}`);
+  // NEGACION: "no es código abierto" o "not open source" son correctos; solo se
+  // marca una afirmacion.
+  const NEGACION = /no (es|somos|pretende ser)|not |no longer|nunca|jamás|не |不是|ではない|아닙니다/i;
+  const lineas = text.split("\n").filter((line) => /open[- ]source|código abierto|código aberto|オープンソース|开源|Open-Source/i.test(line));
+  for (const line of lineas) {
+    if (NEGACION.test(line)) continue;
+    F(`afirma "open source" y la licencia es Business Source License 1.1: ${f}`);
   }
 }
 

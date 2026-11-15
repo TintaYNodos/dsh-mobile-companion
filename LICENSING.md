@@ -4,7 +4,7 @@ DSH Mobile Companion es **source-available**: el código se puede leer, auditar 
 términos de la **Business Source License 1.1 (BUSL-1.1)**, y pasa a ser software libre (MIT)
 cuatro años después de la publicación de cada versión.
 
-Esto **no es** una licencia de código abierto según la OSI. Es a propósito: el proyecto es gratuito
+Esto **no es** una licencia aprobada por la OSI. Es a propósito: el proyecto es gratuito
 para uso personal y no comercial, y el uso comercial requiere una licencia aparte.
 
 ## Qué puedes hacer sin pedir permiso

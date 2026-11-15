@@ -28,7 +28,7 @@
 - [ ] No hay secretos, claves ni IPs privadas en el diff.
 - [ ] Actualicé `CHANGELOG.md` si el cambio se nota al usarlo.
 - [ ] Si hay ruptura de compatibilidad, está explicada arriba.
-- [ ] La licencia sigue siendo Business Source License 1.1 / PolyForm Noncommercial: no introduje
+- [ ] La licencia sigue siendo Business Source License 1.1: no introduje
       dependencias ni código con licencia incompatible.
 
 ## Notas para el revisor

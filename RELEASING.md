@@ -22,6 +22,8 @@ Los demás archivos son **espejos** que se actualizan a partir de esos campos:
   `config.apkVersionCode` y `config.apkVersion`.
 - `README*.md` (los 7 idiomas), `SECURITY.md` y `CHANGELOG.md` — texto para personas; se copian
   los valores de `config.mjs` al publicar y no se inventan cifras nuevas.
+- `RELEASES.json` — registro de las versiones publicadas; la entrada se añade **al publicar**, no en
+  cada commit (campos y política en la sección 1b).
 
 **Cómo se valida:** [`tools/audit-repo.mjs`](tools/audit-repo.mjs) lee los tres archivos de código y
 falla si `package.json` no coincide con `config.version`, si `apkVersion` no coincide con
@@ -38,10 +40,65 @@ Regla de numeración (SemVer):
 - **MINOR** si añade funciones sin romper nada.
 - **PATCH** si solo corrige fallos.
 
-`versionCode` sube **siempre**, de uno en uno: es lo que permite instalar la actualización encima.
+`versionCode` sube **solo al publicar**, de uno en uno: es lo que permite instalar la actualización
+encima. Durante el desarrollo y las pruebas no se toca; al publicar se parte del último valor del
+registro (`RELEASES.json`) y se suma uno. Si una versión no llega a publicarse, su número no se
+consume.
 
 Después actualiza `README*.md` (versión y `versionCode`), `SECURITY.md` (versiones soportadas) y
 `CHANGELOG.md` (entrada nueva arriba, con una sección `### Breaking changes` si es MAJOR).
+
+### 1b. `RELEASES.json`: el registro legible por máquina
+
+[`RELEASES.json`](RELEASES.json) (raíz del repo) es el registro de las versiones **publicadas**:
+versión, `versionCode`, canal, fecha, commit publicado, SHA-256 del APK y huella del certificado.
+No lo genera ningún script: la entrada se añade a mano al publicar.
+
+```json
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "version": "5.1.10",
+      "versionCode": 50,
+      "channel": "stable",
+      "releasedAt": "2026-11-16",
+      "commit": "788aee02842731b11d51dc5610fa15a05b062371",
+      "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Resumen de una línea de la release."
+    }
+  ]
+}
+```
+
+| Campo | Tipo | Cómo se rellena |
+| --- | --- | --- |
+| `schemaVersion` | número | `1`; solo cambia si cambia la forma del registro. |
+| `releases[]` | array | Una entrada por versión publicada, en orden de `versionCode` ascendente. La nueva se añade al final. |
+| `version` | string | `MAJOR.MINOR.PATCH` de `src/config.mjs`. |
+| `versionCode` | número | `apkVersionCode` de `src/config.mjs` en el commit publicado. |
+| `channel` | string | `stable` para una versión estable; `prerelease` para las 5.2.0-pre.x. |
+| `releasedAt` | string | Fecha de la publicación en GitHub, `AAAA-MM-DD`. |
+| `commit` | string | SHA completo del **commit de origen** con el que se compiló el APK (el commit de versión). El registro se añade en el commit siguiente, que es el que se etiqueta: un commit no puede contener su propio SHA. |
+| `apkSha256` | string | 64 hex en minúsculas: el SHA-256 que imprime `build-apk.ps1` y que sirve el puente. |
+| `certSha256` | string | Huella SHA-256 del certificado de release (sección 3), con sus dos puntos. |
+| `notes` | string | Una línea de resumen; el detalle va en `CHANGELOG.md` y en las notas del release. |
+
+Reglas:
+
+- JSON válido y UTF-8 sin BOM: nada de comentarios ni comas finales. La auditoría
+  (`node tools/audit-repo.mjs`) comprueba en cada push que el JSON parsea.
+- Una entrada por versión publicada; no se reescriben ni se borran las anteriores.
+- El `commit` es el commit de origen del binario (el commit de versión, con el código que se
+  compiló). Como un commit no puede contener su propio SHA, la entrada se escribe **después** del
+  commit de release: el SHA se obtiene con `git rev-parse HEAD` y la entrada se añade en el commit
+  siguiente, que es el que se etiqueta con `v<version>`. El árbol etiquetado incluye así el registro
+  completo y el `commit` registrado señala el código exacto que se compiló.
+- `version` y `versionCode` deben coincidir con `src/config.mjs` en ese commit; si no coinciden, la
+  release no se publica.
+- Al publicar la 5.2.0 se añade su objeto al final de `releases`, con `channel: "stable"` (o
+  `"prerelease"` para las 5.2.0-pre.x) y los datos del build que se sube.
 
 ## 2. Verificar
 
@@ -107,6 +164,8 @@ El tag debe apuntar al commit que se publica. Si algo se corrige después, o se 
 2. Título: `DSH Mobile Companion <version> (versionCode <código>)`.
 3. Cuerpo: qué cambia, qué rompe y el SHA-256 del APK. Sin descripciones vacías.
 4. Adjunta `DSH-Companion.apk` y publica.
+5. Añade la entrada de esta versión a `RELEASES.json` (sección 1b) con el SHA del tag, el SHA-256
+   del APK y la fecha de publicación; commitea el registro.
 
 ## 5b. Presentación del repositorio
 

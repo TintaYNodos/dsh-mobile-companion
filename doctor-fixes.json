@@ -26,7 +26,7 @@
       "match": "No encuentro Node.js.",
       "matchRuntime": "No encuentro Node.js.",
       "title": "No hay Node.js instalado ni visible en el PATH.",
-      "command": "winget install --id OpenJS.NodeJS.LTS -e",
+      "command": "winget install --id OpenJS.NodeJS -e",
       "docs": "https://nodejs.org/en/download",
       "blocking": true
     },
@@ -38,7 +38,7 @@
         "Hace falta 22.15 o superior"
       ],
       "title": "El Node.js instalado es anterior a 22.15 y no trae zstd nativo para los avisos.",
-      "command": "winget install --id OpenJS.NodeJS.LTS -e",
+      "command": "winget install --id OpenJS.NodeJS -e",
       "docs": "https://nodejs.org/en/download",
       "blocking": true
     },
@@ -197,6 +197,30 @@
       "docs": "README.md",
       "blocking": false,
       "note": "Si el teléfono no conecta, revisar la regla del puerto del puente en el firewall de Windows."
+    },
+    "backup-missing": {
+      "id": "backup-missing",
+      "match": "No hay ninguna copia de seguridad del registro de telefonos en $backupsDir.",
+      "matchRuntime": [
+        "No hay ninguna copia de seguridad",
+        "registro de telefonos"
+      ],
+      "title": "No hay ninguna copia de seguridad del registro de teléfonos: si se pierde o se corrompe, hay que volver a emparejar los dispositivos.",
+      "command": "backup.bat",
+      "docs": "README.md",
+      "blocking": false
+    },
+    "backup-stale": {
+      "id": "backup-stale",
+      "match": "La ultima copia de seguridad es del $latestLabel y tiene $backupAge dias; conviene una copia cada 7 dias.",
+      "matchRuntime": [
+        "La ultima copia de seguridad es del",
+        "conviene una copia cada 7 dias"
+      ],
+      "title": "La última copia de seguridad del registro tiene más de 7 días: conviene una copia reciente antes de actualizar.",
+      "command": "backup.bat",
+      "docs": "README.md",
+      "blocking": false
     }
   }
 }

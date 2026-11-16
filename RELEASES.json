@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "version": "5.1.10",
+      "versionCode": 50,
+      "channel": "stable",
+      "releasedAt": "2026-11-16",
+      "commit": "788aee02842731b11d51dc5610fa15a05b062371",
+      "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Versión final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (D1, H1, H2, H3, H4, H5, D3, D4, D5, D6). Detalle en CHANGELOG.md y RELEASE_5.1.10.md."
+    }
+  ]
+}

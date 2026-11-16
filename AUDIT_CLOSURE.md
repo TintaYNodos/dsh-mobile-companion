@@ -22,12 +22,12 @@ propia tanda dentro de la misma release: aquí consta el estado y el motivo, no 
 
 | Punto | Estado | Release | Qué se hizo o por qué | Evidencia |
 | --- | --- | --- | --- | --- |
-| P1 | Cerrado | 5.1.8 | El nonce de `BridgeGuard` cubre también `onApprovalRequested`, `onGenerationFinished`, `onJobFinished`, `copyToClipboard`, `saveOfflineDraft` y `onHeartbeat`; sin nonce válido la llamada se rechaza (fail-closed). | [CHANGELOG.md](CHANGELOG.md), [RELEASE_5.1.8.md](RELEASE_5.1.8.md) |
-| P3 | Cerrado | 5.1.8 | Se eliminó la acción de aprobación desde la notificación (botones, receptor y acción pendiente); el aviso queda informativo y se limpian restos de versiones anteriores. | [CHANGELOG.md](CHANGELOG.md), [RELEASE_5.1.8.md](RELEASE_5.1.8.md) |
+| P1 | Cerrado | 5.1.8 | El nonce de `BridgeGuard` cubre también `onApprovalRequested`, `onGenerationFinished`, `onJobFinished`, `copyToClipboard`, `saveOfflineDraft` y `onHeartbeat`; sin nonce válido la llamada se rechaza (fail-closed). | [CHANGELOG.md](CHANGELOG.md) |
+| P3 | Cerrado | 5.1.8 | Se eliminó la acción de aprobación desde la notificación (botones, receptor y acción pendiente); el aviso queda informativo y se limpian restos de versiones anteriores. | [CHANGELOG.md](CHANGELOG.md) |
 | P6 | Cerrado | 5.1.8 | Una petición con cabeceras de proxy (`cf-connecting-ip`, `cf-access-jwt-assertion`, `x-forwarded-for`) ya no abre la ventana del panel en el escritorio del host. | [CHANGELOG.md](CHANGELOG.md), `src/routes.mjs` |
 | P7 | Cerrado | 5.1.8 | `/simulator` y sus recursos exigen dispositivo emparejado o clave de acceso; ya no responden 200 a cualquiera dentro de la VPN. | [CHANGELOG.md](CHANGELOG.md), `src/static.mjs` |
 | P23 | Cerrado | 5.1.8 | El puerto del panel (57421) salió de `targetCandidates`; el descubrimiento del backend ya no puede apuntar al panel. | [src/config.mjs](src/config.mjs) |
-| P36 | Cerrado | 5.1.8 | `CleartextPolicy` es fail-closed: cualquier excepción en la comprobación rechaza el tráfico en claro. | [RELEASE_5.1.8.md](RELEASE_5.1.8.md) |
+| P36 | Cerrado | 5.1.8 | `CleartextPolicy` es fail-closed: cualquier excepción en la comprobación rechaza el tráfico en claro. | [CHANGELOG.md](CHANGELOG.md) |
 | P55 | Cerrado | 5.1.8 | Los CSS y el JS del simulador se sirven con su tipo MIME correcto; la página ya no carga con 403. | [CHANGELOG.md](CHANGELOG.md), `src/static.mjs` |
 | P22 | Cerrado | 5.1.9 | El descubrimiento exige identidad real de DSH (marcador `__DSH_BOOT__` o reto `dsh web authentication required`), no solo "algo responde"; 401/403 sin marcador queda como `possible` y no confirma. Ver detalle abajo. | [src/network.mjs](src/network.mjs) |
 | P2 | Cerrado | 5.1.9 | `verify_registry_safety` ya no puede perder el registro real: respaldo `.test-bak` persistente, periódico `.test-in-progress` y restauración automática (byte a byte) al arrancar y al terminar. Ver detalle abajo. | [test/verify_registry_safety.mjs](test/verify_registry_safety.mjs) |

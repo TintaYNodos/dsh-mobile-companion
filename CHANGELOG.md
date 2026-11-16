@@ -3,6 +3,80 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.2.0 — `versionCode` 51 (versión estable)
+
+Versión de **fortalecimiento**, no de producto: se mantienen todas las funciones, la configuración
+y el formato de datos de la 5.1.10. La 5.1.10 se puede actualizar a la 5.2.0 encima, sin
+desinstalar (la firma no cambió desde la 5.1.7). A partir de aquí la línea queda congelada: solo
+correcciones de seguridad.
+
+### Añadido — salud real y contrato con Harness
+
+- **`/healthz` real**: distingue `ok` (puente y DeepSeek Harness confirmados), `degraded` (ambos
+  arriba, pero alguna pieza del contrato interno cambió) y `down` (HTTP 503: Harness no responde).
+  El puente lo sirve sin credenciales desde la red privada o loopback y no expone secretos.
+- **Healthcheck de Docker con `/healthz`**: antes preguntaba a `/dsh-companion/status`, que
+  respondía 200 aunque Harness estuviera caído. Ahora un contenedor "sano" implica Harness vivo.
+- **`src/dsh-contract.mjs`**: al arrancar (y cada 10 minutos) comprueba las piezas internas de
+  Harness de las que depende el puente —cookie `dsh-auth-*`, marcador `__DSH_BOOT__`, evento
+  `turn/end`, atributo `data-approval-key` y descubrimiento de puerto—. Si una cambia, **degrada
+  solo la función afectada** con un aviso claro en `bridge.log` (avisos, aprobaciones, sesión)
+  en vez de morir o fallar en silencio. El estado se expone como `contract` en `/status` y en
+  `/healthz`.
+
+### Añadido — copias de seguridad del estado
+
+- **`backup.bat` / `restore.bat`** (con `backup.ps1` / `restore.ps1`): copian a
+  `%USERPROFILE%\.dsh\backups\AAAA-MM-DD-HHMMSS\` el registro de dispositivos, la clave de acceso
+  y el token del panel, con un manifiesto `backups/<fecha>/manifest.json` de tamaños y SHA-256.
+  `--dry-run` no escribe nada.
+- **Restauración fail-closed**: `restore.ps1` verifica los hashes **antes** de escribir; si el
+  respaldo está manipulado se niega y no toca nada, y antes de restaurar guarda una copia del
+  estado actual en `backups\<fecha>-pre-restore`.
+- **El instalador respalda el registro** antes de actualizar/arrancar (si falla, avisa pero no
+  aborta la instalación) y **`doctor.ps1` avisa** cuando no hay una copia reciente.
+
+### Añadido — operación y soporte
+
+- **`OPERACION.md`**: cómo aprobar un dispositivo nuevo, arrancar/reiniciar el puente, revisar
+  `bridge.log` y su rotación, comprobar la salud y restaurar copias **sin estar delante de la
+  computadora**. Incluye la recomendación de **RustDesk** como soporte remoto opcional (servidor
+  self-hosted o solo sobre ZeroTier/Tailscale, contraseña fuerte + 2FA, apagado cuando no se usa);
+  RustDesk **no es parte del producto ni se empaqueta**.
+- **`SUPPORT.md`**: qué está soportado, qué no, y cómo pedir ayuda con evidencia verificable.
+- **`CHECKLIST-ESTABLE.md`**: lista de comprobación de la versión estable **desde el teléfono**.
+- **`AUDITORIA-EXTERNA.md`**: tres prompts listos para auditoría de seguridad, onboarding y APK.
+
+### Añadido — registro de versiones y política
+
+- **`RELEASES.json`**: registro legible por máquina de cada build publicado (versión,
+  `versionCode`, commit, SHA-256 del APK, huella del certificado y fecha). Política documentada en
+  `RELEASING.md`: **el `versionCode` solo sube al publicar**.
+
+### Revisado — permisos del APK
+
+- Auditoría de cada permiso con su uso real. `RECORD_AUDIO` **se mantiene**: solo se concede al
+  frame del búnker cuando la página pide captura de audio (quitarlo rompería la entrada de voz en
+  la GUI). `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` **solo se pide al activar el interruptor
+  "Permitir en segundo plano"** de los avisos, nunca al arrancar. Detalle en `SECURITY.md`.
+
+### Limpieza
+
+- Notas `RELEASE_5.1.7/8/9` eliminadas (el `CHANGELOG` ya las cubre) y referencias corregidas.
+- Las cuatro referencias de la skill `mobile-companion-setup` se fusionan en dos, sin renombrar
+  archivos: `doctor-contract.md` (contrato + informe) y `fixes.md` (mapa + pasos de instalación).
+- Capturas y copias duplicadas eliminadas cuando no estaban referenciadas.
+
+### Compatibilidad
+
+- **Sin cambios de configuración**: mismas variables de entorno, mismo registro, mismo formato de
+  datos y misma API. La 5.2.0 es compatible con la 5.1.10.
+- **Sin dependencias npm nuevas** (cero dependencias).
+- Las comprobaciones históricas se mantienen: **14 suites / 235 comprobaciones** en local y **203**
+  en CI, más los tests Java puros (61 watchdog + 16 cleartext + 14 bridgeguard + 25 apkdigest).
+  Se añaden verificaciones adicionales (`test/verify_healthz.mjs`, `test/verify_backup.mjs`) fuera
+  de ese conteo para no romper la comparabilidad histórica.
+
 ## 5.1.10 — `versionCode` 50 (versión final de la serie 5)
 
 ### Correcciones del QA final

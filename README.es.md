@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · **[Español (México)](README.es.md)** · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ La aplicación móvil no reimplementa la interfaz: muestra la propia Web GUI de 
 
 Edición endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versión actual: **5.1.10** (`versionCode` 50).
+Versión actual: **5.2.0** (`versionCode`  51).
 
 ---
 
@@ -129,7 +129,7 @@ Eres un asistente de instalación. Primero ejecuta el diagnóstico y pega su sal
     powershell -ExecutionPolicy Bypass -File doctor.ps1
 
 Si dice que NO HAY TÚNEL (ninguna interfaz de ZeroTier/Tailscale con IP privada), PÁRATE: sin red privada el teléfono no puede llegar a esta computadora. Explícale cómo instalar ZeroTier (https://my.zerotier.com + cliente en PC y teléfono, red privada, autorizar ambos nodos) o Tailscale (misma cuenta en PC y teléfono), y vuelve a ejecutar doctor.ps1.
-Si Node es anterior a 22.15, instala Node 22 LTS. Si faltan credenciales de Harness, abre DeepSeek Harness e inicia sesión. Si el puente no está levantado, ejecuta install-autostart.bat.
+Si Node es anterior a 22.15, instala Node.js 22. Si faltan credenciales de Harness, abre DeepSeek Harness e inicia sesión. Si el puente no está levantado, ejecuta install-autostart.bat.
 Después: arranca el puente (install-autostart.bat registra el autoarranque Y lo arranca; no ejecutes run-hidden.vbs otra vez), empareja el teléfono con panel.bat (el panel muestra el mismo código de 4 dígitos que el teléfono) y prueba los avisos en Ajustes -> Notificaciones de la PC -> Probar desde la PC.
 Termina ejecutando doctor.ps1 otra vez e informando: interfaz y IP del túnel, URL del teléfono, versión del puente, panel, estado del emparejamiento y resultado de la prueba de avisos. No digas que funciona sin esa evidencia. No expongas el puente a Internet, no imprimas la clave de acceso y no ejecutes el kill switch sin que te lo pidan.
 ```
@@ -246,6 +246,23 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 ---
 
+## Salud, copias de seguridad y soporte remoto
+
+- **Salud real.** `/healthz` informa por separado del puente y de DeepSeek Harness y devuelve HTTP
+  503 cuando Harness está caído; el estado `degraded` indica que cambió una pieza del contrato de
+  Harness. `/dsh-companion/status` expone el contrato que comprobó el puente.
+- **Copias.** [backup.bat](backup.bat) guarda el registro de dispositivos, la clave de acceso y el
+  token del panel con un manifiesto de hashes; [restore.bat](restore.bat) verifica ese manifiesto
+  antes de escribir y conserva una copia previa. Las copias viven en `%USERPROFILE%\.dsh\backups\`.
+- **Soporte remoto (opcional).** Para ayuda guiada, [RustDesk](https://rustdesk.com) es solo una
+  recomendación: nunca se empaqueta y no es necesario. Usa un servidor propio o accede solo a través
+  de ZeroTier/Tailscale, define una contraseña permanente fuerte y 2FA, y apágalo al terminar.
+- **Procedimiento.** [OPERACION.md](OPERACION.md) recorre aprobaciones, reinicios, logs, salud,
+  copias y actualización del APK sin tener la computadora delante; política de soporte y evidencia:
+  [SUPPORT.md](SUPPORT.md).
+
+---
+
 ## Funciones del cliente móvil
 
 - **Bloque de comandos y teclas de código.** Una fila de atajos del redactor y una fila de símbolos de código que aparecen solo mientras el teclado está abierto, debajo de la tarjeta del redactor cuando cabe y encima de ella en caso contrario. Ambas filas se pueden activar o desactivar en Ajustes.
@@ -287,7 +304,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 
 **Aplicación nativa (Android)**
 
-- `DSH-Companion.apk` — versión **5.1.10**, `versionCode` 50, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versión **5.2.0**, `versionCode`  51, `minSdk` 26, `targetSdk` 35.
 - Sin AndroidX y sin Kotlin: bytecode Java puro, alrededor de 222 KB.
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, DeepSeek). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.
@@ -356,7 +373,7 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## Estabilidad
 
-**La 5.1.10 es la versión final de la serie 5.** Es la base congelada: no recibe funciones nuevas; solo un fallo de seguridad crítico produciría una 5.1.11. Lo siguiente sale como **pre-release** (5.2.0-pre.1 y siguientes) hasta estabilizarse. La rama `stable/5` conserva exactamente este árbol.
+**La 5.2.0 es la versión estable de la serie 5.** Es la base congelada: solo recibe correcciones de seguridad, nunca funciones nuevas. La rama `stable/5` conserva exactamente este árbol. La 5.1.x queda como línea anterior.
 
 
 ## Capturas
@@ -371,7 +388,7 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## Documentos del proyecto
 
-[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [AGENT_COMPAT.md](AGENT_COMPAT.md) · [LICENSE](LICENSE)
+[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [AGENT_COMPAT.md](AGENT_COMPAT.md) · [LICENSE](LICENSE)
 
 ## iPhone / iPad
 

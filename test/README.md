@@ -142,6 +142,29 @@ Nota: el runner no redirige la salida del puente a `bridge.log`. `bridge.mjs`
 rota `bridge.log` al arrancar si supera 5 MB; es comportamiento del puente, no
 del runner, y en CI ese archivo no existe (está en `.gitignore`).
 
+## Verificaciones adicionales (5.2.0)
+
+Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
+quedan **fuera** del conteo histórico de la suite (14 suites / 235 comprobaciones en local y 203 en
+CI). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`, así que no alteran esas cifras
+ni la comparabilidad con las releases de la serie 5.
+
+| Archivo | Qué cubre | Necesita un puente real |
+| --- | --- | --- |
+| `test/verify_healthz.mjs` | `/healthz` y el contrato con DeepSeek Harness: `computeHealth()` con estados inyectados y, sobre puentes temporales, el camino sano (`ok`/`degraded`, HTTP 200) y el caído (`down`, HTTP 503). | No: arranca y apaga sus propios puentes aislados. |
+| `test/verify_backup.mjs` | `backup.ps1`/`restore.ps1`: respaldo con manifiesto (`backups/<fecha>/manifest.json`) y hashes, `-DryRun` sin escrituras, restauración tras corromper los archivos vivos y rechazo de un respaldo manipulado sin tocar nada. | No: usa un `DSH_HOME` temporal. |
+
+Se ejecutan a mano y sin tocar la instalación del usuario:
+
+```bash
+node test/verify_healthz.mjs
+node test/verify_backup.mjs
+```
+
+Cada una imprime `PASS`/`FAIL` por comprobación y una línea `RESULTADO: x/y`; salen con código 1 si
+algo falla. En plataformas no Windows, `test/verify_backup.mjs` imprime `SKIP` y sale con 0. Las dos
+pueden correr con el puente real en marcha sin interrumpirlo.
+
 ## Utilidades manuales
 
 - `bench_latency.mjs` — banco de latencia contra el puente vivo (no forma parte de `run-all.mjs`):

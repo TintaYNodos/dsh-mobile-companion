@@ -101,7 +101,7 @@ text version:
       network may be blocking it. Do not work around it by publishing the bridge.
     * If the user refuses to install a tunnel, say clearly that this setup cannot work: there is no
       supported remote access without a private network. Do not offer public tunnels.
-- If it reports Node older than 22.15: install Node 22 LTS and repeat.
+- If it reports Node older than 22.15: install Node.js 22 and repeat.
 - If it reports missing DeepSeek Harness credentials: open Harness, sign in, repeat.
 - If it reports the bridge down: start it with install-autostart.bat, repeat.
 
@@ -157,6 +157,18 @@ Then give a final report in this exact shape:
     Pairing:       <paired / pending>
     Notifications: <test result>
     Remaining:     <anything still failing, or "none">
+
+## Step 6 — Hand over operations and support
+
+- Explain that `/healthz` reports the bridge and DeepSeek Harness separately (HTTP 503 means the
+  computer is on but Harness is down), and that backup.bat / restore.bat protect the device
+  registry, the access key and the panel token.
+- Point the user to OPERACION.md for the runbook (approvals, restarts, logs, health, backups, APK
+  updates), CHECKLIST-ESTABLE.md for a check from the phone and SUPPORT.md for the support policy
+  and the evidence to attach.
+- Remote desktop (for example RustDesk) is an optional recommendation for hands-on support only: it
+  is not part of the product and is never bundled. If used, keep it on the private network or a
+  self-hosted server, set a strong permanent password plus 2FA, and turn it off after the session.
 
 ## Rules you must never break
 
@@ -272,7 +284,7 @@ texto:
       estar bloqueándolo. No lo rodees publicando el puente.
     * Si el usuario no quiere instalar un túnel, dile claro que así no puede funcionar: no hay
       acceso remoto soportado sin una red privada. No ofrezcas túneles públicos.
-- Si dice que Node es anterior a 22.15: instala Node 22 LTS y repite.
+- Si dice que Node es anterior a 22.15: instala Node.js 22 y repite.
 - Si faltan credenciales de Harness: abre Harness, inicia sesión y repite.
 - Si el puente no está levantado: arráncalo con install-autostart.bat y repite.
 
@@ -329,6 +341,18 @@ Después entrega el informe con esta forma exacta:
     Avisos:         <resultado de la prueba>
     Pendiente:      <lo que siga fallando, o "nada">
 
+## Paso 6 — Entregar la operación y el soporte
+
+- Explica que `/healthz` informa por separado del puente y de DeepSeek Harness (HTTP 503 significa
+  que la computadora está encendida pero Harness está caído), y que backup.bat / restore.bat
+  protegen el registro de dispositivos, la clave de acceso y el token del panel.
+- Indica OPERACION.md para el procedimiento (aprobaciones, reinicios, logs, salud, copias,
+  actualización del APK), CHECKLIST-ESTABLE.md para comprobarlo desde el teléfono y SUPPORT.md para
+  la política de soporte y la evidencia que hay que adjuntar.
+- El escritorio remoto (por ejemplo RustDesk) es una recomendación opcional solo para soporte
+  guiado: no forma parte del producto y nunca se empaqueta. Si se usa, mantenlo en la red privada o
+  en un servidor propio, define una contraseña permanente fuerte y 2FA, y apágalo al terminar.
+
 ## Opcional: iPhone, PWA y acceso sin VPN
 
 ### iPhone / iPad (no hay APK)
@@ -380,6 +404,9 @@ Tailscale instalado en el teléfono. Ese es el camino soportado y no expone nada
 ## After the setup
 
 - `doctor.ps1` — the diagnostic above; run it whenever something stops working.
+- [OPERACION.md](OPERACION.md) — runbook for health, restarts, logs, backups and remote support;
+  [SUPPORT.md](SUPPORT.md) — support policy and the evidence to attach;
+  [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) — the stable-release check from the phone.
 - [skills/mobile-companion-setup](skills/mobile-companion-setup/) — the same procedure as an
   installable DSH skill, with the failure-to-fix map in [doctor-fixes.json](doctor-fixes.json).
 - `SECURITY.md` — how to report a vulnerability.

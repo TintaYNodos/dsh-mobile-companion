@@ -63,7 +63,7 @@ Reglas para el agente:
 
 - Por defecto usa `candidates[0]`, que es lo que ya reflejan `tunnel` y `bindHost`.
 - Con varias candidatas utilizables, el doctor emite un WARN y sugiere una IP por cada una; si el
-  usuario prefiere otra, arranca el puente con `DSH_BIND_HOST=<ip>` (ver `setup-steps.md`).
+  usuario prefiere otra, arranca el puente con `DSH_BIND_HOST=<ip>` (ver `fixes.md`).
 - `candidates: []` con `ok: false` significa que no hay VPN privada: es el FAIL que hay que
   resolver antes de seguir.
 
@@ -168,6 +168,87 @@ confirmar que ambos mensajes tienen entrada.
 
 Nunca modifiques `doctor.ps1` del repo para probar estas ramas.
 
+## Informe final con evidencia
+
+El trabajo no termina cuando el puente arranca: termina cuando el informe demuestra que funciona.
+Sin evidencia, el estado es "pendiente".
+
+Reglas del informe:
+
+- Pega la salida **real** de los comandos; no la resumas ni la reescribas de memoria.
+- No inventes valores: `tunnel`, `phoneUrl`, `bridgeVersion` y `nodeVersion` salen del JSON.
+- Redacta secretos: nunca la clave de acceso, el token del panel, cookies ni `.credentials.yaml`.
+- Si algo falla, di qué falla, con qué comando y con qué salida. No escondas errores.
+- Distingue "hecho y verificado" de "hecho pero sin prueba del usuario" (por ejemplo, el aviso de
+  prueba solo lo puede confirmar el teléfono).
+
+### Forma exacta del informe
+
+```text
+Túnel:          <interfaz> -> <IP privada>
+URL teléfono:   http://<IP privada>:57420
+Puente:         versión <x>, en línea
+Panel:          127.0.0.1:57421
+Emparejamiento: <emparejado / pendiente>
+Avisos:         <resultado de la prueba>
+Pendiente:      <lo que siga fallando, o "nada">
+```
+
+En inglés, si el usuario lo pide:
+
+```text
+Tunnel:        <interface> -> <private IP>
+Phone URL:     http://<private IP>:57420
+Bridge:        version <x>, online
+Panel:         127.0.0.1:57421
+Pairing:       <paired / pending>
+Notifications: <test result>
+Remaining:     <anything still failing, or "none">
+```
+
+### Evidencia que acompaña al informe
+
+1. Salida del diagnóstico final (JSON o tabla de checks, sin secretos):
+
+       powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report
+
+2. Salida de la verificación del recibo (obligatoria):
+
+       node tools/verify-receipt.mjs doctor-report.json
+
+   Debe indicar que el recibo es válido; sin esta salida el informe no cuenta como evidencia.
+
+3. Salida del mapeo del informe:
+
+       node skills/mobile-companion-setup/scripts/verify-fixes.mjs report doctor-report.json
+
+   Debe indicar cuántos FAIL/AVISO mapeó y ningún `SIN MAPA`.
+
+4. Salida humana, si el usuario prefiere el texto:
+
+       powershell -ExecutionPolicy Bypass -File doctor.ps1
+
+### Ejemplo de informe completo (valores ficticios)
+
+```text
+Túnel:          Tailscale -> 100.64.0.24
+URL teléfono:   http://100.64.0.24:57420
+Puente:         versión 5.1.10, en línea
+Panel:          127.0.0.1:57421
+Emparejamiento: emparejado (código 4821)
+Avisos:         prueba enviada; aviso recibido en el teléfono
+Pendiente:      nada
+```
+
+Los valores del ejemplo son ficticios: en un informe real se copian del JSON de esta máquina.
+
+### Si no se puede cerrar
+
+- **Falta el túnel**: `Pendiente: falta red privada (ZeroTier/Tailscale)`. No hay URL del teléfono.
+- **El usuario no probó el aviso**: `Avisos: pendiente de confirmación en el teléfono`.
+- **Un mensaje no está en el mapa**: `Pendiente: mensaje sin fix verificado: <mensaje exacto>`. Se
+  reporta y se detiene; no se inventa la solución.
+
 ## Actualizado en 5.1.9
 
 El JSON de `doctor.ps1 -Json` incluye además:
@@ -179,4 +260,5 @@ El JSON de `doctor.ps1 -Json` incluye además:
 - `certSha256Release`: huella del certificado de release.
 - `receipt`: `{ algorithm, canonical, sha256 }`; `tools/verify-receipt.mjs` lo valida.
 
-El recuento de mensajes del doctor que el mapa `doctor-fixes.json` debe cubrir es 16.
+El recuento exacto de mensajes del doctor que el mapa `doctor-fixes.json` debe cubrir lo imprime
+`scripts/verify-fixes.mjs static` (hoy, 18 mensajes: cada uno exige su fix).

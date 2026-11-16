@@ -15,6 +15,7 @@ import { hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mj
 import { deviceLabel, deviceSummary, findPairedDevice, isViewer, runWithRequestContext } from "./src/devices.mjs";
 import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPanel } from "./src/panel.mjs";
 import { isSameOriginRequest, sendText } from "./src/http.mjs";
+import { startContractWatch } from "./src/dsh-contract.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
 import { dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
 
@@ -250,6 +251,10 @@ const watchBinding = () => {
 
 startPanel();
 void resolveTargetPort(true);
+// 5.2.0: comprueba al arrancar (y cada 10 min) las piezas internas de Harness de
+// las que depende el puente. Si alguna cambia, degrada solo su funcion con un
+// aviso claro en bridge.log en vez de fallar en silencio.
+startContractWatch();
 watchBinding();
 
 server.listen(config.listenPort, bindHost, () => {

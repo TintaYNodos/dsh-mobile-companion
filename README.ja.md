@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.1.10**（`versionCode` 50）。
+現在のバージョン：**5.2.0**（`versionCode`  51）。
 
 ---
 
@@ -127,7 +127,7 @@ companion/
     powershell -ExecutionPolicy Bypass -File doctor.ps1
 
 「トンネルなし」（プライベート IP を持つ ZeroTier/Tailscale インターフェースが無い）と出たら、そこで停止してください。プライベートネットワークが無いとスマートフォンはこの PC に到達できません。ZeroTier（https://my.zerotier.com でネットワーク作成、PC とスマートフォンにクライアント導入、プライベート設定、両ノードを承認）または Tailscale（両方で同じアカウント）の設定方法を説明し、doctor.ps1 を再実行してください。
-Node が 22.15 未満なら Node 22 LTS を入れてください。Harness の認証情報が無ければ DeepSeek Harness を開いてログインしてください。ブリッジが停止していれば install-autostart.bat を実行してください。
+Node が 22.15 未満なら Node.js 22 を入れてください。Harness の認証情報が無ければ DeepSeek Harness を開いてログインしてください。ブリッジが停止していれば install-autostart.bat を実行してください。
 次に：ブリッジ起動（install-autostart.bat は自動起動を登録し、その場でも起動します。run-hidden.vbs を再度実行しないでください）、panel.bat でスマートフォンをペアリング（パネルにはスマートフォンと同じ 4 桁コードが出ます）、設定 → PC の通知 → PC からテスト で通知を確認します。
 最後に doctor.ps1 を再実行し、トンネルのインターフェースと IP、スマートフォンの URL、ブリッジのバージョン、パネル、ペアリング状態、通知テストの結果を報告してください。証拠なしに「動いた」と言わないでください。ブリッジをインターネットに公開せず、アクセスキーを表示せず、指示なくキルスイッチを実行しないでください。
 ```
@@ -263,7 +263,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.1.10**、`versionCode` 50、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — バージョン **5.2.0**、`versionCode`  51、`minSdk` 26、`targetSdk` 35。
 - AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 222 KB。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
@@ -329,7 +329,7 @@ npm test
 
 ## 安定性
 
-**5.1.10 はシリーズ 5 の最終バージョンです。** 固定ベースラインであり、新機能は追加せず、重大なセキュリティ修正のみ 5.1.11 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
+**5.2.0 はシリーズ 5 の安定版です。** 固定ベースラインであり、セキュリティ修正のみで新機能は追加しません。`stable/5` ブランチがこのツリーを保持します。5.1.x は前のラインです。
 
 ## スクリーンショット
 

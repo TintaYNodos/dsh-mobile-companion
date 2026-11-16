@@ -25,6 +25,8 @@ import { hasStaticRoute, serveStatic, apkSha256 } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
 import { emitTestEvent, handlePcEvents, startPcWatcher } from "./pc-events.mjs";
+import { contractSnapshot } from "./dsh-contract.mjs";
+import { handleHealthz } from "./healthz.mjs";
 
 /**
  * Cabeceras que delatan que la peticion llego a traves de un proxy o tunel
@@ -78,6 +80,9 @@ export const buildStatusPayload = async (options = {}) => {
     // user-agents de otros equipos). Solo se entrega al panel local.
     ...(includePendingList ? { pendingList: pending } : {}),
     systemStats: collectSystemStats(),
+    // 5.2.0: estado del contrato interno con Harness. El cliente autorizado ve
+    // que piezas se comprobaron y cuales estan degradadas; nunca hay secretos.
+    contract: contractSnapshot(),
     time: Date.now(),
   };
 };
@@ -192,6 +197,14 @@ export async function dispatchRequest(req, res, context) {
   }
 
   const { pathname } = url;
+
+  // 5.2.0: salud real (puente + Harness) para el healthcheck de Docker y para el
+  // panel. Sin credenciales: la peticion solo puede llegar desde la red privada
+  // o loopback (guarda anterior) y la respuesta no contiene secretos.
+  if (pathname === "/healthz") {
+    await handleHealthz(req, res, { bindHost, remoteAddress });
+    return;
+  }
 
   if (await handlePairingRoutes(req, res, { url, pathname, remoteAddress, context, proxyHeaders })) return;
 

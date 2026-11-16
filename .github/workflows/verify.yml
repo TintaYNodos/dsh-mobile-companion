@@ -67,3 +67,11 @@ jobs:
       # No hay `npm install`: el proyecto no tiene dependencias.
       - name: Pruebas del puente sin DeepSeek Harness real
         run: npm run test:ci
+
+      # 5.2.0: comprobaciones adicionales, fuera del conteo historico de la
+      # suite (asi la cifra 235/203 sigue siendo comparable entre versiones).
+      - name: Salud real y contrato con Harness (5.2.0)
+        run: node test/verify_healthz.mjs
+
+      - name: Respaldo y restauracion del estado (5.2.0, solo Windows)
+        run: node test/verify_backup.mjs

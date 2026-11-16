@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.1.10** (`versionCode` 50).
+Aktuelle Version: **5.2.0** (`versionCode`  51).
 
 ---
 
@@ -127,7 +127,7 @@ Du bist ein Einrichtungsassistent. Führe zuerst die Diagnose aus und gib die Au
     powershell -ExecutionPolicy Bypass -File doctor.ps1
 
 Meldet sie KEINEN TUNNEL (keine ZeroTier/Tailscale-Schnittstelle mit privater IP), HALTE AN: ohne privates Netz erreicht das Telefon diesen Rechner nicht. Erkläre, wie man ZeroTier (https://my.zerotier.com + Client auf PC und Telefon, privates Netz, beide Knoten autorisieren) oder Tailscale (gleiches Konto auf beiden) einrichtet, und starte doctor.ps1 erneut.
-Ist Node älter als 22.15, installiere Node 22 LTS. Fehlen Harness-Zugangsdaten, öffne DeepSeek Harness und melde dich an. Läuft die Bridge nicht, führe install-autostart.bat aus.
+Ist Node älter als 22.15, installiere Node.js 22. Fehlen Harness-Zugangsdaten, öffne DeepSeek Harness und melde dich an. Läuft die Bridge nicht, führe install-autostart.bat aus.
 Dann: Bridge starten (install-autostart.bat registriert den Autostart UND startet sie; run-hidden.vbs nicht erneut ausführen), Telefon mit panel.bat koppeln (das Panel zeigt denselben 4-stelligen Code) und Benachrichtigungen testen (Einstellungen -> PC-Benachrichtigungen -> Vom PC testen).
 Zum Schluss doctor.ps1 erneut ausführen und berichten: Tunnelschnittstelle und IP, Telefon-URL, Bridge-Version, Panel, Kopplungsstatus und Testergebnis. Ohne diese Belege nichts als funktionierend melden. Die Bridge nie ins Internet stellen, den Zugangsschlüssel nie ausgeben und den Kill-Switch nicht ohne Aufforderung ausführen.
 ```
@@ -263,7 +263,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.1.10**, `versionCode` 50, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — Version **5.2.0**, `versionCode`  51, `minSdk` 26, `targetSdk` 35.
 - Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 222 KB.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
@@ -329,7 +329,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.1.10 ist die endgültige Version der Serie 5.** Sie ist die eingefrorene Basis: keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.11 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
+**5.2.0 ist die stabile Version der Serie 5.** Sie ist die eingefrorene Basis: nur Sicherheitskorrekturen, keine neuen Funktionen. Der Zweig `stable/5` enthält genau diesen Baum. 5.1.x bleibt die vorherige Linie.
 
 ## Bildschirmfotos
 

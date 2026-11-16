@@ -650,7 +650,7 @@ try {
         if ($null -ne $nodeFix) {
             Add-FixEntry $nodeFix $nodeResult.error "FAIL"
         } else {
-            Add-RawEntry "FAIL" $nodeResult.error "Falta Node.js 22.15 o superior" "winget install --id OpenJS.NodeJS.LTS -e" "https://nodejs.org/en/download"
+            Add-RawEntry "FAIL" $nodeResult.error "Falta Node.js 22.15 o superior" "winget install --id OpenJS.NodeJS -e" "https://nodejs.org/en/download"
         }
         Complete-Install 1
     }
@@ -688,6 +688,51 @@ try {
         Complete-Install 1
     } else {
         Add-Step "doctor-preflight" "ok" ("ok=false recuperable: " + [string]$recoverableCount + " fallo(s) del puente detenido; se arranca")
+    }
+
+    # Respaldo del registro antes de arrancar o actualizar: si existe el registro
+    # del telefono se guarda una copia verificable. Un fallo del respaldo se avisa
+    # como AVISO, pero nunca aborta la instalacion.
+    $dshHomeBackup = ""
+    if (-not [string]::IsNullOrWhiteSpace($env:DSH_HOME)) { $dshHomeBackup = $env:DSH_HOME }
+    elseif (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) { $dshHomeBackup = Join-Path $env:USERPROFILE ".dsh" }
+    $registryBackupPath = ""
+    if ($dshHomeBackup -ne "") { $registryBackupPath = Join-Path $dshHomeBackup "companion-devices.json" }
+    if ($registryBackupPath -ne "" -and (Test-Path -LiteralPath $registryBackupPath -PathType Leaf)) {
+        $backupFailure = ""
+        $backupScript = Join-Path $script:RepoDir "backup.ps1"
+        if (-not (Test-Path -LiteralPath $backupScript -PathType Leaf)) {
+            $backupFailure = "Falta backup.ps1 en el repo: no se pudo guardar la copia del registro."
+        } else {
+            $psBackup = (Get-Process -Id $PID).Path
+            if ([string]::IsNullOrEmpty([string]$psBackup)) { $psBackup = "powershell.exe" }
+            $backupErrFile = Join-Path ([System.IO.Path]::GetTempPath()) ("dsh-install-backup-" + [guid]::NewGuid().ToString("N") + ".err")
+            $backupCode = 1
+            try {
+                $null = (& $psBackup -NoProfile -ExecutionPolicy Bypass -File $backupScript -RegistryOnly -DshHome $dshHomeBackup 2> $backupErrFile | Out-String)
+                $backupCode = $LASTEXITCODE
+            } catch {
+                $backupCode = 1
+                $backupFailure = $_.Exception.Message
+            } finally {
+                if (Test-Path -LiteralPath $backupErrFile) {
+                    $backupErrText = (Read-TextFileAny $backupErrFile).Trim()
+                    if ($backupErrText -ne "" -and $backupFailure -eq "") { $backupFailure = ($backupErrText -split "`r?`n")[0] }
+                    Remove-Item -LiteralPath $backupErrFile -Force -ErrorAction SilentlyContinue
+                }
+            }
+            if ($backupCode -ne 0 -and $backupFailure -eq "") {
+                $backupFailure = "backup.ps1 devolvio codigo " + [string]$backupCode + "."
+            }
+        }
+        if ($backupFailure -eq "") {
+            Add-Step "backup" "ok" ("Copia del registro guardada en " + (Join-Path $dshHomeBackup "backups"))
+        } else {
+            Add-Step "backup" "skipped" ($backupFailure + " La instalacion continua.")
+            Add-Note ($backupFailure + " La instalacion continua; puedes repetir el respaldo con backup.bat.") "Respaldo del registro no realizado" "backup.bat" "README.md"
+        }
+    } else {
+        Add-Step "backup" "skipped" "No hay registro del telefono todavia (primer emparejamiento): no hay nada que respaldar."
     }
 
     $bindHost = [string](Get-Field $script:Doctor "bindHost" "")

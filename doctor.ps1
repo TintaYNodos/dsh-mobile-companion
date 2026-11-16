@@ -99,7 +99,7 @@ function Get-Sha256Hex {
 
 # Huella SHA-256 del certificado del keystore de release: dato documental, no se
 # lee del keystore (el doctor no necesita la clave privada). Es la que publican
-# RELEASE_5.1.7.md, README y SECURITY.md; actualizala cuando cambie la firma.
+# SECURITY.md, CHANGELOG.md y README; actualizala cuando cambie la firma.
 $certSha256Release = "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23"
 
 Out ""
@@ -116,7 +116,7 @@ if (-not $nodeExe) {
 }
 if (-not $nodeExe) {
     Bad "No encuentro Node.js."
-    Info "Instala Node 22.15 o superior desde https://nodejs.org (LTS actual)."
+    Info "Instala Node 22.15 o superior desde https://nodejs.org (version estable actual)."
 } else {
     $raw = (& $nodeExe --version 2>$null)
     $version = ($raw -replace "^v", "").Trim()
@@ -126,7 +126,7 @@ if (-not $nodeExe) {
         Ok "Node v$version ($nodeExe)"
     } else {
         Bad "Node v$version es antiguo. Hace falta 22.15 o superior (zstd nativo para los avisos)."
-        Info "Descarga el LTS desde https://nodejs.org"
+        Info "Descarga Node.js 22 o superior desde https://nodejs.org"
     }
 }
 
@@ -310,7 +310,49 @@ if ($panelOpen) { Ok "Panel escuchando en 127.0.0.1:$panelPort" }
 else { Bad "El panel no esta escuchando en el puerto $panelPort"; Info "Solo abre escuchando en loopback: arranca el puente y ejecuta panel.bat" }
 
 Out ""
-Out "== 6. Resumen ==" Cyan
+Out "== 6. Copia de seguridad ==" Cyan
+$backupsDir = Join-Path $dshHome "backups"
+$latestBackup = $null
+$latestWhen = $null
+$backupDirs = @()
+if (Test-Path -LiteralPath $backupsDir) {
+    $backupDirs = @(Get-ChildItem -LiteralPath $backupsDir -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending)
+}
+foreach ($candidateDir in $backupDirs) {
+    $manifestPath = Join-Path $candidateDir.FullName "manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { continue }
+    $when = $null
+    try {
+        $manifestText = [System.IO.File]::ReadAllText($manifestPath, [System.Text.Encoding]::UTF8)
+        $manifestData = $manifestText | ConvertFrom-Json
+        if ($manifestData.createdAt) {
+            $when = [datetime]::Parse([string]$manifestData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind)
+        }
+    } catch {
+        $when = $null
+    }
+    if ($null -eq $when) { $when = $candidateDir.LastWriteTime }
+    $latestBackup = $candidateDir
+    $latestWhen = $when
+    break
+}
+if ($null -eq $latestBackup) {
+    Warn "No hay ninguna copia de seguridad del registro de telefonos en $backupsDir."
+    Info "Ejecuta backup.bat para guardar el registro, la clave de acceso y el token del panel."
+} else {
+    $latestLabel = $latestWhen.ToString("yyyy-MM-dd")
+    $backupAge = [int][Math]::Floor(((Get-Date) - $latestWhen).TotalDays)
+    if ($backupAge -lt 0) { $backupAge = 0 }
+    if ($backupAge -gt 7) {
+        Warn "La ultima copia de seguridad es del $latestLabel y tiene $backupAge dias; conviene una copia cada 7 dias."
+        Info "Ejecuta backup.bat para guardar una copia nueva antes de seguir."
+    } else {
+        Ok "Copia de seguridad reciente: $($latestBackup.Name) ($latestLabel, $backupAge dia(s))"
+    }
+}
+
+Out ""
+Out "== 7. Resumen ==" Cyan
 Out ""
 # Informe legible por maquinas: el agente de IA no tiene que interpretar texto.
 $checks = @()

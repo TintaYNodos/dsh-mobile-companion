@@ -114,8 +114,9 @@ Si el usuario no quiere instalar un túnel, dilo claro: sin red privada esto no 
        node skills/mobile-companion-setup/scripts/verify-fixes.mjs report doctor-report.json
 
    Si algo sale como `SIN MAPA`, párate y repórtalo: no improvises la solución.
-4. Entrega el informe con la forma de `references/report-template.md` y evidencia pegada. Sin
-   el recibo verificado y sin evidencia, el resultado es "pendiente", no "hecho".
+4. Entrega el informe con la forma descrita en `references/doctor-contract.md` (sección «Informe
+   final con evidencia») y evidencia pegada. Sin el recibo verificado y sin evidencia, el resultado
+   es "pendiente", no "hecho".
 
 ## Cómo leer el JSON del diagnóstico
 
@@ -148,8 +149,6 @@ mapa. El contrato completo y cómo forzar el caso sin túnel están en
 
 | Recurso | Contenido |
 | --- | --- |
-| `references/doctor-contract.md` | Contrato del diagnóstico: campos, códigos de salida y cómo forzar el caso sin túnel. |
-| `references/fixes.md` | Cómo mapear cada FAIL/AVISO a `$RepoRoot/doctor-fixes.json` y cómo ampliar el mapa. |
-| `references/setup-steps.md` | Comandos exactos por plataforma: arranque, firewall, panel, avisos y parada. |
-| `references/report-template.md` | Plantilla y reglas del informe final con evidencia. |
+| `references/doctor-contract.md` | Contrato del diagnóstico: campos, códigos de salida, cómo forzar el caso sin túnel y la plantilla del informe final con evidencia. |
+| `references/fixes.md` | Cómo mapear cada FAIL/AVISO a `$RepoRoot/doctor-fixes.json`, cómo ampliar el mapa y los comandos exactos de instalación por plataforma. |
 | `scripts/verify-fixes.mjs` | Auditoría estática del mapa y mapeo de un informe JSON real. |

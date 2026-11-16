@@ -13,7 +13,7 @@ computadora y hasta dónde llega la evidencia**. Nace de una regla del proyecto:
 | **Documentado (sin ejecución)** | El agente no tiene shell ni acceso a archivos: el usuario ejecuta los comandos y le pega los resultados. |
 
 Entorno de la prueba: Windows con Windows PowerShell 5.1, Node 24.21.0 (el runtime que trae DSH),
-puente v5.1.10 y un túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
+puente v5.2.0 y un túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
 probado lo que aquí figura como documentado.
 
 ## Matriz
@@ -137,8 +137,8 @@ ese caso se comportan como un agente con shell y aplican las advertencias de la 
 | Campo | Contenido |
 | --- | --- |
 | `apkSha256` | SHA-256 del APK que el puente sirve de verdad, calculado en vivo desde `/dsh-companion/status` |
-| `apkVersion` | Versión del APK anunciada por el puente (`5.1.10` en la release actual) |
-| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`50` en la release actual) |
+| `apkVersion` | Versión del APK anunciada por el puente (`5.2.0` en la release actual) |
+| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`51` en la release actual) |
 | `certSha256Release` | Huella documental del certificado del keystore de release (la de README y SECURITY.md) |
 | `receipt` | `algorithm` (`sha256`), `canonical` (`json-compact-sin-receipt`) y `sha256` del informe |
 

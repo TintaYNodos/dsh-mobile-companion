@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.1.10**（`versionCode` 50）。
+当前版本：**5.2.0**（`versionCode`  51）。
 
 ---
 
@@ -127,7 +127,7 @@ companion/
     powershell -ExecutionPolicy Bypass -File doctor.ps1
 
 若提示“没有隧道”（没有带私有 IP 的 ZeroTier/Tailscale 网卡），请停止：没有私有网络，手机无法访问这台计算机。请说明如何配置 ZeroTier（在 https://my.zerotier.com 建网、PC 与手机安装客户端、设为私有网络并手动授权两个节点）或 Tailscale（两端使用同一账号），然后重新运行 doctor.ps1。
-若 Node 低于 22.15，请安装 Node 22 LTS；若缺少 Harness 凭据，打开 DeepSeek Harness 登录；若桥接未运行，执行 install-autostart.bat。
+若 Node 低于 22.15，请安装 Node.js 22；若缺少 Harness 凭据，打开 DeepSeek Harness 登录；若桥接未运行，执行 install-autostart.bat。
 然后：启动桥接（install-autostart.bat 会注册开机自启并立即启动，不要再运行 run-hidden.vbs），用 panel.bat 配对手机（面板显示与手机相同的 4 位验证码），并在 设置 -> PC 通知 -> 从 PC 测试 中验证通知。
 最后再次运行 doctor.ps1 并报告：隧道网卡与 IP、手机地址、桥接版本、面板、配对状态和通知测试结果。没有这些证据不要说已成功。不要把桥接暴露到互联网，不要打印访问密钥，未经要求不要执行 kill switch。
 ```
@@ -263,7 +263,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.1.10**、`versionCode` 50、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.2.0**、`versionCode`  51、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 222 KB。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
@@ -329,7 +329,7 @@ npm test
 
 ## 稳定性
 
-**5.1.10 是 5 系列的最终版本。** 它是冻结基线：不再添加新功能；只有严重安全修复才会发布 5.1.11。之后的功能以 **pre-release**（5.2.0-pre.1 等）发布。`stable/5` 分支保存此版本树。
+**5.2.0 是 5 系列的稳定版。** 这是冻结基线：只接受安全修复，不再添加新功能。`stable/5` 分支保存此版本树。5.1.x 为上一版本线。
 
 ## 截图
 

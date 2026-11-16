@@ -33,12 +33,15 @@ EXPOSE 57420 57421
 
 VOLUME ["/home/node/.dsh", "/app/synced_chats"]
 
-# P49: healthcheck real contra /dsh-companion/status: es la unica ruta que
-# responde 200 sin credenciales a un cliente que no pide HTML (el resto, como
-# /offline, devuelve 403 o la pagina de espera de aprobacion). Ademas de exigir
-# 200 se comprueba que el cuerpo identifique al puente, para no dar por sano el
-# 200 de otro servidor que hubiera ocupado el puerto.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD ["node", "-e", "require('http').get('http://127.0.0.1:57420/dsh-companion/status', (r) => { let b = ''; r.setEncoding('utf8'); r.on('data', (c) => b += c); r.on('end', () => process.exit(r.statusCode === 200 && b.includes('dsh-companion') ? 0 : 1)); }).on('error', () => process.exit(1))"]
+# P49/5.2.0: healthcheck real contra /healthz, que distingue los tres estados:
+#  - 200 `ok`:         puente arriba y DeepSeek Harness confirmado por identidad.
+#  - 200 `degraded`:   puente y Harness arriba, pero alguna pieza del contrato de
+#                      Harness cambio (la funcion afectada queda degradada).
+#  - 503 `down`:       el puente responde pero Harness no; el contenedor queda
+#                      "unhealthy" en vez de fingir que todo esta bien.
+# Antes se consultaba /dsh-companion/status, que responde 200 aunque Harness este
+# caido: un contenedor "sano" con el telefono incomunicado.
+HEALTHCHECK --interval=30s --timeout=6s --start-period=20s --retries=3 \
+  CMD ["node", "-e", "const p=process.env.DSH_LISTEN_PORT||57420;require('http').get('http://127.0.0.1:'+p+'/healthz',(r)=>{let b='';r.setEncoding('utf8');r.on('data',(c)=>b+=c);r.on('end',()=>{let j=null;try{j=JSON.parse(b)}catch{};process.exit(r.statusCode===200&&j&&j.service==='dsh-companion'&&j.status!=='down'?0:1)});}).on('error',()=>process.exit(1))"]
 
 CMD ["node", "bridge.mjs"]

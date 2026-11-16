@@ -4,10 +4,11 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.1.x (current, `versionCode` 50) | Yes |
+| 5.2.x (current, `versionCode` 51) | Yes — security fixes only |
+| 5.1.x | No (previous series) |
 | 4.5.x and earlier | No |
 
-Only the current release receives security fixes.
+5.2.0 is the frozen stable line: it receives security fixes only, never new features.
 
 ## Verifying a build
 
@@ -81,3 +82,26 @@ P22 y P2 quedaron cerrados en 5.1.9: el descubrimiento exige identidad real de D
 registro ya no puede corromper el registro real del usuario. Los cuatro puntos aceptados de arriba
 mantienen su mitigación; el detalle punto por punto y la evidencia están en
 [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
+
+## APK permissions (5.2.0 review)
+
+Every permission declared in `android_src/AndroidManifest.xml` was checked against real code use in
+5.2.0. Nothing was removed that the client actually needs, and nothing is requested "just in case"
+at install time.
+
+| Permission | Real use | Decision |
+| --- | --- | --- |
+| `INTERNET` | WebView traffic to the bridge and the bridge's own update checks. | Keep. |
+| `ACCESS_NETWORK_STATE` | Detect connectivity loss in `ConnectionController` and `Cleanup` to show the offline/standby page instead of a blank error. | Keep. |
+| `RECORD_AUDIO` | `CompanionChromeClient.onPermissionRequest` only for the **same-origin bunker** frame when the page asks for `RESOURCE_AUDIO_CAPTURE`; a cross-origin frame is denied. It powers the WebView's audio capture (voice input) without granting anything else. | Keep: removing it would silently break audio capture in the proxied GUI. It is never requested at startup; the system dialog appears only when the page asks. |
+| `POST_NOTIFICATIONS` | PC-event notifications. Requested once from `MainActivity` on Android 13+. | Keep. |
+| `VIBRATE` | Haptic feedback of the mobile key bar, approval results and the kill switch. | Keep. |
+| `REQUEST_INSTALL_PACKAGES` | In-app update: `UpdateInstaller` only installs after the SHA-256 anchor is verified. | Keep; installation still needs the user's confirmation. |
+| `USE_BIOMETRIC` + `USE_FINGERPRINT` | `BiometricGate` for critical approvals. `USE_FINGERPRINT` is the legacy alias required on API 26–27. | Keep for Android 8.0 compatibility. |
+| `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC` | The PC-event watcher runs in a `dataSync` foreground service while notifications are enabled. | Keep. |
+| `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | `SettingsNotifications.requestBatteryExemption` is called **only** when the user turns on the "Permitir en segundo plano" switch after enabling notifications; it is never requested on launch. | Keep: the switch is opt-in and the request is tied to it. |
+| `RECEIVE_BOOT_COMPLETED` | `BootReceiver` restarts the notification service after a reboot, only if the user left notifications and the watchdog enabled. | Keep. |
+
+The manifest `versionCode` only increases when a release is published; the machine-readable record
+of each published build (version, commit, APK SHA-256, certificate fingerprint, date) lives in
+[RELEASES.json](RELEASES.json).

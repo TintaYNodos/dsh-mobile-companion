@@ -151,9 +151,9 @@ export function touchDevice(device) {
   return needsRefresh;
 }
 
+// D4: poda los rechazos caducados antes de contestar (uno de hace 31 min no vale).
 export const isDenied = (address) =>
-  loadRegistry().denied.some((row) => row.address === normalize(address));
-
+  prune(loadRegistry(), Date.now()).denied.some((row) => row.address === normalize(address));
 export function clearDenied(address) {
   const current = loadRegistry();
   const before = current.denied.length;
@@ -204,7 +204,6 @@ export function approveRequest(id) {
 
   const [entry] = current.pending.splice(index, 1);
   current.denied = current.denied.filter((row) => row.address !== entry.address);
-  current.devices = current.devices.filter((device) => device.address !== entry.address);
 
   const device = {
     id: crypto.randomBytes(24).toString("base64url"),
@@ -225,6 +224,7 @@ export function approveRequest(id) {
     claimToken: entry.claimToken || null,
     code: entry.code || "",
   };
+  // D3: no se borra por IP (varios equipos comparten NAT/proxy); solo se anade.
   current.devices.push(device);
   while (current.devices.length > MAX_DEVICES) current.devices.shift();
 
@@ -366,8 +366,8 @@ export function removeDevice(id) {
   const current = loadRegistry();
   const index = current.devices.findIndex((device) => device.id === id);
   if (index === -1) return false;
+  // D3: se revoca SOLO ese id; otros equipos con la misma IP (NAT/proxy) siguen.
   const [device] = current.devices.splice(index, 1);
-  current.devices = current.devices.filter((entry) => entry.address !== device.address);
   const persisted = saveRegistry();
   log("pair", `Dispositivo revocado: ${device.address}`);
   if (persisted) recordEvent("revoke", device.name || device.address);

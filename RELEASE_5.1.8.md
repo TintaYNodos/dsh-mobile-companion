@@ -68,7 +68,7 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 - Auditoría externa: **P1** (nonce en 6 métodos más), **P3** (acción de notificación muerta
   eliminada), **P36** (`CleartextPolicy` fail-closed).
 
-## ⚠️ Antes de instalar## ⚠️ Antes de instalar
+## ⚠️ Antes de instalar
 
 **Actualiza el APK y el puente juntos.** La 5.1.8 cambia el contrato del puente JS
 (6 métodos piden nonce): un APK 5.1.8 contra un puente 5.1.7 (o al revés) puede perder el guardado

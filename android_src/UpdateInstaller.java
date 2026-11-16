@@ -178,6 +178,19 @@ class UpdateInstaller {
             }
         }
 
+        // D1: el SHA-256 del buner llega como parametro (recien leido de /status)
+        // o quedo en pending_apk_expected_sha para reanudar tras conceder el
+        // permiso de instalacion. Se consume una sola vez: un SHA pendiente viejo
+        // no debe bloquear reinstalaciones posteriores con un ancla ya caducada.
+        String pendingSha = a.prefs.getString("pending_apk_expected_sha", "");
+        if (pendingSha == null) pendingSha = "";
+        if (!pendingSha.trim().isEmpty()) {
+            a.prefs.edit().remove("pending_apk_expected_sha").apply();
+        }
+        final String bunkerSha = (expectedSha != null && !expectedSha.trim().isEmpty())
+                ? expectedSha
+                : pendingSha;
+
         String base = a.activeUrl.isEmpty() ? "http://" + a.prefs.getString(KEY_URL_1, "") : a.activeUrl;
         if (!base.startsWith("http://") && !base.startsWith("https://")) base = "http://" + base;
         final String apkUrl = (customUrl != null && !customUrl.isEmpty())
@@ -289,10 +302,14 @@ class UpdateInstaller {
                 }
 
                 final String actualDigest = ApkDigest.hex(sha256.digest());
-                String githubDigest = UpdateRelease.expectedDigestFor(a, apkUrl);
-            final String expectedDigest = githubDigest.isEmpty()
-                    ? a.prefs.getString("pending_apk_expected_sha", "")
-                    : githubDigest;
+                // D1: expectedDigestFor() devuelve null para las URLs del buner
+                // (no hay ancla de GitHub). Llamar a .isEmpty() sobre ese null
+                // lanzaba NullPointerException, se mostraba "Error al descargar"
+                // y la actualizacion del buner nunca se instalaba. El SHA-256 que
+                // publica el servidor (bunkerSha) es el ancla de esa ruta; la de
+                // GitHub sigue siendo su digest.
+                final String expectedDigest = ApkDigest.resolveExpected(
+                        UpdateRelease.expectedDigestFor(a, apkUrl), bunkerSha);
                 final String digestDecision = ApkDigest.decision(expectedDigest, actualDigest);
 
                 a.ui.post(() -> {

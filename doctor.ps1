@@ -262,7 +262,7 @@ Out "== 4. Puente ==" Cyan
 if (-not $privateIp) {
     Warn "Sin IP privada no se puede comprobar el puente todavia."
 } else {
-    $url = "http://${privateIp}:57420/dsh-companion/status"
+    $url = "http://${privateIp}:${portBridge}/dsh-companion/status"
     $headers = @{}
     $keyPath = Join-Path $dshHome "companion-access-key"
     if (Test-Path $keyPath) {
@@ -335,7 +335,7 @@ $doctorReport = [ordered]@{
     apkVersionCode= $(if ($response) { [int]$response.apkVersionCode } else { 0 })
     apkSha256     = $(if ($response) { [string]$response.apkSha256 } else { "" })
     certSha256Release = $certSha256Release
-    phoneUrl      = $(if ($privateIp) { "http://${privateIp}:57420" } else { "" })
+    phoneUrl      = $(if ($privateIp) { "http://${privateIp}:${portBridge}" } else { "" })
     tunnel        = $(if ($privateIp) { $ifaceName } else { "" })
     # Todas las redes privadas vistas, en orden de preferencia. `tunnel` es la
     # elegida; con varias, el agente puede fijar otra con DSH_BIND_HOST=<ip>.
@@ -372,7 +372,7 @@ if ($fallos -eq 0) {
     Out "  TODO LISTO para conectar el telefono." Green
     Out ""
     Write-Host "  Direccion para el telefono:  " -NoNewline
-    Out "http://${privateIp}:57420" Cyan
+    Out "http://${privateIp}:${portBridge}" Cyan
     Write-Host "  APK:                         " -NoNewline
     Out "https://github.com/TintaYNodos/dsh-mobile-companion/releases" Cyan
     Out ""

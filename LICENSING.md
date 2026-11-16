@@ -51,7 +51,7 @@ Escríbenos para hablarlo: **seguridad@tintaynodos.dev**.
 | --- | --- |
 | Licencia operativa | Business Source License 1.1 |
 | Licenciante | Tinta y Nodos / Ismael Muñoz Reyes |
-| Obra licenciada | DSH Mobile Companion 5.1.3 |
+| Obra licenciada | DSH Mobile Companion 5.1.10 |
 | Change Date | **2030-11-15** |
 | Change License | **MIT** |
 | Uso adicional permitido | Personal, educativo, evaluación, auditoría y producción no comercial |

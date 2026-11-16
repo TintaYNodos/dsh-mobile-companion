@@ -239,6 +239,9 @@ const handler = async (req, res) => {
     }
 
     // Una pagina externa abierta en este equipo no puede enviar formularios aqui.
+    // H4: `Origin: null` (iframe sandbox, data:, file:) se rechaza igual que
+    // hace el puente; antes solo se permitia si el valor era un origen exacto y
+    // la cadena "null" se colaba.
     const origin = req.headers.origin;
     const secFetchSite = req.headers["sec-fetch-site"];
 
@@ -247,9 +250,13 @@ const handler = async (req, res) => {
       return;
     }
 
-    if (origin && origin !== "null" && origin !== `http://127.0.0.1:${activePort}` && origin !== `http://localhost:${activePort}`) {
-      sendText(res, 403, "Origen no autorizado");
-      return;
+    const allowedOrigins = new Set([`http://127.0.0.1:${activePort}`, `http://localhost:${activePort}`]);
+    if (origin !== undefined) {
+      const value = String(origin).trim().toLowerCase();
+      if (!value || value === "null" || !allowedOrigins.has(value)) {
+        sendText(res, 403, "Origen no autorizado");
+        return;
+      }
     }
 
     const referer = req.headers.referer;

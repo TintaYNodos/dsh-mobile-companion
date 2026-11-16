@@ -32,6 +32,35 @@ import { invalidatePanelSessions } from "./panel-session.mjs";
 
 const waitingClients = new Set();
 
+/**
+ * H1: un privilegio de loopback (panel, aprobacion, retry, pair-events) solo se
+ * concede si la conexion viene de verdad del propio equipo. Detras de un proxy
+ * o tunel el socket tambien es 127.0.0.1, pero el cliente es remoto: ahi no hay
+ * privilegios locales ni con DSH_ALLOW_PROXY_ACCESS=1.
+ */
+const isLocalRequest = (remoteAddress, proxyHeaders) =>
+  !proxyHeaders && normalizeAddress(remoteAddress).startsWith("127.");
+
+/**
+ * H6: /pair-state sondea cada 700 ms y `requestAccess` guarda el registro con
+ * fsync. Se persiste como mucho una vez por minuto por IP; entre medias basta
+ * con no llamar (la solicitud sigue vigente: su TTL es de 15 min).
+ */
+const PAIR_STATE_PERSIST_INTERVAL_MS = 60 * 1000;
+const pairStatePolls = new Map();
+
+const shouldPersistPairState = (remoteAddress, userAgent) => {
+  const now = Date.now();
+  for (const [key, at] of pairStatePolls) {
+    if (now - at > 30 * 60 * 1000) pairStatePolls.delete(key);
+  }
+  // IP + user-agent: dos clientes tras la misma IP no comparten la ventana.
+  const key = `${normalizeAddress(remoteAddress || "desconocida")}|${String(userAgent || "").slice(0, 120)}`;
+  if (now - (pairStatePolls.get(key) || 0) < PAIR_STATE_PERSIST_INTERVAL_MS) return false;
+  pairStatePolls.set(key, now);
+  return true;
+};
+
 onDeviceApproved(() => {
   for (const client of waitingClients) {
     try {
@@ -59,12 +88,11 @@ export const resolveDevice = (req, res, remoteAddress) => {
   return claimed;
 };
 
-export async function handlePairingRoutes(req, res, { url, pathname, remoteAddress, context }) {
+export async function handlePairingRoutes(req, res, { url, pathname, remoteAddress, context, proxyHeaders = false }) {
   const { openPanelWindow } = context;
 
   if (pathname === "/pair" || pathname.startsWith("/pair/")) {
-    const clientIp = normalizeAddress(remoteAddress);
-    if (clientIp.startsWith("127.")) {
+    if (isLocalRequest(remoteAddress, proxyHeaders)) {
       // No se redirige con el token del panel en la URL: se abre la ventana del
       // panel (que ya hace el canje token->cookie) y se responde sin credencial.
       openPanelWindow();
@@ -93,7 +121,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
         sendJson(res, 200, { approved: false, rejected: true, pending: false });
         return true;
       }
-      requestAccess(remoteAddress, req.headers["user-agent"]);
+      if (shouldPersistPairState(remoteAddress, req.headers["user-agent"])) requestAccess(remoteAddress, req.headers["user-agent"]);
     }
 
     sendJson(res, 200, { approved, rejected: false, pending: !approved });
@@ -104,7 +132,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // El flujo de espera filtra el estado de aprobacion de cualquier IP. Solo lo
     // consume la propia computadora o un cliente ya autorizado.
     const paired = resolveDevice(req, res, remoteAddress);
-    if (!paired && !hasValidAccessKey(req) && !normalizeAddress(remoteAddress).startsWith("127.")) {
+    if (!paired && !hasValidAccessKey(req) && !isLocalRequest(remoteAddress, proxyHeaders)) {
       sendJson(res, 403, { error: "Acceso no autorizado" });
       return true;
     }
@@ -129,8 +157,10 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
 
   if (pathname === "/dsh-companion/open-panel" && req.method === "POST") {
     // Abrir ventanas en el escritorio del host es una accion local: solo se
-    // permite desde loopback. Antes cualquier cliente de la red podia hacerlo.
-    if (!normalizeAddress(remoteAddress).startsWith("127.")) {
+    // permite desde loopback real. Antes cualquier cliente de la red podia
+    // hacerlo; detras de un proxy el socket tambien es loopback, pero el cliente
+    // no esta delante de la pantalla del host.
+    if (!isLocalRequest(remoteAddress, proxyHeaders)) {
       sendJson(res, 403, { ok: false, error: "Solo disponible desde la computadora" });
       return true;
     }
@@ -147,7 +177,13 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // Borrar un rechazo y crear una solicitud nueva no debe poder hacerlo
     // cualquiera de la red: solo el propio equipo o un cliente autorizado.
     const paired = resolveDevice(req, res, remoteAddress);
-    if (!paired && !hasValidAccessKey(req) && !normalizeAddress(remoteAddress).startsWith("127.")) {
+    // D1: el boton "Pedir acceso de nuevo" de la pagina de rechazo lo pulsa el
+    // telefono desde su propia IP, que en ese momento esta en `denied`. Se le
+    // permite reintentar (con el mismo rate limit) porque solo borra su rechazo
+    // y vuelve a la cola: el panel sigue decidiendo y no autoriza nada. Sin
+    // estar rechazado, la ruta sigue exigiendo loopback o credencial.
+    const denied = isDenied(remoteAddress);
+    if (!paired && !hasValidAccessKey(req) && !denied && !isLocalRequest(remoteAddress, proxyHeaders)) {
       sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
       return true;
     }
@@ -157,7 +193,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     }
     clearDenied(remoteAddress);
     const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
-    if (created) openPanelWindow({ force: true });
+    if (created && !proxyHeaders) openPanelWindow({ force: true });
     sendJson(res, 200, { ok: true });
     return true;
   }
@@ -215,11 +251,12 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // Aprobar o rechazar dispositivos es una decision de administracion del
     // equipo, no del cliente. Antes bastaba una cookie de dispositivo
     // emparejado: un telefono podia autorizar a otros dispositivos. Ahora la
-    // accion queda reservada al propio equipo del host (loopback), que es
-    // donde vive el panel local; el telefono recibe 403 y debe hacerlo desde
-    // la computadora. El panel de 127.0.0.1:<panelPort>/pair no usa esta ruta:
-    // aplica las decisiones con su propia sesion.
-    if (!normalizeAddress(remoteAddress).startsWith("127.")) {
+    // accion queda reservada al propio equipo del host (loopback real, sin
+    // cabeceras de proxy), que es donde vive el panel local; el telefono recibe
+    // 403 y debe hacerlo desde la computadora. El panel de
+    // 127.0.0.1:<panelPort>/pair no usa esta ruta: aplica las decisiones con su
+    // propia sesion.
+    if (!isLocalRequest(remoteAddress, proxyHeaders)) {
       log("pair", `Accion de dispositivos rechazada para ${remoteAddress}: solo desde el equipo del host`);
       sendJson(res, 403, { error: "Accion reservada al panel local de la computadora" });
       return true;
@@ -280,7 +317,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
  * dispositivo para aplicar su perfil (rol y puerto destino) al proxy, incluida
  * la primera peticion en la que se canjea la cookie.
  */
-export async function handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context }) {
+export async function handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context, proxyHeaders = false }) {
   const { bindHost, openPanelWindow } = context;
   let requestDevice = null;
 
@@ -308,7 +345,7 @@ export async function handlePendingApprovalGate(req, res, { url, pathname, remot
 
     if (!requestDevice) {
       const { entry: pending, created, denied } = requestAccess(remoteAddress, req.headers["user-agent"]);
-      if (created) openPanelWindow();
+      if (created && !proxyHeaders) openPanelWindow();
 
       if (isDocumentRequest(req)) {
         const pageBody = denied

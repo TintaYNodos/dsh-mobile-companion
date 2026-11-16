@@ -218,6 +218,10 @@ public final class NotificationHelper {
     }
 
     public static void notifyAppUpdateAvailable(Context context, String newVersion) {
+        // Interruptor maestro y visibilidad, igual que el resto de avisos: si el
+        // usuario apago las notificaciones o esta usando la app, no se avisa.
+        if (context == null) return;
+        if (!MainActivity.shouldShowNotification(context)) return;
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
@@ -264,6 +268,9 @@ public final class NotificationHelper {
      */
     public static void notifyPcEventsStalled(Context context) {
         if (context == null) return;
+        // Interruptor maestro y visibilidad: este aviso tampoco debe saltarse el
+        // ajuste general de notificaciones.
+        if (!MainActivity.shouldShowNotification(context)) return;
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 

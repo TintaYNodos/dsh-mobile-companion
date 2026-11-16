@@ -60,7 +60,9 @@ text version:
 
 - `ok: true` → continue with Step 2. Use `phoneUrl` and `tunnel` exactly as reported.
 - `ok: false` → read `blockers` (the human-readable messages) and fix them one by one. The ids
-  in `checks[]` are stable slugs: use them to look up the fix below instead of improvising.
+  in `checks[]` are **not** stable: they are generated from the message and can include paths,
+  ports or IPs of this machine. Match by the message text against the `matchRuntime` entries in
+  `doctor-fixes.json` (or let the skill do it); do not use the id as a key and do not improvise.
 - Never invent an IP, a version or a tunnel. If a field is empty, the step is missing.
 - If it reports NO TUNNEL (most common problem): STOP HERE. Do not invent an IP and do not
   continue. Explain to the user, briefly:
@@ -139,9 +141,12 @@ text version:
 
 ## Step 5 — Prove it and report
 
-Run, and paste the real output:
+Run, and paste the real output of **both** commands:
 
     powershell -ExecutionPolicy Bypass -File doctor.ps1
+    node tools/verify-receipt.mjs doctor-report.json
+
+The evidence is mandatory: a report without the receipt check is not accepted as done.
 
 Then give a final report in this exact shape:
 
@@ -192,8 +197,15 @@ Do not publish the bridge on the internet: no port forwarding, no public tunnel,
 with a public hostname. The design assumes a private network; the pairing screen and the panel are
 meant to be reachable only from the operator's own network. As a safety net the bridge rejects
 requests that carry proxy headers (`cf-connecting-ip`, `cf-access-jwt-assertion`,
-`x-forwarded-for`) unless it was started with `DSH_ALLOW_PROXY_ACCESS=1`, and even then it is not
-a supported configuration.
+`x-forwarded-for`) unless it was started with `DSH_ALLOW_PROXY_ACCESS=1`.
+
+`DSH_ALLOW_PROXY_ACCESS=1` means **exposing the bridge to anyone who gets past the external layer**
+(Cloudflare Access, nginx auth, mTLS, etc.). The flag only lets the request past the network guard:
+it does **not** grant loopback privileges — with proxy headers the bridge never exposes the pending
+device list, never opens the desktop panel and never approves/retries devices. **Without an identity
+layer in front of the tunnel this flag is insecure**: whoever reaches the tunnel gets the bridge.
+That combination is not a supported configuration; say so and steer the user back to ZeroTier or
+Tailscale.
 
 If the user wants remote access from outside their network, the answer is: keep ZeroTier or
 Tailscale on the phone. That is the supported path and it exposes nothing.
@@ -219,8 +231,10 @@ Devuelve JSON legible por máquina (y escribe `doctor-report.json`). Parsea el J
 texto:
 
 - `ok: true` → continúa con el Paso 2. Usa `phoneUrl` y `tunnel` tal como vienen.
-- `ok: false` → lee `blockers` y corrige uno por uno. Los ids de `checks[]` son slugs estables:
-  úsalos para buscar la solución de abajo en vez de improvisar.
+- `ok: false` → lee `blockers` y corrige uno por uno. Los ids de `checks[]` **no** son estables:
+  se generan a partir del mensaje y pueden incluir rutas, puertos o IPs de esta máquina. Empareja
+  por el texto del mensaje con las entradas `matchRuntime` de `doctor-fixes.json` (o deja que la
+  skill lo haga); no uses el id como clave ni improvises.
 - Nunca inventes una IP, una versión ni un túnel. Si un campo viene vacío, ese paso falta.
 - Si dice que NO HAY TÚNEL (lo más habitual): PÁRATE. No inventes una IP ni continúes.
   Explícale, en corto:
@@ -298,9 +312,12 @@ texto:
 
 ## Paso 5 — Demostrarlo e informar
 
-Ejecuta y pega la salida real:
+Ejecuta y pega la salida real de **ambos** comandos:
 
     powershell -ExecutionPolicy Bypass -File doctor.ps1
+    node tools/verify-receipt.mjs doctor-report.json
+
+La evidencia es obligatoria: un informe sin la comprobación del recibo no se acepta como hecho.
 
 Después entrega el informe con esta forma exacta:
 
@@ -335,7 +352,15 @@ No publiques el puente en Internet: nada de abrir puertos, túneles públicos ni
 hostname público. El diseño asume red privada; la pantalla de emparejamiento y el panel están
 pensados para la red del operador. Como red de seguridad, el puente rechaza las peticiones con
 cabeceras de proxy (`cf-connecting-ip`, `cf-access-jwt-assertion`, `x-forwarded-for`) salvo que se
-arranque con `DSH_ALLOW_PROXY_ACCESS=1`, y aun así no es una configuración soportada.
+arranque con `DSH_ALLOW_PROXY_ACCESS=1`.
+
+`DSH_ALLOW_PROXY_ACCESS=1` significa **exponer el puente a quien pase la capa externa** (Cloudflare
+Access, autenticación de nginx, mTLS, etc.). El flag solo deja pasar la guarda de red: **no concede
+privilegios de loopback** — con cabeceras de proxy el puente nunca muestra la lista de dispositivos
+pendientes, ni abre el panel en el escritorio, ni aprueba o reintenta dispositivos. **Sin una capa
+de identidad delante del túnel, este flag es inseguro**: cualquiera que llegue al túnel obtiene el
+puente. Esa combinación no es una configuración soportada; dilo y vuelve a proponer ZeroTier o
+Tailscale.
 
 Si el usuario quiere acceso remoto desde fuera de su red, la respuesta es: mantén ZeroTier o
 Tailscale instalado en el teléfono. Ese es el camino soportado y no expone nada.

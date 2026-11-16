@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.1.x (current, `versionCode` 43) | Yes |
+| 5.1.x (current, `versionCode` 50) | Yes |
 | 4.5.x and earlier | No |
 
 Only the current release receives security fixes.

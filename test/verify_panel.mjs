@@ -48,6 +48,29 @@ const check = (name, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  ->  " + detail : ""}`);
 };
 
+/**
+ * La prueba SOLO puede tocar el dispositivo y la solicitud que ella misma crea.
+ * Marca su solicitud con un user-agent propio (el panel lo muestra como
+ * "Teléfono Android 99.9") y localiza ESA tarjeta; nunca usa "el primer id del
+ * panel" (un dispositivo o una solicitud reales del usuario).
+ */
+const OWN_AGENT =
+  "Mozilla/5.0 (Linux; Android 99.9; Pixel QA de prueba) AppleWebKit/537.36 " +
+  "(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36";
+const OWN_CARD = "Teléfono Android 99.9";
+const cookiePair = (setCookie, name) => {
+  const value = setCookie.find((entry) => entry.startsWith(`${name}=`));
+  return value ? value.split(";")[0] : "";
+};
+const pendingIdFor = (html, marker) => {
+  for (const match of html.matchAll(/<article class="card">([\s\S]*?)<\/article>/g)) {
+    if (!match[1].includes(marker)) continue;
+    const id = /name="id" value="([^"]+)"/.exec(match[1]);
+    if (id) return id[1];
+  }
+  return "";
+};
+
 // 1. El panel NO esta expuesto por la red privada.
 const viaVpn = await call(BRIDGE, "/pair");
 check("panel no responde por la VPN", viaVpn.status === 403, `status=${viaVpn.status}`);
@@ -70,34 +93,46 @@ const cookie = panelCookie ? panelCookie.split(";")[0] : "";
 const panel = await call(PANEL, "/pair", { cookie });
 check("panel visible con cookie", panel.status === 200 && panel.body.includes("Dispositivos autorizados"), `status=${panel.status}`);
 
-// 5. Un telefono pide acceso por la VPN.
-await call(BRIDGE, "/dsh-companion/status", { headers: { "user-agent": "Pixel 7 · prueba" } });
+// 5. Un telefono pide acceso por la VPN. Se guarda su cookie de canje para que
+//    el emparejamiento quede atado a ESTA solicitud y no a otra de la misma IP.
+const poll = await call(BRIDGE, "/dsh-companion/status", { headers: { "user-agent": OWN_AGENT } });
+const claimCookie = cookiePair(poll.setCookie, "dsh-companion-claim");
 const withPending = await call(PANEL, "/pair", { cookie });
-const idMatch = withPending.body.match(/name="id" value="([^"]+)"/);
-check("la solicitud aparece en el panel", Boolean(idMatch), idMatch ? "con id" : "sin id");
+const id = pendingIdFor(withPending.body, OWN_CARD);
+check("la solicitud aparece en el panel", Boolean(id), id ? "con id propio" : "sin id propio");
+check(
+  "solo se aprueba la solicitud de la prueba",
+  Boolean(id) && withPending.body.includes(OWN_CARD),
+  id ? "tarjeta propia localizada" : "no se localizo la tarjeta propia"
+);
 
-// 6. Aprobar.
-const id = idMatch ? idMatch[1] : "";
+// 6. Aprobar (solo el id de la solicitud propia).
 const approve = await call(PANEL, "/pair/approve", { method: "POST", cookie, body: `id=${encodeURIComponent(id)}` });
 check("aprobar funciona", approve.status === 303, `status=${approve.status}`);
 
-// 7. El telefono reclama su cookie.
-const claim = await call(BRIDGE, "/dsh-companion/pair-state");
+// 7. El telefono reclama su cookie (con la cookie de canje de su solicitud).
+const claim = await call(BRIDGE, "/dsh-companion/pair-state", { cookie: claimCookie || null });
 const deviceCookie = claim.setCookie.find((value) => value.startsWith("dsh-companion-device="));
 check("el telefono recibe cookie", Boolean(deviceCookie), deviceCookie ? "cookie emitida" : "sin cookie");
 const device = deviceCookie ? deviceCookie.split(";")[0] : "";
+const deviceId = device.slice("dsh-companion-device=".length);
 
 // 8. Entra a la app.
 const app = await call(BRIDGE, "/", { headers: { accept: "text/html", "sec-fetch-dest": "document" }, cookie: device });
 check("el telefono entra a la app", app.status === 200 && !app.body.includes("Acceso pendiente"), `status=${app.status}`);
 
-// 9. El dispositivo figura en el panel con boton de revocar.
+// 9. El dispositivo propio figura en el panel con boton de revocar. NUNCA se
+//    usa el primer id del panel: puede ser un dispositivo real del usuario.
 const listed = await call(PANEL, "/pair", { cookie });
-check("el dispositivo figura en el panel", listed.body.includes("/pair/revoke-device"), "con boton revocar");
-const deviceId = (listed.body.match(/action="\/pair\/revoke-device"[^>]*>[\s\S]*?name="id" value="([^"]+)"/) || [])[1];
+check("el dispositivo figura en el panel", Boolean(deviceId) && listed.body.includes(deviceId), deviceId ? "id propio listado" : "sin id propio");
+check(
+  "el dispositivo propio tiene boton de revocar",
+  Boolean(deviceId) && new RegExp(`action="/pair/revoke-device"[\\s\\S]{0,400}?name="id" value="${deviceId}"`).test(listed.body),
+  "formulario de revocar propio"
+);
 
-// 10. Revocar individualmente.
-const revoke = await call(PANEL, "/pair/revoke-device", { method: "POST", cookie, body: `id=${encodeURIComponent(deviceId || "")}` });
+// 10. Revocar individualmente SOLO el dispositivo que creo esta prueba.
+const revoke = await call(PANEL, "/pair/revoke-device", { method: "POST", cookie, body: `id=${encodeURIComponent(deviceId)}` });
 check("revocar dispositivo responde", revoke.status === 303, `status=${revoke.status}`);
 
 const after = await call(BRIDGE, "/", { headers: { accept: "text/html", "sec-fetch-dest": "document" }, cookie: device });

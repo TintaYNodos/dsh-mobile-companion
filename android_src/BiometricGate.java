@@ -149,7 +149,12 @@ class BiometricGate {
             android.util.Log.e("MainActivity", "Error de seguridad en autenticación biométrica: " + e.getMessage(), e);
             a.vibrateHaptic("reject");
             if (a.webView != null) {
-                a.webView.evaluateJavascript("window.__DSH_RESOLVE_APPROVAL__(" + org.json.JSONObject.quote(key) + ", 'deny')", null);
+                // D4: el global real del cliente movil es
+                // window.__DSH_COMPANION_ACTION__(accion, key), que hace clic en
+                // el boton de rechazo de la tarjeta de aprobacion. El antiguo
+                // __DSH_RESOLVE_APPROVAL__ no existe y lanzaba ReferenceError.
+                String safeKey = org.json.JSONObject.quote(key);
+                a.webView.evaluateJavascript("if (window.__DSH_COMPANION_ACTION__) { window.__DSH_COMPANION_ACTION__('reject', " + safeKey + "); }", null);
             }
         }
     }

@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.mjs";
 import { readBody, sendJson } from "./http.mjs";
+import { sanitizeLogMessage } from "./log.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { neutralizeMarkdown, renderMarkdown, slugify, uniqueBase } from "./sync-format.mjs";
 import { SAFE_ID_RE, assertInside, ensureIndex, getSyncedChat, listSyncedChats, writeAtomic } from "./sync-index.mjs";
@@ -100,7 +101,10 @@ const sendError = (res, error, id = "") => {
   if (res.headersSent || res.writableEnded || res.destroyed) return;
   const status = Number.isInteger(error.statusCode) ? error.statusCode : 500;
   if (status >= 500) {
-    console.error(`[sync] Fallo${id ? ` en ${id}` : ""}: ${error.message}`);
+    // H5: el mensaje de un error puede reflejar el JSON crudo del cliente
+    // (JSON.parse lo incluye). Se sanea antes de loguear: sin CR/LF, sin
+    // caracteres de control y recortado a 200.
+    console.error(sanitizeLogMessage(`[sync] Fallo${id ? ` en ${id}` : ""}: ${error.message}`));
     sendOnce(res, status, { error: "No se pudo procesar la conversacion" });
     return;
   }
@@ -157,7 +161,7 @@ export async function handleListChats(req, res, remoteAddress) {
     const chats = await listSyncedChats();
     sendOnce(res, 200, { ok: true, chats, total: chats.length });
   } catch (error) {
-    console.error(`[sync] Fallo al listar conversaciones: ${error.message}`);
+    console.error(sanitizeLogMessage(`[sync] Fallo al listar conversaciones: ${error.message}`));
     sendOnce(res, 500, { error: "No se pudieron obtener las conversaciones" });
   }
 }

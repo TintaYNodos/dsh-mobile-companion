@@ -3,7 +3,35 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
-## Sin publicar
+## 5.1.10 — `versionCode` 50 (versión final de la serie 5)
+
+### Correcciones del QA final
+
+- **D1 (ALTA): la actualización desde la PC fallaba con `NullPointerException`** porque la ruta
+  del búnker no tiene digest de GitHub; ahora usa como ancla el SHA-256 que publica el puente
+  (`apkSha256`).
+- **H1 (MEDIA): con `DSH_ALLOW_PROXY_ACCESS=1`, una petición con cabeceras de proxy se trataba
+  como loopback** (podía autoaprobarse, abrir el panel y ver `pendingList`); ahora el flag solo
+  permite pasar la guarda de red y nunca eleva privilegios.
+- **H2 (MEDIA): un dispositivo `viewer` podía abrir el WebSocket**; ahora se rechaza el upgrade de
+  un viewer.
+- **H3 (BAJA): un symlink o hardlink dentro de `synced_chats/` permitía leer archivos del host
+  como conversación**; ahora se rechazan los archivos no regulares y se comprueba la ruta real.
+- **H4 (BAJA): el panel aceptaba `Origin: null`**; ahora lo rechaza como el resto de orígenes
+  ajenos.
+- **H5 (BAJA): un JSON malformado en `/sync` podía inyectar texto arbitrario en `bridge.log`**;
+  ahora se sanea (sin CR/LF ni caracteres de control, truncado).
+- **D3 (BAJA): el kill switch borraba las cookies aunque la revocación no se hubiera confirmado**;
+  ahora solo cierra la sesión local si el puente confirma.
+- **D4 (BAJA): la biometría crítica llamaba a un hook JS inexistente**; ahora usa el hook real del
+  cliente.
+- **D5 (INFORMATIVA): `BootReceiver` ya no es `exported=true`** (`BOOT_COMPLETED` es un broadcast
+  protegido).
+- **D6 (INFORMATIVA): el descubrimiento Android ya no acepta el marcador por subcadena**; exige
+  JSON con `service == "dsh-companion"`.
+
+**D1, H1 y H2 justifican por sí solos el relanzamiento**: rompían la actualización desde la PC y
+abrían dos vías de privilegio.
 
 ### Corregido (informe externo, puntos verificados)
 
@@ -13,8 +41,9 @@ Android `versionCode` increments once per published build.
   `simulator-components.css` y `simulator.js`, que el puente no servía (403). Añadidos a los
   estáticos con su tipo MIME.
 - **P23:** el puerto del panel (57421) ya no está entre los candidatos del backend de Harness.
-- **P6: sin ventana del panel para peticiones proxificadas.** Con cabeceras de proxy (Cloudflare,
-  nginx) el puente ya no abre la ventana del panel en el escritorio del host.
+- **P6: sin ventana del panel para peticiones proxificadas.** Con cabeceras de proxy
+  (`cf-connecting-ip`, `x-forwarded-for`, `x-real-ip`) el puente ya no abre la ventana del panel
+  en el escritorio del host.
 
 ### Descartados tras verificar el código (no aplican)
 
@@ -24,22 +53,6 @@ Android `versionCode` increments once per published build.
 - **P45**: el SSE solo emite `{type, turn, at}`; no difunde nombres de espacio ni sesión.
 - **P52**: `/pair` responde 403 solo cuando el boleto ya no es válido; es el comportamiento correcto.
 
-### Corregido (informe externo, puntos verificados)
-
-- **P7: el simulador ya no es publico.** `/simulator` se servia con 200 a cualquiera en la red
-  privada; ahora exige un dispositivo emparejado o la clave de acceso.
-- **P55: el simulador estaba roto.** Su HTML cargaba los CSS y el JS del simulador, que el puente
-  no servia (403). Anadidos a los estaticos con su tipo MIME.
-- **P23:** el puerto del panel (57421) ya no esta entre los candidatos del backend de Harness.
-- **P6: sin ventana del panel para peticiones proxificadas.** Con cabeceras de proxy el puente ya
-  no abre la ventana del panel en el escritorio del host.
-
-### Descartados tras verificar el codigo (no aplican)
-
-- **P33**: `focusPanelWindow` ya tiene espera de 60 s en `panel.mjs`.
-- **P40**: `NetCredentials` limpia cookies y credenciales HTTP al eliminar una PC.
-- **P45**: el SSE solo emite `{type, turn, at}`; no difunde espacios ni sesiones.
-- **P52**: `/pair` responde 403 solo cuando el boleto ya no es valido; es correcto.
 
 ### Añadido
 
@@ -52,7 +65,8 @@ Android `versionCode` increments once per published build.
   (`cf-connecting-ip`, `cf-access-jwt-assertion`, `x-forwarded-for`) el puente la rechaza salvo
   que se arranque con `DSH_ALLOW_PROXY_ACCESS=1`. Así no se publica el puente por accidente.
 - `AI_SETUP_PROMPT.md` documenta iPhone/PWA (Safari, `Add to Home Screen`, PWA estática en
-  Cloudflare Pages) y el acceso remoto opcional con Cloudflare Tunnel + Access.
+  cualquier servidor estático propio) y el acceso remoto opcional con red privada (ZeroTier o
+  Tailscale); no hay túneles públicos soportados.
 - **Informe del doctor verificable**: `doctor.ps1 -Report` añade `apkSha256`, `apkVersion`,
   `apkVersionCode`, `certSha256Release` y un `receipt` sha256 calculado sobre el JSON compacto sin el
   recibo, y escribe `doctor-report.json` sin BOM para que `JSON.parse` funcione sin limpieza previa.
@@ -63,23 +77,13 @@ Android `versionCode` increments once per published build.
   reciben el contexto, qué pueden ejecutar y el texto mínimo de traspaso. Incluye el enlace de la
   skill en `.dsh/skills` o `.agents/skills` y el recibo como evidencia.
 
-## Sin publicar (siguiente versión)
+### Cierre de la serie 5
 
-### Seguridad
+- `AUDIT_CLOSURE.md` añade al cierre de los 56 puntos del informe externo la tabla de los diez
+  defectos del QA final (D1, H1–H5, D3–D6).
+- **Esta es la versión final de la serie 5.** Lo siguiente se publicará como pre-release 5.2.x.
 
-- **P7: el simulador ya no es público.** `/simulator` y sus recursos exigían la red privada pero
-  no credenciales; ahora requieren un dispositivo emparejado o la clave de acceso, y se sirven
-  sus CSS/JS (antes daban 403 y la página estaba rota: **P55**).
-- **P6: sin ventana del panel para peticiones proxificadas.** Si la petición llega con cabeceras
-  de proxy (Cloudflare, nginx), el puente ya no abre la ventana del panel en el escritorio del
-  host; con `DSH_ALLOW_PROXY_ACCESS=1` el operador no está delante.
-
-### Corregido
-
-- **P23**: el puerto del panel (57421) ya no está entre los candidatos del backend de Harness;
-  antes el descubrimiento podía apuntar al panel.
-
-## 5.1.9 — `versionCode` 49 (última de la serie 5)
+## 5.1.9 — `versionCode` 49 (base de la serie 5)
 
 ### Añadido
 
@@ -98,11 +102,11 @@ Android `versionCode` increments once per published build.
 - **P2**: `verify_registry_safety` deja un respaldo `.test-bak` con fsync y restaura al arrancar si
   la ejecución anterior quedó a medias.
 
-### Cierre de la serie 5
+### Estado de la serie 5
 
 - `AUDIT_CLOSURE.md` fija el estado de los 17 puntos abiertos o en disputa del informe externo:
   7 cerrados en 5.1.8, 2 en 5.1.9, 4 aceptados con mitigación y 4 verificados como no aplicables.
-- **Esta es la última versión de la serie 5.** Lo siguiente se publicará como pre-release 5.2.x.
+- **La 5.1.9 fue la base de la 5.1.10**, la versión final de la serie 5.
 
 ## 5.1.8 — `versionCode` 48
 

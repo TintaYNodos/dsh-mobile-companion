@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-231%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.1.9** (`versionCode` 49).
+Aktuelle Version: **5.1.10** (`versionCode` 50).
 
 ---
 
@@ -105,7 +105,7 @@ companion/
 │   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
 │   └── …                     Erkennung, Telemetrie, Satellit, WOL, Widget
 ├── test/
-│   ├── verify_*.mjs           vierzehn Verifikations-Suites (231 Prüfungen)
+│   ├── verify_*.mjs           vierzehn Verifikations-Suites (235 Prüfungen)
 │   ├── _harness.mjs           gemeinsamer Client
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              persistierte Konversationen (.md und .json)
@@ -150,7 +150,7 @@ Node.js 22.15 oder neuer, keine npm-Abhängigkeiten.
 
 Zwei gleichwertige Methoden:
 
-- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 210 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
+- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 222 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
 - **Ohne Installation:** Öffnen Sie `http://<VPN_IP>:57420` in Ihrem Browser und wählen Sie „Zum Startbildschirm hinzufügen“.
 
 `/m` antwortet mit einer permanenten Weiterleitung auf `/`: Der alte Satellitenmodus wurde zugunsten der echten Oberfläche eingestellt.
@@ -206,7 +206,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 - `GET /` — Web-GUI von DeepSeek Harness, mit angewendeter Touch-Schicht, wenn der Client ein Telefon ist.
 - `GET /offline` — Bereitschaftsseite, während Harness startet, plus der Offline-Leser für redaktionelle Inhalte.
-- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`. Anonyme Aufrufer erhalten diese minimale Form; Geräteliste und Telemetrie erfordern Autorisierung.
+- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, apkVersion, apkVersionCode, requestAttempts, time }`. Anonyme Aufrufer erhalten diese minimale Form; `apkSha256`, Geräteliste, ausstehende Liste und Telemetrie erfordern Autorisierung.
 - `POST /dsh-companion/sync` — speichert eine Konversation in `synced_chats/` als Markdown und JSON.
 - `GET /dsh-companion/chats` — Index der synchronisierten Konversationen.
 - `GET /dsh-companion/chat/:id` — Inhalt der Konversation (JSON oder Markdown mit `?format=md`).
@@ -263,8 +263,8 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.1.9**, `versionCode` 49, `minSdk` 26, `targetSdk` 35.
-- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 210 KB.
+- `DSH-Companion.apk` — Version **5.1.10**, `versionCode` 50, `minSdk` 26, `targetSdk` 35.
+- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 222 KB.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
 - Mikrofonzugriff auf die exakte Origin des Bunkers beschränkt (Schema, Host und Port).
@@ -295,7 +295,7 @@ apksigner verify --print-certs DSH-Companion.apk
 
 SHA-256 des Release-Zertifikats: `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
 
-APKs bis 5.1.6 waren mit dem Debug-Zertifikat signiert. **Die Signatur hat sich in 5.1.9 geändert**: die vorherige Version einmal deinstallieren, dann diese installieren.
+APKs bis 5.1.6 waren mit dem Debug-Zertifikat signiert. **Die Signatur hat sich in 5.1.7 geändert**: nur wenn Sie von einer älteren Version als 5.1.7 kommen, einmal deinstallieren; ab 5.1.7 wird darüber installiert.
 
 ## Tests
 
@@ -303,7 +303,7 @@ APKs bis 5.1.6 waren mit dem Debug-Zertifikat signiert. **Die Signatur hat sich 
 npm test
 ```
 
-Vierzehn Suites, **231 Prüfungen** (201 in CI), die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+Vierzehn Suites, **235 Prüfungen** (203 in CI), die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
 
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
@@ -329,7 +329,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.1.9 ist die eingefrorene Basis der Serie 5.** Sie erhält keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.9 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
+**5.1.10 ist die endgültige Version der Serie 5.** Sie ist die eingefrorene Basis: keine neuen Funktionen; nur ein kritischer Sicherheitsfehler würde 5.1.11 ergeben. Alles Weitere erscheint als **Pre-Release** (5.2.0-pre.1 usw.). Der Branch `stable/5` bewahrt genau diesen Stand.
 
 ## Bildschirmfotos
 

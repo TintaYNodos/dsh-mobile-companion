@@ -113,6 +113,35 @@ final class ApkDigest {
         return null;
     }
 
+    /**
+     * Resuelve el ancla SHA-256 que debe usarse para una descarga. Es Java puro
+     * (sin android.*) a proposito: la NPE de D1 ocurrio por llamar a
+     * String.isEmpty() sobre el null que devuelve expectedDigestFor() para las
+     * URLs del buner, y esta funcion se prueba en escritorio.
+     *
+     * @param githubDigest resultado de UpdateRelease.expectedDigestFor(): null si
+     *        la URL no es de GitHub (buner), "" si es de GitHub y el release no
+     *        publica digest, hex de 64 si lo publica.
+     * @param bunkerSha SHA-256 que el buner publica en /status (apkSha256) y que
+     *        se guarda como pending_apk_expected_sha.
+     * @return null si no hay ningun ancla (buner antiguo sin SHA publicado: se
+     *         instala como antes); "" si hay ancla declarada pero no verificable
+     *         (se rechaza); hex de 64 si el ancla es verificable.
+     */
+    static String resolveExpected(String githubDigest, String bunkerSha) {
+        if (githubDigest != null) {
+            // Ruta de GitHub: manda su digest. Un release sin digest queda "" y
+            // se rechaza; el SHA del buner no sustituye al ancla de GitHub.
+            return ApkDigest.normalize(githubDigest);
+        }
+        String bunker = bunkerSha == null ? "" : bunkerSha.trim();
+        if (bunker.isEmpty()) return null;
+        // El buner si publica un SHA: es el ancla de esa ruta. Si llega
+        // corrupto, normalize devuelve "" y decision() lo trata como no
+        // verificable (fail-closed).
+        return ApkDigest.normalize(bunker);
+    }
+
     /** "ok" | "missing" | "mismatch" | "no-anchor". */
     static String decision(String expected, String actual) {
         if (expected == null) return DECISION_NO_ANCHOR;

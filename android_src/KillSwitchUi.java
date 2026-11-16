@@ -70,7 +70,7 @@ class KillSwitchUi {
         killCard.addView(killTitle);
 
         TextView killDesc = new TextView(a);
-        killDesc.setText("Revoca de inmediato todos los dispositivos emparejados en la PC y cierra la sesión local.");
+        killDesc.setText("Revoca de inmediato todos los dispositivos emparejados en la PC y, solo si la computadora confirma la revocación, cierra la sesión local.");
         killDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         killDesc.setTextColor(ThemePalette.inkDim(a));
         killDesc.setPadding(0, ThemePalette.dp(a, 2), 0, ThemePalette.dp(a, 10));
@@ -94,7 +94,7 @@ class KillSwitchUi {
     static void confirmKillSwitch(MainActivity a) {
         AlertDialog dialog = new AlertDialog.Builder(a)
                 .setTitle("Kill Switch de Emergencia")
-                .setMessage("¿Deseas revocar de inmediato todos los dispositivos autorizados en la computadora y cerrar la sesión?")
+                .setMessage("¿Deseas revocar de inmediato todos los dispositivos autorizados en la computadora? Si la computadora confirma la revocación, también se cerrará la sesión local.")
                 .setPositiveButton("Revocar todo ahora", (d, w) -> KillSwitchUi.executeKillSwitch(a))
                 .setNegativeButton("Cancelar", null)
                 .create();
@@ -149,26 +149,28 @@ class KillSwitchUi {
             final boolean confirmed = revoked;
             final String failure = detail;
             a.ui.post(() -> {
-                // Solo se borran las cookies locales si el puente confirmó la
-                // revocación: si el POST falló, borrarlas dejaría al usuario
-                // fuera de su propia sesión sin haber revocado nada.
-                CookieManager.getInstance().removeAllCookies(null);
-                CookieManager.getInstance().flush();
-
                 if (confirmed) {
+                    // D3: el cierre de sesión local solo ocurre con la revocación
+                    // confirmada. Si el POST falló no se borran cookies ni se
+                    // recarga la sesión: el usuario se quedaría fuera de su
+                    // propia sesión sin haber revocado nada en la computadora.
+                    CookieManager.getInstance().removeAllCookies(null);
+                    CookieManager.getInstance().flush();
+                    if (a.webView != null) a.webView.loadUrl("about:blank");
+                    ConnectionController.boot(a);
                     NotificationHelper.notifyCritical(a, "Kill switch ejecutado",
                             "Accesos revocados y sesión cerrada en la computadora.");
                     Toast.makeText(a, "Kill Switch ejecutado: accesos revocados", Toast.LENGTH_LONG).show();
                 } else {
+                    // Sin confirmación no se toca la sesión local: se conserva el
+                    // acceso que el usuario ya tenía y se avisa del fallo.
                     NotificationHelper.notifyCritical(a, "Kill switch sin confirmar",
                             "La computadora no confirmó la revocación" + (failure.isEmpty() ? "" : " (" + failure + ")")
-                                    + ". Revisa la conexión y reintenta en Ajustes.");
+                                    + ". No se cerró la sesión local; revisa la conexión y reintenta en Ajustes.");
                     Toast.makeText(a,
-                            "No se pudo confirmar la revocación en la computadora. Revisa la conexión y reintenta en Ajustes",
+                            "No se pudo confirmar la revocación en la computadora. No se cerró la sesión local; revisa la conexión y reintenta en Ajustes",
                             Toast.LENGTH_LONG).show();
                 }
-                if (a.webView != null) a.webView.loadUrl("about:blank");
-                ConnectionController.boot(a);
             });
         }).start();
     }

@@ -9,14 +9,14 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { config } from "./src/config.mjs";
-import { log, warn, rotateBridgeLog } from "./src/log.mjs";
+import { log, sanitizeLogMessage, warn, rotateBridgeLog } from "./src/log.mjs";
 import { findVpnAddress, isClientAuthorized, resolveTargetPort } from "./src/network.mjs";
 import { hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mjs";
-import { deviceSummary, findPairedDevice, runWithRequestContext } from "./src/devices.mjs";
+import { deviceLabel, deviceSummary, findPairedDevice, isViewer, runWithRequestContext } from "./src/devices.mjs";
 import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPanel } from "./src/panel.mjs";
 import { isSameOriginRequest, sendText } from "./src/http.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
-import { dispatchRequest } from "./src/routes.mjs";
+import { dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
 
 /**
  * P25: bridge.log lo escribe la redireccion de run-hidden.vbs y crecia sin
@@ -121,7 +121,7 @@ refreshRouteContext();
  */
 const handleRequest = (req, res) => {
   runWithRequestContext(req, res, () => dispatchRequest(req, res, routeContext)).catch((error) => {
-    warn("bridge", `Peticion fallida: ${error.message}`);
+    warn("bridge", `Peticion fallida: ${sanitizeLogMessage(error?.message || error)}`);
     if (!res.headersSent) sendText(res, 500, "Fallo interno del puente");
     else if (!res.destroyed) res.destroy();
   });
@@ -142,9 +142,26 @@ server.on("upgrade", (req, socket, head) => {
     return;
   }
 
-  if (accessKeyOn && !hasValidAccessKey(req) && !findPairedDevice(req)) {
+  // H1: detras de un proxy el socket tambien es loopback. Ahi la confianza
+  // local no vale: hace falta credencial verificable aunque DSH_ACCESS_DISABLE
+  // haya apagado la clave para el equipo local. El flag solo deja pasar la
+  // guarda de red, no eleva privilegios.
+  const proxyHeaders = hasProxyHeaders(req);
+  const device = findPairedDevice(req);
+  const keyAuthorized = accessKeyOn && hasValidAccessKey(req);
+  const authorized = Boolean(device) || keyAuthorized || (!proxyHeaders && !accessKeyOn);
+  if (!authorized) {
     log("ws", `rechazado sin credencial valida: ${remote}`);
     socket.end("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: " + REALM + "\r\nConnection: close\r\n\r\n");
+    return;
+  }
+
+  // H2: un dispositivo `viewer` no abre el tunel. El canal transporta tambien
+  // llamadas unarias y respuestas de aprobacion, no solo eventos: no se puede
+  // garantizar que sea de solo lectura, asi que se rechaza el upgrade entero.
+  if (device && isViewer(device)) {
+    log("ws", `upgrade rechazado para ${deviceLabel(device)} (solo lectura): ${remote}`);
+    socket.end("HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
     return;
   }
 

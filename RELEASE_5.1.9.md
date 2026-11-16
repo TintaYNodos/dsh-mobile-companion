@@ -1,4 +1,4 @@
-# DSH Mobile Companion 5.1.9 (versionCode 49) — última de la serie 5 — base estable de la serie 5
+# DSH Mobile Companion 5.1.9 (versionCode 49) — base de la serie 5
 
 Esta es la **base congelada** de la serie 5. A partir de aquí el proyecto avanza con mejoras
 menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
@@ -31,7 +31,7 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 ### 5.1.3 — auditoría final de publicación
 - Cinco README recuperan la sección de compilación y la cola del árbol.
 - `SECURITY.md`, `AI_SETUP_PROMPT.md` y `docker-compose.yml` dejan de mencionar la terminal.
-- Tabla de variables completa, rutas y módulos completos, cifra de pruebas honesta (154).
+- Tabla de variables completa, rutas y módulos completos, cifra de pruebas honesta (231).
 - `panel.bat` respeta `DSH_PANEL_PORT`; `.lnk` de autoarranque con comillas correctas.
 - Docker copia los assets del manifest y el healthcheck usa el puerto efectivo.
 
@@ -63,7 +63,7 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
   de avisos y **VPN ampliada** (NetBird, Nebula, EasyTier, Tinc, SoftEther, Twingate, Headscale).
 - Auditoría externa: **P1** (nonce), **P3** (notificación muerta), **P36** (`CleartextPolicy`).
 
-### 5.1.9 — cierre de la serie
+### 5.1.9 — watchdog configurable y arranque
 - **Watchdog configurable**: silencio 1/3/5 min, reintentos 1/2/3, aviso on/off y "Probar ahora".
 - **Arranque tras reiniciar el teléfono** (BootReceiver, solo si avisos y watchdog están activos).
 - **P1 completo**: nonce en los 23 métodos del puente JS.
@@ -71,7 +71,7 @@ menores y publicaciones **pre-release** (5.2.x), sin tocar esta línea.
 - **P2**: respaldo con fsync del registro en la prueba (restaura si quedó a medias).
 - **`AUDIT_CLOSURE.md`**: estado final de los 56 puntos del informe externo.
 
-## ⚠️ Antes de instalar## ⚠️ Antes de instalar## ⚠️ Antes de instalar
+## ⚠️ Antes de instalar
 
 **Actualiza el APK y el puente juntos.** Esta versión cambia el contrato del puente JS (23
 métodos piden nonce) y el arranque del servicio: un APK 5.1.9 con un puente anterior puede perder
@@ -91,13 +91,14 @@ de antes de la 5.1.7. Desde la 5.1.7 se instala encima.
 | Firma | APK Signature Scheme v2 + v3, certificado de release RSA 4096 |
 | Requisitos | Android 8.0 (SDK 26) o superior |
 
-Comprobado en la corrida previa al empaquetado: **154/154** comprobaciones en 11 suites,
-auditoría del repositorio sin hallazgos, un solo aviso por turno, `pendingList` fuera del
+Comprobado en la corrida previa al empaquetado: **231/231** comprobaciones en 14 suites
+(201 en CI), auditoría del repositorio sin hallazgos, un solo aviso por turno, `pendingList` fuera del
 `/status` anónimo y las tres sondas de la pantalla de espera creando **una** solicitud.
 
 ## Política de esta línea
 
-- **La serie 5 queda cerrada con la 5.1.9.** Solo un fallo de seguridad crítico produciría una 5.1.10.
+- **La serie 5 se cierra con la 5.1.10** (notas en [RELEASE_5.1.10.md](RELEASE_5.1.10.md)), que
+  aplica las correcciones del QA final sobre esta base. Esta 5.1.9 no es la versión final.
 - Lo siguiente sale como **pre-release** (5.2.0-pre.1...) hasta estabilizarse.
 - La rama `stable/5` conserva exactamente este árbol.
 

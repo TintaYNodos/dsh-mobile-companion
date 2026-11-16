@@ -199,12 +199,13 @@ mutaciones y quedan fuera del allowlist.
   DeepSeek Harness muta sin que su nombre lo delate y se colara en el
   allowlist, el viewer podría escribir. Por eso el allowlist es corto, se
   revisa con cada versión y todo lo desconocido se rechaza.
-- **El WebSocket no se filtra por rol.** El viewer mantiene el canal en vivo
-  (`/api/remote.mux`) para recibir eventos, que es de solo lectura en los
-  flujos que usa la interfaz. Las llamadas unarias (escribir, aprobar) y las
-  respuestas de aprobación van por HTTP y sí se bloquean, pero un flujo con
-  uplink (hoy, adjuntar/retener una terminal ya existente) no se inspecciona.
-  Es un riesgo residual conocido, no un permiso concedido.
+- **El WebSocket se rechaza para el viewer.** Desde 5.1.10 el upgrade de un
+  dispositivo `viewer` responde **403** antes de conectar con DeepSeek Harness
+  (queda en `bridge.log`, sin secretos). El canal (`/api/remote.mux`) también
+  transporta llamadas unarias y respuestas de aprobación, así que no se puede
+  garantizar que sea solo eventos. Consecuencia asumida: el viewer pierde la
+  actualización en vivo por WebSocket; la interfaz sigue funcionando por HTTP
+  hasta donde alcance. No es un riesgo abierto: es una limitación funcional.
 - **Las lecturas por GET no se filtran.** Si el backend expusiera una acción
   por GET (no es el caso de la API de DeepSeek Harness, que usa POST para todo
   lo unario), el viewer podría invocarla. El rol limita métodos mutantes, no

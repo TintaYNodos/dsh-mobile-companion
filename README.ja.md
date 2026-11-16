@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.1.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-231%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-210%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.1.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.1.9**（`versionCode` 49）。
+現在のバージョン：**5.1.10**（`versionCode` 50）。
 
 ---
 
@@ -105,7 +105,7 @@ companion/
 │   ├── KeyStoreVault.java     保存キーの Android Keystore 暗号化
 │   └── …                     ディスカバリ、テレメトリ、サテライト、WOL、ウィジェット
 ├── test/
-│   ├── verify_*.mjs           11 個の検証スイート（231 チェック）
+│   ├── verify_*.mjs           14 個の検証スイート（235 チェック）
 │   ├── _harness.mjs           共有クライアント
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              永続化された会話（.md および .json）
@@ -150,7 +150,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 2 つの同等な方法があります：
 
-- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係がゼロで、約 210 KB：純粋で再現可能な Java、アセットアイコン、テーマのみです。
+- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係がゼロで、約 222 KB：純粋で再現可能な Java、アセットアイコン、テーマのみです。
 - **何もインストールしない方法：** ブラウザで `http://<VPN_IP>:57420` を開き、「ホーム画面に追加」を選択します。
 
 `/m` は `/` への恒久的なリダイレクトを返します。旧式のサテライトモードは廃止され、実際のインターフェースに置き換わりました。
@@ -206,7 +206,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 - `GET /` — DeepSeek Harness の Web GUI。クライアントがスマートフォンの場合はタッチレイヤーが適用されます。
 - `GET /offline` — Harness の起動中に表示される待機ページと、オフライン・エディトリアル・リーダー。
-- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, time }`。匿名の呼び出し元にはこの最小限の形だけを返します。デバイス一覧とテレメトリには認可が必要です。
+- `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, apkVersion, apkVersionCode, requestAttempts, time }`。匿名の呼び出し元にはこの最小限の形だけを返します。`apkSha256`、デバイス一覧、保留一覧、テレメトリには認可が必要です。
 - `POST /dsh-companion/sync` — 会話を Markdown と JSON として `synced_chats/` に保存します。
 - `GET /dsh-companion/chats` — 同期済み会話のインデックス。
 - `GET /dsh-companion/chat/:id` — 会話の内容（JSON、または `?format=md` を付けると Markdown）。
@@ -263,8 +263,8 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.1.9**、`versionCode` 49、`minSdk` 26、`targetSdk` 35。
-- AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 210 KB。
+- `DSH-Companion.apk` — バージョン **5.1.10**、`versionCode` 50、`minSdk` 26、`targetSdk` 35。
+- AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 222 KB。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
 - マイクへのアクセスはバンカーの正確なオリジン（スキーム、ホスト、ポート）に限定。
@@ -295,7 +295,7 @@ apksigner verify --print-certs DSH-Companion.apk
 
 リリース証明書の SHA-256：`4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
 
-5.1.6 以前の APK はデバッグ証明書で署名されていました。**5.1.9 で署名が変わった**ため、旧版を一度アンインストールしてからこれをインストールしてください。
+5.1.6 以前の APK はデバッグ証明書で署名されていました。**5.1.7 で署名が変わった**ため、それより前のバージョンから来る場合のみ旧版を一度アンインストールしてください。5.1.7 以降は上書きインストールできます。
 
 ## テスト
 
@@ -303,7 +303,7 @@ apksigner verify --print-certs DSH-Companion.apk
 npm test
 ```
 
-14 個のスイート、**181 のチェック**（201 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、サテライトへの受け渡し、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
+14 個のスイート、**231 のチェック**（201 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、サテライトへの受け渡し、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
 
 スイートは**稼働中のブリッジ**と通信します（モックではありません）。先にブリッジを起動してください。実際のキルスイッチの実行は破壊的で、デバイスを失効させキーをローテーションするため、`DSH_TEST_DESTRUCTIVE=1` によるオプトインになっています。
 
@@ -329,7 +329,7 @@ npm test
 
 ## 安定性
 
-**5.1.9 はシリーズ 5 の固定ベースラインです。** 新機能は追加せず、重大なセキュリティ修正のみ 5.1.9 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
+**5.1.10 はシリーズ 5 の最終バージョンです。** 固定ベースラインであり、新機能は追加せず、重大なセキュリティ修正のみ 5.1.11 として出します。以降は **pre-release**（5.2.0-pre.1 など）として提供します。`stable/5` ブランチがこのツリーを保持します。
 
 ## スクリーンショット
 

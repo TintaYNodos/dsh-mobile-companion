@@ -38,11 +38,20 @@ const CHECK_INTERVAL_MS = 30_000;
 const RETRY_AFTER_MS = 60_000;
 const STDOUT_METHODS = ["log", "info", "debug"];
 const STDERR_METHODS = ["warn", "error", "trace"];
-
 const stamp = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
-export const log = (scope, message) => console.log(`[${stamp()}] [${scope}] ${message}`);
-export const warn = (scope, message) => console.warn(`[${stamp()}] [${scope}] ${message}`);
+/** H5: el log elimina saltos de linea y caracteres de control de datos que
+ * controla el cliente, y trunca a 200 los mensajes de error que reflejan su
+ * texto: evita inyectar lineas falsas en bridge.log. */
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
+export const sanitizeLogText = (value) => String(value ?? "").replace(CONTROL_CHARS, "");
+export const sanitizeLogMessage = (value, maxLength = 200) => {
+  const clean = sanitizeLogText(value);
+  return clean.length > maxLength ? `${clean.slice(0, maxLength - 1)}…` : clean;
+};
+
+export const log = (scope, message) => console.log(`[${stamp()}] [${scope}] ${sanitizeLogText(message)}`);
+export const warn = (scope, message) => console.warn(`[${stamp()}] [${scope}] ${sanitizeLogText(message)}`);
 
 const fileStat = (file) => {
   try { const stat = fs.statSync(file); return stat.isFile() ? stat : null; } catch { return null; }
@@ -74,7 +83,7 @@ const shiftArchives = (logFile, keep) => {
 
 /** Avisa de valores de entorno invalidos sin detener el arranque. */
 const emitWarnings = (warnings) => {
-  for (const message of warnings) console.warn(`[${stamp()}] [log] aviso: ${message}`);
+  for (const message of warnings) console.warn(`[${stamp()}] [log] aviso: ${sanitizeLogText(message)}`);
 };
 
 /**

@@ -42,13 +42,19 @@ Remaining:     <anything still failing, or "none">
 
        powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report
 
-2. Salida del mapeo del informe:
+2. Salida de la verificación del recibo (obligatoria):
+
+       node tools/verify-receipt.mjs doctor-report.json
+
+   Debe indicar que el recibo es válido; sin esta salida el informe no cuenta como evidencia.
+
+3. Salida del mapeo del informe:
 
        node skills/mobile-companion-setup/scripts/verify-fixes.mjs report doctor-report.json
 
    Debe indicar cuántos FAIL/AVISO mapeó y ningún `SIN MAPA`.
 
-3. Salida humana, si el usuario prefiere el texto:
+4. Salida humana, si el usuario prefiere el texto:
 
        powershell -ExecutionPolicy Bypass -File doctor.ps1
 
@@ -57,7 +63,7 @@ Remaining:     <anything still failing, or "none">
 ```text
 Túnel:          Tailscale -> 100.64.0.24
 URL teléfono:   http://100.64.0.24:57420
-Puente:         versión 5.1.7, en línea
+Puente:         versión 5.1.10, en línea
 Panel:          127.0.0.1:57421
 Emparejamiento: emparejado (código 4821)
 Avisos:         prueba enviada; aviso recibido en el teléfono

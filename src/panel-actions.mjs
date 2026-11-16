@@ -4,7 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 import { config } from "./config.mjs";
-import { discoverListeningPorts, probeDshPort } from "./network.mjs";
+import { discoverListeningPorts, probeDshPort, resolveTargetPort } from "./network.mjs";
 import { escapeHtml } from "./pairing-views.mjs";
 import {
   approveRequest,
@@ -83,22 +83,37 @@ export async function runPanelAction(pathname, form) {
 
 let cachedPorts = { at: 0, ports: [] };
 const TARGET_CHOICES_TTL_MS = 60_000;
+const TARGET_CHOICES_LIMIT = 24;
 
-/** Puertos de loopback que parecen backends para sugerir en el formulario. */
+/**
+ * Puertos sugeridos para el backend de un dispositivo. D5: primero el backend
+ * activo, el configurado y los candidatos de Harness; despues los puertos de
+ * `netstat` ordenados. Antes solo se veian los 12 primeros del orden de
+ * `netstat` y el puerto real podia quedar fuera de la lista.
+ */
 export async function listTargetPortChoices() {
   if (Date.now() - cachedPorts.at < TARGET_CHOICES_TTL_MS) return cachedPorts.ports;
-  let ports = [];
+  let current = config.targetPort;
   try {
-    ports = await discoverListeningPorts();
+    current = await resolveTargetPort();
   } catch {
-    ports = [];
+    current = config.targetPort;
   }
-  cachedPorts = {
-    at: Date.now(),
-    ports: ports
-      .filter((port) => isValidDeviceTargetPort(port))
-      .slice(0, 12),
+  let discovered = [];
+  try {
+    discovered = await discoverListeningPorts();
+  } catch {
+    discovered = [];
+  }
+  const ports = [];
+  const add = (port) => {
+    if (Number.isInteger(port) && isValidDeviceTargetPort(port) && !ports.includes(port)) ports.push(port);
   };
+  add(current);
+  add(config.targetPort);
+  for (const port of config.targetCandidates) add(port);
+  for (const port of [...discovered].sort((left, right) => left - right)) add(port);
+  cachedPorts = { at: Date.now(), ports: ports.slice(0, TARGET_CHOICES_LIMIT) };
   return cachedPorts.ports;
 }
 

@@ -26,6 +26,29 @@ import { consumeAllowance } from "./ratelimit.mjs";
 import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
 import { emitTestEvent, handlePcEvents, startPcWatcher } from "./pc-events.mjs";
 
+/**
+ * Cabeceras que delatan que la peticion llego a traves de un proxy o tunel
+ * (Cloudflare, nginx, etc.). Cuando estan presentes, el `remoteAddress` es el
+ * del proxy (loopback), no el del cliente: la pertenencia a loopback deja de
+ * ser una identidad y NUNCA debe conceder privilegios locales (ver
+ * `DSH_ALLOW_PROXY_ACCESS` en src/config.mjs). El flag solo permite pasar la
+ * guarda de red; no eleva privilegios.
+ */
+const PROXY_SIGNAL_HEADERS = [
+  "cf-connecting-ip",
+  "cf-access-jwt-assertion",
+  "x-forwarded-for",
+  "x-real-ip",
+  "forwarded",
+];
+
+export const hasProxyHeaders = (req) =>
+  PROXY_SIGNAL_HEADERS.some((name) => String(req?.headers?.[name] ?? "").trim() !== "");
+
+/** Loopback real: la conexion viene del propio equipo, no de un proxy delante. */
+export const isTrustedLoopbackRequest = (req, remoteAddress) =>
+  !hasProxyHeaders(req) && normalizeAddress(remoteAddress).startsWith("127.");
+
 export const wantsMobileShell = (req, url) => {
   if (url.searchParams.get("dshc") === "off") return false;
   if (url.searchParams.get("dshc") === "on") return true;
@@ -60,7 +83,7 @@ export const buildStatusPayload = async (options = {}) => {
 };
 
 /**
- * P6: estado por IP de los sondeos de /status sin credencial.
+ * P6: estado de los sondeos de /status sin credencial.
  *
  * El telefono sondea mientras espera aprobacion. La solicitud se conserva
  * porque es el flujo de emparejamiento, pero no se abre una ventana del panel
@@ -69,23 +92,54 @@ export const buildStatusPayload = async (options = {}) => {
  * ya devuelve la existente para la misma IP); aqui solo se cuenta el intento.
  */
 const pairingPolls = new Map();
+// La ventana del panel se recuerda por IP (P6: una sola vez por equipo), pero el
+// estado del sondeo se separa por IP + user-agent: dos clientes tras la misma IP
+// (NAT, pruebas en loopback) no deben compartir la solicitud cacheada.
+const pairingPanelOpened = new Map();
 const PAIRING_POLL_TTL_MS = 30 * 60 * 1000;
+// H6: `requestAccess` persiste el registro con fsync. Un sondeo anonimo a
+// /status no puede reescribirlo cada 2 segundos (desgaste del disco y latencia):
+// `requestedAt` se refresca en memoria en cada sondeo y se persiste como mucho
+// una vez por minuto. El primer sondeo si escribe, porque requestAccess crea la
+// solicitud y necesita guardarla.
+const PAIRING_PERSIST_INTERVAL_MS = 60 * 1000;
+
+const agentKey = (userAgent) => String(userAgent || "").slice(0, 120);
+const pollKey = (address, userAgent) => `${address}|${agentKey(userAgent)}`;
+
+const markPairingPanelOpened = (remoteAddress) => {
+  pairingPanelOpened.set(normalizeAddress(remoteAddress || "desconocida"), Date.now());
+};
 
 const trackPairingPoll = (remoteAddress, userAgent) => {
   const now = Date.now();
-  for (const [address, previous] of pairingPolls) {
-    if (now - previous.at > PAIRING_POLL_TTL_MS) pairingPolls.delete(address);
+  for (const [key, previous] of pairingPolls) {
+    if (now - previous.at > PAIRING_POLL_TTL_MS) pairingPolls.delete(key);
+  }
+  for (const [address, at] of pairingPanelOpened) {
+    if (now - at > PAIRING_POLL_TTL_MS) pairingPanelOpened.delete(address);
   }
 
-  const key = normalizeAddress(remoteAddress || "desconocida");
-  const { entry, created, denied } = requestAccess(remoteAddress, userAgent);
+  const address = normalizeAddress(remoteAddress || "desconocida");
+  const key = pollKey(address, userAgent);
   const previous = pairingPolls.get(key);
+  if (previous?.entry && now - previous.persistedAt < PAIRING_PERSIST_INTERVAL_MS) {
+    previous.entry.requestedAt = new Date(now).toISOString();
+    previous.attempts += 1;
+    previous.entry.attempts = previous.attempts;
+    previous.at = now;
+    return { entry: previous.entry, created: false, denied: false, state: previous };
+  }
+
+  const { entry, created, denied } = requestAccess(remoteAddress, userAgent);
   const sameRequest = Boolean(entry) && previous?.requestId === entry.id;
   const state = {
     requestId: entry ? entry.id : "",
     attempts: entry ? (sameRequest ? previous.attempts + 1 : 1) : 0,
-    panelOpened: Boolean(previous?.panelOpened),
+    panelOpened: pairingPanelOpened.has(address),
     at: now,
+    persistedAt: now,
+    entry: entry || null,
   };
   pairingPolls.set(key, state);
   // Marca visible en la solicitud: el esquema del registro lo administra
@@ -104,11 +158,10 @@ export async function dispatchRequest(req, res, context) {
   // peticiones lleguen desde 127.0.0.1, y entonces el criterio de red dejaria de
   // proteger nada. Si aparecen cabeceras de proxy y el operador no lo habilito
   // de forma explicita, se rechaza: mejor fallar cerrado que publicar el puente
-  // sin querer.
-  const proxyHeaders =
-    String(req.headers["cf-connecting-ip"] || "").trim() !== "" ||
-    String(req.headers["cf-access-jwt-assertion"] || "").trim() !== "" ||
-    String(req.headers["x-forwarded-for"] || "").trim() !== "";
+  // sin querer. `DSH_ALLOW_PROXY_ACCESS=1` SOLO deja pasar esta guarda de red:
+  // con cabeceras de proxy no se concede ningun privilegio de loopback (lista
+  // de pendientes, abrir el panel, aprobar/rechazar, retry ni pair-events).
+  const proxyHeaders = hasProxyHeaders(req);
   if (proxyHeaders && !config.allowProxyAccess) {
     sendJson(res, 403, {
       error: "Peticion a traves de un proxy rechazada",
@@ -140,7 +193,7 @@ export async function dispatchRequest(req, res, context) {
 
   const { pathname } = url;
 
-  if (await handlePairingRoutes(req, res, { url, pathname, remoteAddress, context })) return;
+  if (await handlePairingRoutes(req, res, { url, pathname, remoteAddress, context, proxyHeaders })) return;
 
   if (!isSameOriginRequest(req, allowedOrigins, allowedHosts)) {
     sendText(res, 403, "Origen no autorizado");
@@ -169,10 +222,11 @@ export async function dispatchRequest(req, res, context) {
       const poll = trackPairingPoll(remoteAddress, req.headers["user-agent"]);
       if (!poll.state.panelOpened && !isPanelTabOpen()) {
         poll.state.panelOpened = true;
+        markPairingPanelOpened(remoteAddress);
         // P6: si la peticion llego por un proxy/tunel no se abre una ventana del
-      // panel en el escritorio del host: el operador no esta delante y la ventana
-      // solo molesta.
-      if (!proxyHeaders) openPanelWindow();
+        // panel en el escritorio del host: el operador no esta delante y la
+        // ventana solo molesta.
+        if (!proxyHeaders) openPanelWindow();
       }
       sendJson(res, 200, {
         service: "dsh-companion",
@@ -194,7 +248,9 @@ export async function dispatchRequest(req, res, context) {
     // a diario. Refrescar aqui no cambia la autorizacion.
     if (device) touchDevice(device);
 
-    const isLoopback = normalizeAddress(remoteAddress).startsWith("127.");
+    // Una peticion con cabeceras de proxy no es loopback aunque el socket venga
+    // de 127.0.0.1: el proxy reenvia desde el host. Sin privilegios locales.
+    const isLoopback = isTrustedLoopbackRequest(req, remoteAddress);
     const payload = await buildStatusPayload({ includePendingList: isLoopback, device });
     sendJson(res, 200, payload);
     return;
@@ -233,7 +289,7 @@ export async function dispatchRequest(req, res, context) {
   // La puerta devuelve el dispositivo de la peticion (o `true` si respondio
   // ella). Se reutiliza aqui para aplicar su perfil (rol y puerto destino) al
   // proxy, incluida la primera peticion en la que el dispositivo se canjea.
-  const gate = await handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context });
+  const gate = await handlePendingApprovalGate(req, res, { url, pathname, remoteAddress, context, proxyHeaders });
   if (gate === true) return;
   const requestDevice = gate || findPairedDevice(req) || null;
 

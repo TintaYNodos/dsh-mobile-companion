@@ -103,13 +103,19 @@ Si el usuario no quiere instalar un túnel, dilo claro: sin red privada esto no 
        powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report
        powershell -ExecutionPolicy Bypass -File doctor.ps1
 
-2. Comprueba que cada mensaje de `blockers`/`warnings` del informe mapea a una entrada:
+2. Verifica el recibo del informe (obligatorio):
+
+       node tools/verify-receipt.mjs doctor-report.json
+
+   Debe responder que el recibo es válido y mostrar su OK. Sin esta salida, la evidencia no
+   cuenta: el informe queda "pendiente", no "hecho".
+3. Comprueba que cada mensaje de `blockers`/`warnings` del informe mapea a una entrada:
 
        node skills/mobile-companion-setup/scripts/verify-fixes.mjs report doctor-report.json
 
    Si algo sale como `SIN MAPA`, párate y repórtalo: no improvises la solución.
-3. Entrega el informe con la forma de `references/report-template.md` y evidencia pegada. Sin
-   evidencia, el resultado es "pendiente", no "hecho".
+4. Entrega el informe con la forma de `references/report-template.md` y evidencia pegada. Sin
+   el recibo verificado y sin evidencia, el resultado es "pendiente", no "hecho".
 
 ## Cómo leer el JSON del diagnóstico
 

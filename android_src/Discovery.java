@@ -182,8 +182,10 @@ class Discovery {
 
             int code = connection.getResponseCode();
 
-            // P5: cualquier host que devolviera 200 se auto-conectaba. Se exige
-            // que el JSON se identifique como el puente antes de aceptarlo.
+            // P5/D6: cualquier host que devolviera 200 se auto-conectaba. Se
+            // exige un JSON real que se identifique como el puente; antes valia
+            // una simple subcadena "dsh-companion" en el cuerpo, que un portal
+            // cautivo o cualquier pagina de la LAN podia contener.
             boolean looksLikeCompanion = false;
             if (code == 200) {
                 try (java.io.InputStream is = connection.getInputStream()) {
@@ -191,12 +193,16 @@ class Discovery {
                     byte[] chunk = new byte[1024];
                     int read;
                     int total = 0;
-                    while ((read = is.read(chunk)) != -1 && total < 8192) {
-                        buffer.write(chunk, 0, read);
-                        total += read;
+                    // El estado sin autorizar es compacto (~1 KB). Se lee hasta
+                    // 32 KB para no truncar el JSON de un equipo ya emparejado;
+                    // un cuerpo mayor se descarta porque no se puede validar.
+                    while (total < 32768 && (read = is.read(chunk)) != -1) {
+                        int keep = Math.min(read, 32768 - total);
+                        buffer.write(chunk, 0, keep);
+                        total += keep;
                     }
                     String body = buffer.toString("UTF-8");
-                    looksLikeCompanion = body.contains("\"" + COMPANION_SERVICE + "\"");
+                    looksLikeCompanion = Discovery.isCompanionStatus(body);
                 } catch (Exception ignored) {
                 }
             }
@@ -216,6 +222,25 @@ class Discovery {
             return false;
         } finally {
             if (connection != null) connection.disconnect();
+        }
+    }
+
+    /**
+     * D6: valida el cuerpo de /dsh-companion/status sin coincidencia por
+     * subcadena. Exige un objeto JSON con service == "dsh-companion" y, si trae
+     * version, con forma de version. Sin JSON valido no se acepta el host.
+     */
+    static boolean isCompanionStatus(String body) {
+        if (body == null) return false;
+        String json = body.trim();
+        if (json.isEmpty() || json.charAt(0) != '{') return false;
+        try {
+            org.json.JSONObject status = new org.json.JSONObject(json);
+            if (!COMPANION_SERVICE.equals(status.optString("service", "").trim())) return false;
+            String version = status.optString("version", "").trim();
+            return version.isEmpty() || version.matches("\\d+(\\.\\d+){1,3}([-+][0-9A-Za-z.-]+)?");
+        } catch (Exception notJson) {
+            return false;
         }
     }
 }

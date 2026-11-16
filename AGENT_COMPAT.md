@@ -13,7 +13,7 @@ computadora y hasta dónde llega la evidencia**. Nace de una regla del proyecto:
 | **Documentado (sin ejecución)** | El agente no tiene shell ni acceso a archivos: el usuario ejecuta los comandos y le pega los resultados. |
 
 Entorno de la prueba: Windows con Windows PowerShell 5.1, Node 24.21.0 (el runtime que trae DSH),
-puente v5.1.7 y un túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
+puente v5.1.10 y un túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
 probado lo que aquí figura como documentado.
 
 ## Matriz
@@ -39,7 +39,7 @@ Evidencia ejecutada aquí:
 ```text
 powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json -Report     -> exit 0, ok=true, recibo escrito
 node tools/verify-receipt.mjs doctor-report.json                     -> RECIBO VALIDO
-node skills/mobile-companion-setup/scripts/verify-fixes.mjs static   -> static check OK (14 fixes)
+node skills/mobile-companion-setup/scripts/verify-fixes.mjs static   -> static check OK (16 fixes)
 ```
 
 Texto mínimo de handoff para un agente DSH que ya tiene la skill cargada:
@@ -115,7 +115,7 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 fad7749b9bfa1c4eb130b02d5e37334056e3cc6bf54b7118fd4b130dd1c9ab98 `
+  --expect-apk-sha256 c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6 `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 
@@ -137,8 +137,8 @@ ese caso se comportan como un agente con shell y aplican las advertencias de la 
 | Campo | Contenido |
 | --- | --- |
 | `apkSha256` | SHA-256 del APK que el puente sirve de verdad, calculado en vivo desde `/dsh-companion/status` |
-| `apkVersion` | Versión del APK anunciada por el puente (`5.1.7` en la release actual) |
-| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`47` en la release actual) |
+| `apkVersion` | Versión del APK anunciada por el puente (`5.1.10` en la release actual) |
+| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`50` en la release actual) |
 | `certSha256Release` | Huella documental del certificado del keystore de release (la de README y SECURITY.md) |
 | `receipt` | `algorithm` (`sha256`), `canonical` (`json-compact-sin-receipt`) y `sha256` del informe |
 

@@ -163,7 +163,7 @@
       }
       if (!started) {
         try {
-          bridge.startSatelliteQuery(JSON.stringify(payload));
+          if (token) { bridge.startSatelliteQuery(token, JSON.stringify(payload)); } else { bridge.startSatelliteQuery(JSON.stringify(payload)); }
           started = true;
         } catch (e2) {
           started = false;
@@ -183,7 +183,7 @@
 
   function cancelSatellite() {
     if (window.AndroidCompanion && typeof window.AndroidCompanion.cancelSatelliteQuery === 'function') {
-      window.AndroidCompanion.cancelSatelliteQuery();
+      var cancelToken = window.__DSH_BRIDGE_TOKEN__; if (cancelToken) { window.AndroidCompanion.cancelSatelliteQuery(cancelToken); } else { window.AndroidCompanion.cancelSatelliteQuery(); }
     }
     finishAssistantResponse();
     if (satelliteStatus) satelliteStatus.textContent = 'Consulta cancelada';

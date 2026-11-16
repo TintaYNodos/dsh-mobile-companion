@@ -1,6 +1,6 @@
 {
   "name": "dsh-mobile-companion",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "private": true,
   "description": "Puente local y cliente Android que llevan DeepSeek Harness al telefono dentro de una red privada.",
   "type": "module",

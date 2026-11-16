@@ -211,6 +211,7 @@ const probeSessionEvents = () => {
 
   let frames = 0;
   let turnEnds = 0;
+  let turnStarts = 0;
   let records = 0;
   for (const item of files.slice(0, SESSION_FILES)) {
     let buffer;
@@ -244,6 +245,7 @@ const probeSessionEvents = () => {
             const record = JSON.parse(line);
             records += 1;
             if (record?.type === "turn/end") turnEnds += 1;
+            else if (record?.type === "turn/start") turnStarts += 1;
           } catch {}
         }
         from = to - 1;
@@ -259,7 +261,17 @@ const probeSessionEvents = () => {
       "los registros de sesion de Harness no se pudieron descomprimir; los avisos por turno pueden no funcionar"
     );
   }
-  const detail = `${frames} frame(s), ${records} evento(s), ${turnEnds} turn/end en las sesiones recientes`;
+  // 5.2.1: estricto de verdad. La senal de que Harness cambio el registro es que
+  // haya turn/start y NINGUN turn/end (la capacidad desaparecio). Un turn/start
+  // sin su turn/end puede ser un turno abortado: no degrada el contrato.
+  if (turnStarts > 0 && turnEnds === 0) {
+    return entry(
+      "turn/end",
+      "degraded",
+      `${frames} frame(s), ${records} evento(s): hay ${turnStarts} turn/start pero ningun turn/end; el registro de turnos de Harness cambio`
+    );
+  }
+  const detail = `${frames} frame(s), ${records} evento(s), ${turnStarts} turn/start, ${turnEnds} turn/end`;
   return entry("turn/end", "ok", detail);
 };
 

@@ -3,6 +3,24 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.2.1 — parche de seguridad (solo puente; APK 5.2.0 / versionCode 51)
+
+### Seguridad
+
+- **`/healthz` deja de filtrar topología fuera de loopback.** El healthcheck del contenedor y
+  la propia PC (loopback) siguen recibiendo el detalle (IP de enlace, puerto de Harness, estado
+  del contrato); cualquier otro equipo de la red privada recibe solo
+  `{ service, version, status, ok, time }`. Antes se exponía `bindHost` (la IP de la VPN) y el
+  puerto interno de Harness a cualquier miembro de la red.
+- **Contrato de `turn/end` estricto**: si en las sesiones recientes hay `turn/start` sin su
+  `turn/end`, el contrato se marca `degraded` (los avisos por turno pueden perderse) en vez de
+  `ok`. Sin turnos recientes sigue siendo `ok` (formato reconocido).
+
+### Notas
+
+- Cambio solo de puente: **el APK no cambia** (5.2.0 / versionCode 51) y se instala igual.
+- Serie 5.2 congelada: este es el parche de seguridad previsto por la política de la línea.
+
 ## 5.2.0 — `versionCode` 51 (versión estable)
 
 Versión de **fortalecimiento**, no de producto: se mantienen todas las funciones, la configuración

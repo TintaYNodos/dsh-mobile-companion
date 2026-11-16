@@ -23,11 +23,35 @@ import { consumeAllowance } from "./ratelimit.mjs";
  *   - `down`     (HTTP 503): el puente responde pero Harness no confirma.
  *
  * La ruta no exige credenciales (la usa el healthcheck del contenedor en
- * loopback) y solo devuelve versiones, puertos privados y estado del contrato:
- * nunca claves, cookies ni secretos.
+ * loopback). Desde 5.2.1 solo loopback recibe el detalle (puertos, IP de enlace y
+ * estado del contrato); al resto de la red privada se le devuelve lo minimo.
+ * Nunca se exponen claves, cookies ni secretos.
  */
 
 const IDENTITY_TIMEOUT_MS = 900;
+
+/** Loopback de verdad (no "parece loopback" por venir de un proxy). */
+export const isTrueLoopback = (address) => {
+  const value = String(address || "").replace(/^::ffff:/, "").trim();
+  return value === "::1" || value.startsWith("127.");
+};
+
+/**
+ * 5.2.1: el detalle (IP de enlace, puerto de Harness, estado del contrato) solo
+ * se entrega a loopback (healthcheck de Docker/PC). A cualquier otro equipo de la
+ * red privada se le responde lo minimo para saber si el servicio esta sano, sin
+ * revelar topologia interna.
+ */
+export const redactHealth = (health, detailed) => {
+  if (detailed) return health;
+  return {
+    service: health.service,
+    version: health.version,
+    status: health.status,
+    ok: health.ok,
+    time: health.time,
+  };
+};
 
 /** Funcion pura: decide el estado y el codigo HTTP a partir de las sondas. */
 export function computeHealth({ bridge, harness, contract, apk, now = Date.now() }) {
@@ -106,7 +130,8 @@ export async function handleHealthz(req, res, context = {}) {
     apk: { sha256: apkSha256() },
   });
 
-  sendJson(res, health.status === "down" ? 503 : 200, health, {
+  const payload = redactHealth(health, isTrueLoopback(remoteAddress));
+  sendJson(res, health.status === "down" ? 503 : 200, payload, {
     "Cache-Control": "no-store",
     ...(health.status === "down" ? { "Retry-After": "10" } : {}),
   });

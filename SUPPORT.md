@@ -1,6 +1,6 @@
 # Política de soporte
 
-**Versión estable actual: 5.2.0** (versionCode 51). La línea estable es la única que se mantiene:
+**Versión estable actual: 5.2.1** (puente; APK 5.2.0, versionCode 51). La línea estable es la única que se mantiene:
 a partir de su publicación **solo recibe correcciones de seguridad**, no funciones nuevas. Cualquier
 función nueva sale en una serie posterior. **5.1.x queda como la versión anterior** y ya no recibe
 cambios: si sigues en ella, actualiza a 5.2.0.

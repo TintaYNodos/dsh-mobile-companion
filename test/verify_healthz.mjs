@@ -4,7 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 /**
- * Verificacion 5.2.0 de /healthz y del contrato con DeepSeek Harness.
+ * Verificacion 5.2.1 de /healthz y del contrato con DeepSeek Harness.
  *
  * Fuera del conteo historico 14 suites / 235 (local) y 203 (CI): se ejecuta como
  * comprobacion adicional para no romper la comparabilidad de esa cifra.
@@ -30,7 +30,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(here, "..");
-const { computeHealth } = await import(pathToFileURL(path.join(REPO, "src", "healthz.mjs")).href);
+const { computeHealth, isTrueLoopback, redactHealth } = await import(pathToFileURL(path.join(REPO, "src", "healthz.mjs")).href);
+const { config } = await import(pathToFileURL(path.join(REPO, "src", "config.mjs")).href);
 const { startBridge } = await import(pathToFileURL(path.join(here, "ci", "start-bridge.mjs")).href);
 
 const checks = [];
@@ -85,7 +86,7 @@ const bridgeInfo = { listenPort: 57420, panelPort: 57421, bindHost: "127.0.0.1" 
 
 const okHealth = computeHealth({ bridge: bridgeInfo, harness: { ok: true, port: 52710, identity: "confirmed", httpStatus: 200 }, contract: healthyContract, apk });
 check("computeHealth: sano -> status ok", okHealth.status === "ok" && okHealth.ok === true, okHealth.status);
-check("computeHealth: incluye version y sha256 del APK", okHealth.version === "5.2.0" && okHealth.apkSha256 === apk.sha256, `${okHealth.version}/${okHealth.apkSha256.slice(0, 8)}`);
+check("computeHealth: incluye version y sha256 del APK", okHealth.version === config.version && okHealth.apkSha256 === apk.sha256, `${okHealth.version}/${okHealth.apkSha256.slice(0, 8)}`);
 check("computeHealth: incluye puertos del puente", okHealth.bridge.listenPort === 57420 && okHealth.bridge.panelPort === 57421);
 
 const downHealth = computeHealth({ bridge: bridgeInfo, harness: { ok: false, port: 52710, identity: "none", httpStatus: 0 }, contract: healthyContract, apk });
@@ -112,7 +113,7 @@ try {
     body = JSON.parse(health.body || "{}");
   }
   check("/healthz responde 200 sin credenciales", health.status === 200, `status=${health.status}`);
-  check("/healthz se identifica como dsh-companion", body.service === "dsh-companion" && body.version === "5.2.0", `${body.service}/${body.version}`);
+  check("/healthz se identifica como dsh-companion", body.service === "dsh-companion" && body.version === config.version, `${body.service}/${body.version}`);
   check("/healthz dice que Harness responde (doble)", body.harness && body.harness.ok === true && body.harness.port === bridge.stubPort, `port=${body.harness && body.harness.port}`);
   check("/healthz no esta 'down'", body.status !== "down", `status=${body.status}`);
   check("/healthz espera a comprobar el contrato", Boolean(body.contract && body.contract.checkedAt), `${body.contract && body.contract.checkedAt}`);
@@ -127,7 +128,7 @@ try {
   const status = await get(bridge.bridgePort, "/dsh-companion/status", { authorization: auth });
   const statusBody = JSON.parse(status.body || "{}");
   check("/status autorizado expone el contrato", status.status === 200 && Boolean(statusBody.contract) && Array.isArray(statusBody.contract.checks), `status=${status.status}`);
-  check("/status conserva los campos de siempre", statusBody.version === "5.2.0" && statusBody.apkVersionCode === 51 && statusBody.dshOnline === true);
+  check("/status conserva los campos de siempre", statusBody.version === config.version && statusBody.apkVersionCode === config.apkVersionCode && statusBody.dshOnline === true);
   const anon = JSON.parse((await get(bridge.bridgePort, "/dsh-companion/status")).body || "{}");
   check("/status anonimo NO expone el contrato", anon.contract === undefined && anon.status === "pairing", `status=${anon.status}`);
 } finally {
@@ -205,6 +206,24 @@ try {
   }
   if (!ready) console.log(output.join("").split(/\r?\n/).slice(-12).join("\n"));
 }
+
+check("isTrueLoopback: 127.0.0.1", isTrueLoopback("127.0.0.1"));
+check("isTrueLoopback: ::1", isTrueLoopback("::1"));
+check("isTrueLoopback: ::ffff:127.0.0.1", isTrueLoopback("::ffff:127.0.0.1"));
+check("isTrueLoopback: IP de la VPN no es loopback", isTrueLoopback("192.0.2.10") === false);
+check("isTrueLoopback: vacio no es loopback", isTrueLoopback("") === false);
+const fullHealth = computeHealth({
+  bridge: bridgeInfo,
+  harness: { ok: true, port: 52710, identity: "confirmed", httpStatus: 200 },
+  contract: { ok: true, degraded: [], unknown: [], checks: [] },
+  apk,
+});
+const redacted = redactHealth(fullHealth, false);
+check("redactHealth: fuera de loopback no revela bindHost", redacted.bindHost === undefined);
+check("redactHealth: fuera de loopback no revela puerto de Harness", redacted.harness === undefined);
+check("redactHealth: fuera de loopback no revela contrato", redacted.contract === undefined);
+check("redactHealth: fuera de loopback conserva estado", redacted.status === "ok" && redacted.ok === true);
+check("redactHealth: loopback conserva el detalle", redactHealth(fullHealth, true).bridge.bindHost !== undefined);
 
 const passed = checks.filter(Boolean).length;
 console.log(`\nRESULTADO: ${passed}/${checks.length} comprobaciones correctas`);

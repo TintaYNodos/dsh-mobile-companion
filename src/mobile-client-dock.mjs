@@ -29,27 +29,26 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
 
   /**
    * Preferencias de Ajustes del telefono: que filas del bloque se muestran.
-   * Se leen del puente nativo y se pueden cambiar en caliente desde Ajustes sin
-   * recargar la pagina (MainActivity llama a __DSH_SET_DOCK_PREFS__).
+   * P1: quickActionsEnabled/codeKeysEnabled exigen el nonce de pagina, asi que
+   * sin puente armado no se llama y se usan los valores por defecto; cuando el
+   * armado avisa, se releen sin recargar.
    */
   var dockPrefs = { quick: true, keys: true };
 
   function readDockPrefs() {
     var prefs = { quick: true, keys: true };
-    try {
-      if (window.AndroidCompanion) {
-        if (typeof window.AndroidCompanion.quickActionsEnabled === 'function') {
-          prefs.quick = Boolean(window.AndroidCompanion.quickActionsEnabled());
-        }
-        if (typeof window.AndroidCompanion.codeKeysEnabled === 'function') {
-          prefs.keys = Boolean(window.AndroidCompanion.codeKeysEnabled());
-        }
-      }
-    } catch(e) {}
+    var quick = callBridgeValue('quickActionsEnabled', [], null);
+    if (typeof quick === 'boolean') prefs.quick = quick;
+    var keys = callBridgeValue('codeKeysEnabled', [], null);
+    if (typeof keys === 'boolean') prefs.keys = keys;
     return prefs;
   }
 
   dockPrefs = readDockPrefs();
+  window.addEventListener('dsh-bridge-armed', function() {
+    dockPrefs = readDockPrefs();
+    updateComposerDockVisibility();
+  });
 
   window.__DSH_SET_DOCK_PREFS__ = function(next) {
     if (!next) return;

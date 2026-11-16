@@ -22,6 +22,11 @@ import android.widget.Toast;
  * - Finalización de trabajos o tareas en segundo plano.
  * - Latidos periódicos de conexión viva para el monitor de desconexión.
  * - Consultas satelitales directas a DeepSeek vía streaming SSE cifrado con KeyStore.
+ *
+ * P1 (5.1.9): TODOS los métodos llevan el nonce de `BridgeGuard` como primer
+ * argumento, incluidos los getters de solo lectura (defensa en profundidad). Un
+ * iframe no puede leer el token del frame principal. El APK y el puente se
+ * publican juntos, así que no se conserva ninguna firma antigua sin token.
  */
 public class CompanionBridge {
 
@@ -32,6 +37,17 @@ public class CompanionBridge {
     public CompanionBridge(Context context) {
         this.context = context.getApplicationContext();
         this.mainHandler = new Handler(Looper.getMainLooper());
+    }
+
+    /**
+     * P1 (5.1.9): TODOS los metodos expuestos a JavaScript pasan por aqui. Solo
+     * se autoriza con el nonce de la pagina; si no, se registra el rechazo y se
+     * devuelve false, sin excepcion hacia JS y sin ningun efecto.
+     */
+    private static boolean authorized(String method, String nonce) {
+        if (BridgeGuard.authorize(MainActivity.getInstance(), nonce)) return true;
+        BridgeGuard.logRejected(method);
+        return false;
     }
 
     /**
@@ -55,12 +71,13 @@ public class CompanionBridge {
         return true;
     }
 
+    /** P1: cancelar el aviso de aprobacion cambia estado; exige el nonce. */
     @JavascriptInterface
-    public void onApprovalSettled(String key) {
-        if (key == null || key.trim().isEmpty()) return;
-        mainHandler.post(() -> {
-            NotificationHelper.cancelApproval(context, key);
-        });
+    public boolean onApprovalSettled(String nonce, String key) {
+        if (!authorized("onApprovalSettled", nonce)) return false;
+        if (key == null || key.trim().isEmpty()) return false;
+        mainHandler.post(() -> NotificationHelper.cancelApproval(context, key));
+        return true;
     }
 
     /** P1: escribir el portapapeles también exige el nonce de la página. */
@@ -84,14 +101,17 @@ public class CompanionBridge {
         return true;
     }
 
+    /** P1: el estado de generacion mueve la UI nativa; exige el nonce. */
     @JavascriptInterface
-    public void onGenerationStateChanged(boolean isGenerating) {
+    public boolean onGenerationStateChanged(String nonce, boolean isGenerating) {
+        if (!authorized("onGenerationStateChanged", nonce)) return false;
         mainHandler.post(() -> {
             MainActivity instance = MainActivity.getInstance();
             if (instance != null) {
                 instance.setGenerationState(isGenerating);
             }
         });
+        return true;
     }
 
     /** P1: aviso de respuesta terminada; exige el nonce de la página. */
@@ -170,8 +190,14 @@ public class CompanionBridge {
         return true;
     }
 
+    /**
+     * P1: getter de lectura con nonce. Sin autorizacion responde true ("en
+     * linea") a proposito: el interceptor de borradores solo debe guardar cuando
+     * el nativo confirma que NO hay conexion, no ante un rechazo del guardian.
+     */
     @JavascriptInterface
-    public boolean isOnline() {
+    public boolean isOnline(String nonce) {
+        if (!authorized("isOnline", nonce)) return true;
         MainActivity instance = MainActivity.getInstance();
         return instance != null && instance.isOnline();
     }
@@ -197,14 +223,17 @@ public class CompanionBridge {
         return true;
     }
 
+    /** P1: getters de lectura; el nonce es defensa en profundidad (fail-closed). */
     @JavascriptInterface
-    public boolean isDark() {
+    public boolean isDark(String nonce) {
+        if (!authorized("isDark", nonce)) return false;
         MainActivity instance = MainActivity.getInstance();
-        return instance != null ? instance.isDark() : false;
+        return instance != null && instance.isDark();
     }
 
     @JavascriptInterface
-    public String getThemeMode() {
+    public String getThemeMode(String nonce) {
+        if (!authorized("getThemeMode", nonce)) return "system";
         MainActivity instance = MainActivity.getInstance();
         if (instance == null) return "system";
         int m = instance.themeMode();
@@ -212,54 +241,60 @@ public class CompanionBridge {
     }
 
     @JavascriptInterface
-    public boolean isEnterNewlineEnabled() {
+    public boolean isEnterNewlineEnabled(String nonce) {
+        if (!authorized("isEnterNewlineEnabled", nonce)) return true;
         MainActivity instance = MainActivity.getInstance();
         return instance != null ? instance.isEnterNewlineEnabled() : true;
     }
 
     /** Interruptor de Ajustes: fila de comandos rapidos sobre el compositor. */
     @JavascriptInterface
-    public boolean quickActionsEnabled() {
+    public boolean quickActionsEnabled(String nonce) {
+        if (!authorized("quickActionsEnabled", nonce)) return true;
         MainActivity instance = MainActivity.getInstance();
         return instance == null || instance.isQuickActionsEnabled();
     }
 
-    /**
-     * Interruptor "Enter para enviar". Se expone el sentido directo (enviar si /
-     * enviar no) en lugar de "es salto de linea" para que el lado web no tenga
-     * que invertirlo y no pueda quedar desincronizado con Ajustes.
-     */
+    /** Interruptor "Enter para enviar" (sentido directo, sin invertir en web). */
     @JavascriptInterface
-    public boolean enterSendsMessage() {
+    public boolean enterSendsMessage(String nonce) {
+        if (!authorized("enterSendsMessage", nonce)) return false;
         MainActivity instance = MainActivity.getInstance();
         return instance != null && instance.isEnterSendEnabled();
     }
 
     /** Interruptor de Ajustes: fila de teclas de codigo sobre el compositor. */
     @JavascriptInterface
-    public boolean codeKeysEnabled() {
+    public boolean codeKeysEnabled(String nonce) {
+        if (!authorized("codeKeysEnabled", nonce)) return true;
         MainActivity instance = MainActivity.getInstance();
         return instance == null || instance.isCodeKeysEnabled();
     }
 
+    /** P1: recargar la sesion principal tras aprobar cambia la pagina; nonce. */
     @JavascriptInterface
-    public void onApproved() {
+    public boolean onApproved(String nonce) {
+        if (!authorized("onApproved", nonce)) return false;
         mainHandler.post(() -> {
             MainActivity instance = MainActivity.getInstance();
             if (instance != null) {
                 instance.reloadMainSession();
             }
         });
+        return true;
     }
 
+    /** P1: la vibracion se dispara desde JS; exige el nonce. */
     @JavascriptInterface
-    public void performHaptic(String type) {
+    public boolean performHaptic(String nonce, String type) {
+        if (!authorized("performHaptic", nonce)) return false;
         mainHandler.post(() -> {
             MainActivity instance = MainActivity.getInstance();
             if (instance != null) {
                 instance.vibrateHaptic(type);
             }
         });
+        return true;
     }
 
     /**
@@ -290,7 +325,7 @@ public class CompanionBridge {
             BridgeGuard.logRejected("startSatelliteQuery");
             return false;
         }
-        cancelSatelliteQuery();
+        cancelSatelliteQueryInternal();
 
         String apiKey = KeyStoreVault.getDeepSeekApiKey(context);
         if (apiKey == null || apiKey.trim().isEmpty()) {
@@ -338,16 +373,26 @@ public class CompanionBridge {
         return true;
     }
 
+    /** P1: cancelar la consulta satelital cambia estado; exige el nonce. */
     @JavascriptInterface
-    public void cancelSatelliteQuery() {
+    public boolean cancelSatelliteQuery(String nonce) {
+        if (!authorized("cancelSatelliteQuery", nonce)) return false;
+        cancelSatelliteQueryInternal();
+        return true;
+    }
+
+    /** Cancelacion interna: la usa startSatelliteQuery ya autorizado. */
+    private void cancelSatelliteQueryInternal() {
         if (activeSatelliteClient != null) {
             activeSatelliteClient.cancel();
             activeSatelliteClient = null;
         }
     }
 
+    /** P1: consultar si hay clave de API se limita al frame autorizado. */
     @JavascriptInterface
-    public boolean hasSatelliteKey() {
+    public boolean hasSatelliteKey(String nonce) {
+        if (!authorized("hasSatelliteKey", nonce)) return false;
         return KeyStoreVault.hasDeepSeekApiKey(context);
     }
 }

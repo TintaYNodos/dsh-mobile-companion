@@ -89,23 +89,45 @@ const isSafeBindAddress = (address) => {
   return address.startsWith("127.") || isPrivateVpnAddress(address);
 };
 
-export function probePort(port, host = config.targetHost, timeoutMs = 500) {
-  return new Promise((resolve) => {
-    if (!net.isIP(host)) return resolve(false);
+const DSH_MARKERS = ["dsh web authentication required", "__DSH_BOOT__"];
+const DSH_STATUSES = [200, 401, 403];
 
+/** P22: identidad DSH real, no "algo responde": { port, status, identity } con
+ * identity confirmed|possible|none. 200 sin marcador no es DSH; un 401/403 sin
+ * marcador es solo "possible" (pudo pedir credenciales) y no confirma nada. */
+export function probeDshIdentity(port, host = config.targetHost, timeoutMs = 500) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result) => { if (!settled) { settled = true; resolve({ port, ...result }); } };
+    const identityOf = (status, body) =>
+      DSH_MARKERS.some((marker) => body.includes(marker))
+        ? { status, identity: "confirmed" }
+        : { status, identity: status === 200 ? "none" : "possible" };
+    if (!net.isIP(host)) return finish({ status: 0, identity: "none" });
     const request = http.request(
       { hostname: host, port, method: "GET", path: "/", timeout: timeoutMs, agent: false },
       (response) => {
-        response.resume();
-        resolve([200, 301, 302, 307, 308, 401, 403].includes(response.statusCode));
+        const status = response.statusCode || 0;
+        if (!DSH_STATUSES.includes(status)) { response.resume(); return finish({ status, identity: "none" }); }
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+          if (DSH_MARKERS.some((marker) => body.includes(marker))) { request.destroy(); finish(identityOf(status, body)); }
+          else if (body.length > 65536) { request.destroy(); finish({ status, identity: "none" }); }
+        });
+        response.on("end", () => finish(identityOf(status, body)));
       }
     );
-
-    request.on("timeout", () => { request.destroy(); resolve(false); });
-    request.on("error", () => resolve(false));
+    request.on("timeout", () => { request.destroy(); finish({ status: 0, identity: "none" }); });
+    request.on("error", () => finish({ status: 0, identity: "none" }));
     request.end();
   });
 }
+
+/** true solo con identidad DSH confirmada. */
+export const probePort = (port, host = config.targetHost, timeoutMs = 500) =>
+  probeDshIdentity(port, host, timeoutMs).then((result) => result.identity === "confirmed");
 
 /**
  * Candidatas en orden de preferencia. Funcion pura: recibe `os.networkInterfaces()`.
@@ -219,32 +241,10 @@ export function isClientAuthorized(remoteAddress, bindHost, bindPrefix = 24) {
   return inCidr(client, bindHost, bindPrefix);
 }
 
-
-export function probeDshPort(port, host = config.targetHost, timeoutMs = 400) {
-  return new Promise((resolve) => {
-    if (!net.isIP(host)) return resolve(false);
-
-    const request = http.request(
-      { hostname: host, port, method: "GET", path: "/", timeout: timeoutMs, agent: false },
-      (response) => {
-        let body = "";
-        response.setEncoding("utf8");
-        response.on("data", (chunk) => {
-          body += chunk;
-          if (body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__")) {
-            request.destroy();
-            resolve(true);
-          }
-        });
-        response.on("end", () => resolve(body.includes("dsh web authentication required") || body.includes("__DSH_BOOT__")));
-      }
-    );
-
-    request.on("timeout", () => { request.destroy(); resolve(false); });
-    request.on("error", () => resolve(false));
-    request.end();
-  });
-}
+/** P22: el descubrimiento solo confirma puertos con identidad DSH verificada;
+ * un redirect o un 200 generico ya no basta para reasignar el backend. */
+export const probeDshPort = (port, host = config.targetHost, timeoutMs = 400) =>
+  probeDshIdentity(port, host, timeoutMs).then((result) => result.identity === "confirmed");
 
 /**
  * P11: en Linux y macOS no habia descubrimiento dinamico y era sincrono

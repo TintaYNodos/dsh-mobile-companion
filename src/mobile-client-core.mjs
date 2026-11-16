@@ -11,16 +11,14 @@
  *
  * P1: el objeto `window.AndroidCompanion` es accesible tambien desde iframes.
  * El bloque Android inyecta `window.__DSH_BRIDGE_TOKEN__` en este documento y
- * exige que el JS propio lo arme con `armBridge(nonce)`; ademas los metodos
- * sensibles (`installUpdate`, `confirmCriticalApproval`, `startSatelliteQuery`)
- * y los informativos (`onApprovalRequested`, `onGenerationFinished`,
- * `onJobFinished`, `copyToClipboard`, `saveOfflineDraft`, `onHeartbeat`)
- * reciben ese nonce como primer argumento y solo se invocan desde el frame
- * principal (`window.top === window.self`). Un iframe cross-origin no puede leer
- * el global ni el meta del padre. El armado se intenta al arrancar, al cargar el
+ * exige que el JS propio lo arme con `armBridge(nonce)`. Desde 5.1.9 TODOS los
+ * metodos del puente (sensibles, informativos y getters) reciben ese nonce como
+ * primer argumento y solo se invocan desde el frame principal
+ * (`window.top === window.self`); un iframe cross-origin no puede leer el global
+ * ni el meta del padre. El APK y el puente se publican juntos en esta version,
+ * asi que NO queda ninguna llamada de respaldo sin token: si no hay nonce, no se
+ * llama al puente (fail-closed). El armado se intenta al arrancar, al cargar el
  * documento y, si el nonce llega tarde, en el tick del planificador unico (P53).
- * Todo va con `typeof` para que un APK antiguo sin `armBridge` siga funcionando
- * exactamente igual.
  */
 export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_INITIALIZED__) return;
   window.__DSH_COMPANION_NOTIFICATIONS_INITIALIZED__ = true;
@@ -54,9 +52,8 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
   }
 
   function haptic(pattern) {
-    if (window.AndroidCompanion && typeof window.AndroidCompanion.performHaptic === 'function') {
-      try { window.AndroidCompanion.performHaptic(pattern); } catch(e) {}
-    }
+    // P1: la vibracion tambien exige el nonce; sin el, no se llama.
+    callBridgeWithToken('performHaptic', [pattern]);
   }
 
   if (window.AndroidCompanion && typeof window.AndroidCompanion.copyToClipboard === 'function') {
@@ -132,24 +129,20 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
   }
 
   /**
-   * Llama a armBridge con la firma que exista: primero con el nonce y, si esa
-   * firma no existe (JavascriptInterface lanza cuando no hay metodo con esa
-   * aridad), sin argumentos, por si el nativo lee el nonce de su propio WebView.
-   * Un retorno false explicito cuenta como fallo y se reintenta; void (undefined)
-   * cuenta como armado. Sin nonce no se llama: BridgeGuard registra cada rechazo
-   * y no tiene sentido ensuciar el log antes de que WebBridge inyecte el global.
+   * Arma el puente con el nonce. En 5.1.9 el APK y el puente se publican juntos,
+   * asi que armBridge siempre tiene la firma con token: NO hay llamada sin
+   * argumentos (fail-closed). Un retorno false explicito cuenta como fallo y se
+   * reintenta; undefined cuenta como armado (JavascriptInterface antiguo).
    */
   function armBridgeOnce(token) {
     var bridge = window.AndroidCompanion;
     if (!bridge || typeof bridge.armBridge !== 'function') return false;
     if (!token) return false;
     try {
-      if (bridge.armBridge(token) !== false) return true;
-    } catch (errWithToken) {}
-    try {
-      if (bridge.armBridge() !== false) return true;
-    } catch (errNoArgs) {}
-    return false;
+      return bridge.armBridge(token) !== false;
+    } catch (e) {
+      return false;
+    }
   }
 
   // Reintentos acotados: el nonce se inyecta en onPageStarted/onPageFinished y
@@ -161,10 +154,17 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
   function ensureBridgeArmed() {
     if (bridgeArmed) return true;
     if (bridgeArmAttempts >= BRIDGE_ARM_MAX_ATTEMPTS) return false;
+    // P1: solo el frame principal arma el puente. Un iframe no puede leer el
+    // token del padre, pero si lo tuviera tampoco debe poder armar/llamar.
+    if (!isTopFrame()) return false;
     if (!window.AndroidCompanion || typeof window.AndroidCompanion.armBridge !== 'function') return false;
     bridgeArmAttempts++;
     if (!armBridgeOnce(readBridgeToken())) return false;
     bridgeArmed = true;
+    // Los bloques que leen getters nativos (tema, Enter, dock) se enteran ahora
+    // de que el puente acepta llamadas y los releen; asi no quedan con los
+    // valores por defecto si el token se inyecto despues de que corrieran.
+    try { window.dispatchEvent(new Event('dsh-bridge-armed')); } catch (e) {}
     return true;
   }
 
@@ -173,11 +173,7 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
     try { return window.top === window.self; } catch (e) { return false; }
   }
 
-  /**
-   * El APK con guardian se reconoce porque expone armBridge. Con un APK
-   * anterior no hay nonce ni firma nueva: se conserva la llamada de siempre para
-   * que el cliente siga funcionando al mezclar APK viejo con puente actualizado.
-   */
+  /** El APK 5.1.9 expone armBridge; sin el no se llama a nada (fail-closed). */
   function bridgeHasNonceGuard() {
     return Boolean(window.AndroidCompanion && typeof window.AndroidCompanion.armBridge === 'function');
   }
@@ -191,26 +187,23 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
 
   /**
    * P1: invoca un metodo sensible del puente (installUpdate y compania) con el
-   * guardián de nonce. Requiere frame principal, armado y el nonce como primer
-   * argumento; si el puente responde false se rearma UNA vez y se reintenta, sin
-   * bucles. Con APK antiguo (sin armBridge) se llama con la firma de siempre.
-   * Devuelve true si el puente acepto la accion.
+   * guardian de nonce. Exige frame principal, puente armado y el nonce como
+   * primer argumento; si el puente responde false se rearma UNA vez y se
+   * reintenta, sin bucles. Sin nonce no se llama (fail-closed en 5.1.9).
    */
   function callBridgeSensitive(method, args) {
     var bridge = window.AndroidCompanion;
     if (!isTopFrame() || !bridge || typeof bridge[method] !== 'function') return false;
+    if (!bridgeHasNonceGuard()) return false;
 
     var extra = Array.prototype.slice.call(args || []);
     var invoke = function(nonce) {
       try {
-        var callArgs = nonce ? [nonce].concat(extra) : extra;
-        return bridge[method].apply(bridge, callArgs) !== false;
+        return bridge[method].apply(bridge, [nonce].concat(extra)) !== false;
       } catch (e) {
         return false;
       }
     };
-
-    if (!bridgeHasNonceGuard()) return invoke(null);
 
     var nonce = ensureBridgeArmed() ? readBridgeToken() : null;
     if (nonce && invoke(nonce)) return true;
@@ -220,36 +213,41 @@ export const MOBILE_CLIENT_CORE = `  if (window.__DSH_COMPANION_NOTIFICATIONS_IN
 
   /**
    * P1: invoca un metodo informativo del puente (latido, avisos, portapapeles,
-   * borrador) con el nonce de pagina. Los seis metodos pasaron a exigir el token
-   * como primer argumento; antes un iframe cross-origin podia usarlos.
+   * borrador, vibracion, cancelaciones) con el nonce de pagina. Exige frame
+   * principal y puente armado; sin nonce NO se llama: se prefiere no avisar
+   * antes que llamar sin token (fail-closed en 5.1.9).
    *
-   * - APK con guardian (armBridge): exige frame principal, puente armado y
-   *   nonce. Sin nonce NO se llama: se prefiere no avisar antes que llamar sin
-   *   token (fail-closed).
-   * - APK 5.1.0-5.1.7 (tiene armBridge pero estos metodos iban sin token): la
-   *   llamada con token lanza y se reintenta UNA vez con la firma antigua.
-   * - APK anterior al guardian: se conserva la firma de siempre.
-   *
-   * No rearma en bucle como callBridgeSensitive: el latido se repite cada
-   * pocos segundos y no debe reiniciar el presupuesto de intentos del armado.
+   * No rearma en bucle como callBridgeSensitive: el latido se repite cada pocos
+   * segundos y no debe reiniciar el presupuesto de intentos del armado.
    */
   function callBridgeWithToken(method, args) {
     var bridge = window.AndroidCompanion;
     if (!bridge || typeof bridge[method] !== 'function') return false;
-    var extra = Array.prototype.slice.call(args || []);
-
-    if (!bridgeHasNonceGuard()) {
-      try { return bridge[method].apply(bridge, extra) !== false; } catch (e) { return false; }
-    }
-    if (!isTopFrame() || !ensureBridgeArmed()) return false;
+    if (!bridgeHasNonceGuard() || !isTopFrame() || !ensureBridgeArmed()) return false;
     var nonce = readBridgeToken();
     if (!nonce) return false;
-
     try {
-      return bridge[method].apply(bridge, [nonce].concat(extra)) !== false;
+      return bridge[method].apply(bridge, [nonce].concat(Array.prototype.slice.call(args || []))) !== false;
     } catch (e) {
-      // Solo se cae a la firma vieja si la nueva no existe (APK intermedio).
-      try { return bridge[method].apply(bridge, extra) !== false; } catch (e2) { return false; }
+      return false;
+    }
+  }
+
+  /**
+   * P1: lee un getter nativo (tema, Enter, dock, isOnline) con el nonce. Sin
+   * token no se llama al puente y se devuelve el valor por defecto: los
+   * llamadores pasan null para distinguir "no se pudo leer" de un false nativo.
+   */
+  function callBridgeValue(method, args, fallback) {
+    var bridge = window.AndroidCompanion;
+    if (!bridge || typeof bridge[method] !== 'function') return fallback;
+    if (!bridgeHasNonceGuard() || !isTopFrame() || !ensureBridgeArmed()) return fallback;
+    var nonce = readBridgeToken();
+    if (!nonce) return fallback;
+    try {
+      return bridge[method].apply(bridge, [nonce].concat(Array.prototype.slice.call(args || [])));
+    } catch (e) {
+      return fallback;
     }
   }
 

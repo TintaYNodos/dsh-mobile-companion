@@ -64,3 +64,20 @@ Out of scope:
 ## Security model in one paragraph
 
 Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device, closes the WebSocket tunnels and rotates the access key. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.
+
+## Accepted risks (Riesgos aceptados)
+
+These points from the external audit are deliberate decisions, not pending work. The full
+per-point status is in [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
+
+| Point | Accepted risk | Why it is accepted | Mitigation in place |
+| --- | --- | --- | --- |
+| P39 | The home-screen widget receiver is `exported="true"`. | Android requires an exported `AppWidgetProvider` that receives `APPWIDGET_UPDATE`; the launcher is another process. It is inherent to AppWidget. | The receiver takes no external extras and no bridge data: it only reads local `SharedPreferences` and paints `RemoteViews`. No permissions of its own, no tokens, no network. |
+| P50 | Some tests assert the injected CSS/markup. | The dependency lives in test code (`verify_injection`, `verify_satellite_and_battery`), never in a production authorization or sanitization path. | If DeepSeek Harness changes its markup, the suite fails loudly instead of silently missing an injection regression. |
+| P51 | CSP is applied only to the bridge's own pages and static assets, not to proxied DeepSeek Harness HTML. | Rewriting a third-party app's headers would break it; the proxied response is same-origin authenticated and keeps DSH's own headers. | Own pages get CSP, `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff`; the proxy does not strip the upstream security headers. |
+| P56 | There is no linter (ESLint or equivalent). | The project has zero npm dependencies on purpose; adding a linter would add a toolchain and a supply chain for no runtime benefit. | `tools/audit-repo.mjs` (syntax, encoding, links, tables, JSON, versions, secrets, 400-line limit) runs in CI; every module also passes `node --check`. |
+
+P22 y P2 quedaron cerrados en 5.1.9: el descubrimiento exige identidad real de DSH y la prueba del
+registro ya no puede corromper el registro real del usuario. Los cuatro puntos aceptados de arriba
+mantienen su mitigación; el detalle punto por punto y la evidencia están en
+[AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).

@@ -96,7 +96,11 @@ const allKeysIncluded = essentialKeys.every((k) => NOTIFICATION_BRIDGE_SCRIPT.in
 check("mobile-client contiene todas las teclas requeridas", allKeysIncluded, essentialKeys.join(" "));
 check("mobile-client inserta 2 espacios en Tab", NOTIFICATION_BRIDGE_SCRIPT.includes("'  '"));
 check("mobile-client inserta {  } con cursor dentro para { }", NOTIFICATION_BRIDGE_SCRIPT.includes("'{ '") && NOTIFICATION_BRIDGE_SCRIPT.includes("' }'"));
-check("mobile-client conecta haptic feedback performHaptic", NOTIFICATION_BRIDGE_SCRIPT.includes("window.AndroidCompanion.performHaptic"));
+check("mobile-client conecta haptic feedback performHaptic (con nonce)",
+  NOTIFICATION_BRIDGE_SCRIPT.includes("callBridgeWithToken('performHaptic'") ||
+  NOTIFICATION_BRIDGE_SCRIPT.includes('callBridgeWithToken("performHaptic"'));
+check("performHaptic no se invoca sin nonce",
+  !/window\.AndroidCompanion\.performHaptic\s*\(/.test(NOTIFICATION_BRIDGE_SCRIPT));
 
 // ============================================================================
 // 5. REGLAS ESTRICTAS: CERO EMOJIS EN ARCHIVOS MODIFICADOS

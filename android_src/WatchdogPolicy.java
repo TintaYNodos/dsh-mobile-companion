@@ -16,22 +16,27 @@ package com.tintaynodos.dshcompanion;
  * <pre>
  *   OK        la escucha está viva o no toca actuar todavía
  *   RECONNECT cerrar el SSE actual y volver a abrirlo
- *   RESTART   reiniciar la escucha completa (dos reconexiones sin recuperar)
+ *   RESTART   reiniciar la escucha completa (varias reconexiones sin recuperar)
  *   ALERT     el reinicio tampoco recuperó: avisar que los avisos están detenidos
  * </pre>
  *
- * Reglas (umbrales por defecto, configurables en el constructor):
+ * Reglas (umbrales configurables desde Ajustes y por constructor):
  * <ul>
- *   <li>3 min sin ninguna actividad (evento SSE o conexión establecida)
- *       → RECONNECT. El puente manda un comentario `: keep-alive` cada 25 s,
- *       así que un flujo sano nunca llega a 3 min de silencio.</li>
- *   <li>Dos RECONNECT seguidos sin recuperar → RESTART, con un mínimo de
- *       10 min entre reinicios para no entrar en bucle.</li>
- *   <li>5 min después del RESTART sin conexión buena → ALERT, una sola vez.</li>
+ *   <li>Silencio máximo sin actividad (1, 3 o 5 min; 3 por defecto) → RECONNECT.
+ *       El puente manda un comentario `: keep-alive` cada 25 s, así que un flujo
+ *       sano nunca llega a ese umbral.</li>
+ *   <li>N RECONNECT seguidos sin recuperar (1, 2 o 3; 2 por defecto) → RESTART,
+ *       con un mínimo de 10 min entre reinicios para no entrar en bucle.</li>
+ *   <li>5 min después del RESTART sin conexión buena → ALERT, una sola vez. Si
+ *       "Avisar si no recupera" está apagado no se notifica: se cierra la
+ *       ventana y el ciclo vuelve a intentarlo, siempre con el reinicio
+ *       limitado a uno cada 10 min.</li>
  * </ul>
  *
  * Java puro, sin Android, para poder probarla con `java` normal:
- * `android_src/tests/WatchdogPolicyTest.java`.
+ * `android_src/tests/WatchdogPolicyTest.java`. El servicio la reconstruye en
+ * cada tick con los valores de Ajustes (`PrefKeys.watchdogPolicy`), así que
+ * cambiarlos aplica sin reiniciar el servicio.
  */
 final class WatchdogPolicy {
 
@@ -43,7 +48,7 @@ final class WatchdogPolicy {
         ALERT
     }
 
-    /** Silencio máximo sin actividad antes de reconectar. */
+    /** Silencio máximo sin actividad antes de reconectar (3 min por defecto). */
     static final long DEFAULT_STALE_MS = 3 * 60_000L;
     /** Margen que se le da a un RECONNECT antes de darlo por fallido. */
     static final long DEFAULT_RECONNECT_GRACE_MS = 60_000L;
@@ -51,8 +56,10 @@ final class WatchdogPolicy {
     static final long DEFAULT_RESTART_GRACE_MS = 5 * 60_000L;
     /** Nunca más de un RESTART cada 10 minutos. */
     static final long DEFAULT_RESTART_COOLDOWN_MS = 10 * 60_000L;
-    /** Dos reconexiones seguidas sin recuperar → RESTART. */
+    /** Dos reconexiones seguidas sin recuperar → RESTART (por defecto). */
     static final int MAX_FAILED_RECONNECTS = 2;
+    /** Opción máxima de "Reintentos antes de reiniciar" en Ajustes. */
+    static final int MAX_RETRIES_OPTION = 3;
     /** Con menos de un segundo no tiene sentido evaluar nada. */
     static final long MIN_THRESHOLD_MS = 1_000L;
 
@@ -78,7 +85,7 @@ final class WatchdogPolicy {
         long restartArmedAt = 0L;
         /** Reconexiones pedidas que no recuperaron la escucha. */
         int failedReconnects = 0;
-        /** Ya se avisó del último cuelgue (no repetir el aviso cada minuto). */
+        /** Ya se cerró la ventana del último cuelgue (no repetir cada minuto). */
         boolean alertSent = false;
     }
 
@@ -86,17 +93,63 @@ final class WatchdogPolicy {
     private final long reconnectGraceMs;
     private final long restartGraceMs;
     private final long restartCooldownMs;
+    private final int maxFailedReconnects;
+    private final boolean alertEnabled;
 
     WatchdogPolicy() {
-        this(DEFAULT_STALE_MS, DEFAULT_RECONNECT_GRACE_MS,
-                DEFAULT_RESTART_GRACE_MS, DEFAULT_RESTART_COOLDOWN_MS);
+        this(DEFAULT_STALE_MS, DEFAULT_RECONNECT_GRACE_MS, DEFAULT_RESTART_GRACE_MS,
+                DEFAULT_RESTART_COOLDOWN_MS, MAX_FAILED_RECONNECTS, true);
     }
 
+    /** Solo lo configurable en Ajustes: silencio, reintentos y aviso. */
+    WatchdogPolicy(long staleMs, int maxFailedReconnects, boolean alertEnabled) {
+        this(staleMs, DEFAULT_RECONNECT_GRACE_MS, DEFAULT_RESTART_GRACE_MS,
+                DEFAULT_RESTART_COOLDOWN_MS, maxFailedReconnects, alertEnabled);
+    }
+
+    /** Configuración completa, incluidos los márgenes (pruebas finas). */
     WatchdogPolicy(long staleMs, long reconnectGraceMs, long restartGraceMs, long restartCooldownMs) {
+        this(staleMs, reconnectGraceMs, restartGraceMs, restartCooldownMs, MAX_FAILED_RECONNECTS, true);
+    }
+
+    WatchdogPolicy(long staleMs, long reconnectGraceMs, long restartGraceMs, long restartCooldownMs,
+                   int maxFailedReconnects, boolean alertEnabled) {
         this.staleMs = Math.max(MIN_THRESHOLD_MS, staleMs);
         this.reconnectGraceMs = Math.max(MIN_THRESHOLD_MS, reconnectGraceMs);
         this.restartGraceMs = Math.max(MIN_THRESHOLD_MS, restartGraceMs);
         this.restartCooldownMs = Math.max(MIN_THRESHOLD_MS, restartCooldownMs);
+        this.maxFailedReconnects = retriesFor(maxFailedReconnects);
+        this.alertEnabled = alertEnabled;
+    }
+
+    /** Política con los valores de Ajustes (minutos 1/3/5, reintentos 1/2/3). */
+    static WatchdogPolicy fromValues(int staleMinutes, int retries, boolean alertEnabled) {
+        return new WatchdogPolicy(staleMsForMinutes(staleMinutes), retries, alertEnabled);
+    }
+
+    /** Silencio en minutos; cualquier valor distinto de 1, 3 o 5 cae en 3 min. */
+    static long staleMsForMinutes(int minutes) {
+        return minutes == 1 || minutes == 3 || minutes == 5 ? minutes * 60_000L : DEFAULT_STALE_MS;
+    }
+
+    /** Reintentos antes de reiniciar; fuera de 1..3 se usa el valor por defecto. */
+    static int retriesFor(int retries) {
+        return retries >= 1 && retries <= MAX_RETRIES_OPTION ? retries : MAX_FAILED_RECONNECTS;
+    }
+
+    /** Umbral de silencio en milisegundos (para la línea de estado de Ajustes). */
+    long staleMs() {
+        return staleMs;
+    }
+
+    /** Reconexiones fallidas seguidas antes de reiniciar. */
+    int maxFailedReconnects() {
+        return maxFailedReconnects;
+    }
+
+    /** ¿Está activado "Avisar si no recupera"? */
+    boolean alertEnabled() {
+        return alertEnabled;
     }
 
     /** Registra actividad en el flujo: un evento SSE o un keep-alive. */
@@ -143,9 +196,18 @@ final class WatchdogPolicy {
                 return Action.OK;
             }
             if (now - state.restartArmedAt >= restartGraceMs) {
-                if (state.alertSent) return Action.OK;
-                state.alertSent = true;
-                return Action.ALERT;
+                if (alertEnabled) {
+                    if (state.alertSent) return Action.OK;
+                    state.alertSent = true;
+                    return Action.ALERT;
+                }
+                // "Avisar si no recupera" apagado: no se notifica, pero el
+                // vigilante sigue vivo. Se cierra la ventana para que el ciclo
+                // vuelva a reconectar; el reinicio sigue limitado a 1/10 min.
+                state.restartArmedAt = 0L;
+                state.failedReconnects = 0;
+                state.lastReconnectAt = 0L;
+                return Action.OK;
             }
             return Action.OK;
         }
@@ -158,8 +220,8 @@ final class WatchdogPolicy {
             return Action.OK;
         }
 
-        if (state.failedReconnects >= MAX_FAILED_RECONNECTS) {
-            // Dos reconexiones fallidas seguidas: toca reiniciar la escucha,
+        if (state.failedReconnects >= maxFailedReconnects) {
+            // N reconexiones fallidas seguidas: toca reiniciar la escucha,
             // salvo que el límite de 1 reinicio / 10 min lo impida.
             if (state.lastRestartAt > 0L && now - state.lastRestartAt < restartCooldownMs) {
                 return Action.OK;

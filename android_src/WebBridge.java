@@ -68,31 +68,49 @@ class WebBridge {
     }
 
     /**
-     * P1: adaptador para la página estática /offline, que no carga el cliente
-     * inyectado (no llama a armBridge ni conoce la firma nueva de
-     * startSatelliteQuery). Se inyecta una sola vez, solo en esa ruta y solo en
-     * el frame principal: el shim arma el puente con el nonce y adapta la
-     * llamada antigua `startSatelliteQuery(payload)` a la nueva
-     * `startSatelliteQuery(nonce, payload)`. offline.html no contiene iframes y
-     * es contenido propio del búnker, así que armarlo ahí no abre el puente a
-     * terceros.
+     * P1 (5.1.9): adaptador para la pagina estatica /offline. offline-satellite.js
+     * ya pasa el nonce cuando lo tiene, pero conserva una llamada de respaldo sin
+     * argumentos; este shim (solo en /offline y solo en el frame principal) arma
+     * el puente y adapta ambas firmas a `startSatelliteQuery(nonce, payload)` y
+     * `cancelSatelliteQuery(nonce)`. offline.html no contiene iframes y es
+     * contenido propio del bunker, asi que armarlo ahi no abre el puente a
+     * terceros. Sin token no se llama a nada.
      */
     static void applyOfflinePageShim(MainActivity a, String pageUrl, String nonce) {
         if (a.webView == null || nonce == null || pageUrl == null) return;
         if (!WebBridge.isOfflineRoute(pageUrl)) return;
         String js = ";(function(){"
                 + " var token = window.__DSH_BRIDGE_TOKEN__;"
-                + " var bridge = window.AndroidCompanion;"
-                + " if (!token || !bridge) return;"
-                + " try { if (typeof bridge.armBridge === 'function') bridge.armBridge(token); } catch (e) {}"
+                + " var raw = window.AndroidCompanion;"
+                + " if (!token || !raw) return;"
+                + " var start = raw.startSatelliteQuery;"
+                + " var cancel = raw.cancelSatelliteQuery;"
+                + " if (typeof start !== 'function' || typeof cancel !== 'function') return;"
                 + " if (window.__DSH_OFFLINE_BRIDGE_SHIM__) return;"
-                + " var original = bridge.startSatelliteQuery;"
-                + " if (typeof original !== 'function') return;"
                 + " window.__DSH_OFFLINE_BRIDGE_SHIM__ = true;"
-                + " bridge.startSatelliteQuery = function(payload) {"
-                + "   try { if (typeof bridge.armBridge === 'function') bridge.armBridge(token); } catch (e) {}"
-                + "   return original.call(bridge, token, payload);"
+                + " var arm = function() {"
+                + "   try { if (typeof raw.armBridge === 'function') raw.armBridge(token); } catch (e) {}"
                 + " };"
+                + " arm();"
+                + " var shim = {"
+                + "   armBridge: function(n) { try { return raw.armBridge(n); } catch (e) { return false; } },"
+                + "   isOnline: function(n) { try { return raw.isOnline(n); } catch (e) { return true; } },"
+                + "   saveOfflineDraft: function(n, v) { try { return raw.saveOfflineDraft(n, v) !== false; } catch (e) { return false; } },"
+                + "   startSatelliteQuery: function(a, b) {"
+                + "     arm();"
+                + "     if (arguments.length >= 2 && a === token) return start.call(raw, a, b);"
+                + "     return start.call(raw, token, a);"
+                + "   },"
+                + "   cancelSatelliteQuery: function(a) {"
+                + "     arm();"
+                + "     return cancel.call(raw, a === token ? a : token);"
+                + "   }"
+                + " };"
+                + " try { window.AndroidCompanion = shim; } catch (e1) {}"
+                + " if (window.AndroidCompanion === shim) return;"
+                // Si el global no se pudo reemplazar, se parchean los metodos.
+                + " try { raw.startSatelliteQuery = shim.startSatelliteQuery; } catch (e2) {}"
+                + " try { raw.cancelSatelliteQuery = shim.cancelSatelliteQuery; } catch (e3) {}"
                 + "})();";
         a.webView.evaluateJavascript(js, null);
     }
@@ -121,6 +139,23 @@ class WebBridge {
             + "    try { if (typeof b.armBridge === 'function') b.armBridge(n); } catch (e0) {}"
             + "    return b.saveOfflineDraft(n, v) !== false;"
             + "  } catch (e1) { return false; }"
+            + "}";
+
+    /**
+     * P1 (5.1.9): isOnline tambien exige el nonce. Si el token no existe o el
+     * puente aun no esta armado se responde "en linea" a proposito: asi el
+     * interceptor de borradores no se traga la tecla Enter por un rechazo del
+     * guardian. Nunca se llama a isOnline sin nonce.
+     */
+    private static final String ONLINE_CHECK_JS =
+            "function __dshIsOnline() {"
+            + "  var b = window.AndroidCompanion;"
+            + "  var n = window.__DSH_BRIDGE_TOKEN__;"
+            + "  if (!b || !n || typeof b.isOnline !== 'function') return true;"
+            + "  try {"
+            + "    try { if (typeof b.armBridge === 'function') b.armBridge(n); } catch (e0) {}"
+            + "    return b.isOnline(n) !== false;"
+            + "  } catch (e1) { return true; }"
             + "}";
 
     static void applyThemeToWeb(MainActivity a) {
@@ -219,8 +254,10 @@ class WebBridge {
                 + "if (window.__DSH_OUTBOX_INSTALLED__) return; "
                 + "window.__DSH_OUTBOX_INSTALLED__ = true; "
                 + DRAFT_SAVE_JS
+                + ONLINE_CHECK_JS
                 + "function captureAndSave(e) { "
-                + "  if (window.AndroidCompanion && typeof window.AndroidCompanion.isOnline === 'function' && !window.AndroidCompanion.isOnline()) { "
+                + "  if (__dshIsOnline()) return; "
+                + "  { "
                 + "    var t = document.querySelector('textarea, [contenteditable=\"true\"]'); "
                 + "    if (t) { "
                 + "      var v = (t.value || t.innerText || '').trim(); "

@@ -86,21 +86,24 @@ export const MOBILE_CLIENT_EDITOR = `  /**
   };
 
   // Control de comportamiento de tecla Enter (↵): Salto de línea vs Enviar mensaje.
-  // Se consulta el sentido directo ("¿Enter envía?") cuando el puente lo ofrece:
-  // así el lado web no invierte nada y no puede quedar al revés respecto a
-  // Ajustes. El método antiguo queda solo como respaldo.
+  // P1: enterSendsMessage/isEnterNewlineEnabled exigen el nonce de pagina. Si el
+  // puente aun no esta armado no se llama: se conserva el valor por defecto y se
+  // relee cuando llega el aviso de armado. Sin APK, WebBridge aplica el
+  // interruptor por __DSH_SET_ENTER_SENDS__ igual que antes.
   window.__DSH_ENTER_NEWLINE__ = true;
-  try {
-    var bridgeSends = null;
-    if (window.AndroidCompanion && typeof window.AndroidCompanion.enterSendsMessage === 'function') {
-      bridgeSends = Boolean(window.AndroidCompanion.enterSendsMessage());
-    }
-    if (bridgeSends !== null) {
+
+  function readEnterBehaviorFromBridge() {
+    var bridgeSends = callBridgeValue('enterSendsMessage', [], null);
+    if (typeof bridgeSends === 'boolean') {
       window.__DSH_ENTER_NEWLINE__ = !bridgeSends;
-    } else if (window.AndroidCompanion && typeof window.AndroidCompanion.isEnterNewlineEnabled === 'function') {
-      window.__DSH_ENTER_NEWLINE__ = Boolean(window.AndroidCompanion.isEnterNewlineEnabled());
+      return;
     }
-  } catch(e) {}
+    var newline = callBridgeValue('isEnterNewlineEnabled', [], null);
+    if (typeof newline === 'boolean') window.__DSH_ENTER_NEWLINE__ = newline;
+  }
+
+  readEnterBehaviorFromBridge();
+  window.addEventListener('dsh-bridge-armed', readEnterBehaviorFromBridge);
 
   window.__DSH_SET_ENTER_BEHAVIOR__ = function(isNewline) {
     window.__DSH_ENTER_NEWLINE__ = Boolean(isNewline);

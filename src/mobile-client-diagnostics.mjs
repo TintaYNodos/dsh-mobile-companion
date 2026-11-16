@@ -10,6 +10,8 @@
  */
 export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
   var wasGenerating = false;
+  // Ultimo estado de generacion que el puente acepto (P1: exige nonce).
+  var bridgeGenerationState = null;
   var genStartTime = 0;
 
   function checkState() {
@@ -37,10 +39,12 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
         }
       }
     } else if (lastApprovalKey) {
-      if (window.AndroidCompanion && window.AndroidCompanion.onApprovalSettled) {
-        window.AndroidCompanion.onApprovalSettled(lastApprovalKey);
+      // P1: cancelar el aviso exige el nonce de pagina. Solo se olvida la clave
+      // cuando el puente acepta la llamada; si no, se reintenta en el siguiente
+      // tick en lugar de llamar sin token.
+      if (callBridgeWithToken('onApprovalSettled', [lastApprovalKey])) {
+        lastApprovalKey = null;
       }
-      lastApprovalKey = null;
     }
 
     var stopBtn = document.querySelector([
@@ -55,9 +59,11 @@ export const MOBILE_CLIENT_DIAGNOSTICS = `  var lastApprovalKey = null;
     var titleHasGenerating = /generando|generating/i.test(document.title || '');
     var isGenerating = Boolean(stopBtn || titleHasGenerating);
 
-    if (isGenerating !== wasGenerating) {
-      if (window.AndroidCompanion && window.AndroidCompanion.onGenerationStateChanged) {
-        window.AndroidCompanion.onGenerationStateChanged(isGenerating);
+    // P1: onGenerationStateChanged exige el nonce. Si el puente aun no esta
+    // armado no se llama; se reintenta en el siguiente tick del planificador.
+    if (isGenerating !== bridgeGenerationState) {
+      if (callBridgeWithToken('onGenerationStateChanged', [isGenerating])) {
+        bridgeGenerationState = isGenerating;
       }
     }
 

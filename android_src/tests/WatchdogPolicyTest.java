@@ -95,6 +95,64 @@ final class WatchdogPolicyTest {
         expect("hace 2 h", WatchdogPolicy.describeAge(base, base - 7_200_000L), "edad horas");
         expect("hace 4 d", WatchdogPolicy.describeAge(base, base - 4 * 86_400_000L), "edad dias");
 
+        // 10. Ajustes: "silencio antes de reconectar" de 1 y de 5 minutos.
+        WatchdogPolicy fast = WatchdogPolicy.fromValues(1, 2, true);
+        WatchdogPolicy.State fastState = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.OK, fast.decide(fastState, t0 + 59_999L), "silencio 1 min: aun fresco");
+        expect(WatchdogPolicy.Action.RECONNECT, fast.decide(fastState, t0 + 60_000L), "silencio 1 min: reconecta");
+
+        WatchdogPolicy calm = WatchdogPolicy.fromValues(5, 2, true);
+        WatchdogPolicy.State calmState = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.OK, calm.decide(calmState, t0 + 299_999L), "silencio 5 min: aun fresco");
+        expect(WatchdogPolicy.Action.RECONNECT, calm.decide(calmState, t0 + 300_000L), "silencio 5 min: reconecta");
+
+        // 11. "Reintentos antes de reiniciar": con 1 reinicia al primer fallo;
+        //     con 3 aguanta tres reconexiones antes de reiniciar.
+        WatchdogPolicy oneRetry = WatchdogPolicy.fromValues(1, 1, true);
+        WatchdogPolicy.State oneState = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.RECONNECT, oneRetry.decide(oneState, t0 + 60_000L), "1 reintento: reconecta");
+        expect(WatchdogPolicy.Action.RESTART, oneRetry.decide(oneState, t0 + 61_000L), "1 reintento: reinicia al fallar");
+
+        WatchdogPolicy threeRetries = WatchdogPolicy.fromValues(3, 3, true);
+        WatchdogPolicy.State threeState = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.RECONNECT, threeRetries.decide(threeState, t0 + 180_000L), "3 reintentos: primero");
+        expect(WatchdogPolicy.Action.RECONNECT, threeRetries.decide(threeState, t0 + 240_000L), "3 reintentos: segundo");
+        expect(WatchdogPolicy.Action.RECONNECT, threeRetries.decide(threeState, t0 + 300_000L), "3 reintentos: tercero");
+        expect(WatchdogPolicy.Action.RESTART, threeRetries.decide(threeState, t0 + 360_000L), "3 reintentos: reinicia");
+
+        // 12. "Avisar si no recupera" apagado: no notifica, pero reconecta y
+        //     reinicia igual; el reinicio sigue limitado a uno cada 10 min.
+        WatchdogPolicy noAlert = WatchdogPolicy.fromValues(1, 1, false);
+        WatchdogPolicy.State quiet = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.RECONNECT, noAlert.decide(quiet, t0 + 60_000L), "sin aviso: reconecta igual");
+        expect(WatchdogPolicy.Action.RESTART, noAlert.decide(quiet, t0 + 61_000L), "sin aviso: reinicia igual");
+        long afterGrace = t0 + 61_000L + WatchdogPolicy.DEFAULT_RESTART_GRACE_MS;
+        expect(WatchdogPolicy.Action.OK, noAlert.decide(quiet, afterGrace), "sin aviso: no notifica");
+        expect(false, quiet.alertSent, "sin aviso: nunca se marca el aviso");
+        expect(WatchdogPolicy.Action.RECONNECT, noAlert.decide(quiet, afterGrace + 1_000L), "sin aviso: vuelve a intentar");
+        expect(WatchdogPolicy.Action.OK, noAlert.decide(quiet, afterGrace + 62_000L), "sin aviso: enfriamiento del reinicio");
+        expect(WatchdogPolicy.Action.RESTART, noAlert.decide(quiet, t0 + 61_000L + 600_000L), "sin aviso: reinicia a los 10 min");
+
+        // 13. Valores invalidos de Ajustes caen en los de por defecto.
+        WatchdogPolicy defaults = WatchdogPolicy.fromValues(3, 2, true);
+        expect(WatchdogPolicy.DEFAULT_STALE_MS, defaults.staleMs(), "silencio 3 min por defecto");
+        expect(WatchdogPolicy.MAX_FAILED_RECONNECTS, defaults.maxFailedReconnects(), "2 reintentos por defecto");
+        expect(true, defaults.alertEnabled(), "aviso activo por defecto");
+        expect(WatchdogPolicy.DEFAULT_STALE_MS, WatchdogPolicy.fromValues(7, 2, true).staleMs(), "minutos invalidos caen en 3");
+        expect(WatchdogPolicy.MAX_FAILED_RECONNECTS, WatchdogPolicy.fromValues(3, 9, true).maxFailedReconnects(), "reintentos invalidos caen en 2");
+        expect(false, WatchdogPolicy.fromValues(3, 2, false).alertEnabled(), "aviso apagado se respeta");
+
+        // 14. Con los valores por defecto (3 min, 2 reintentos, aviso) la
+        //     politica se comporta exactamente igual que antes de configurables.
+        WatchdogPolicy equivalent = WatchdogPolicy.fromValues(3, 2, true);
+        WatchdogPolicy.State same = state(t0, t0, t0);
+        expect(WatchdogPolicy.Action.OK, equivalent.decide(same, t0 + 179_999L), "por defecto: sin cambios");
+        expect(WatchdogPolicy.Action.RECONNECT, equivalent.decide(same, t0 + 180_000L), "por defecto: mismo umbral");
+        expect(WatchdogPolicy.Action.OK, equivalent.decide(same, t0 + 200_000L), "por defecto: misma gracia");
+        expect(WatchdogPolicy.Action.RECONNECT, equivalent.decide(same, t0 + 240_000L), "por defecto: segunda reconexion");
+        expect(WatchdogPolicy.Action.RESTART, equivalent.decide(same, t0 + 260_000L), "por defecto: mismo reinicio");
+        expect(WatchdogPolicy.Action.ALERT, equivalent.decide(same, t0 + 560_000L), "por defecto: mismo aviso");
+
         System.out.println("WatchdogPolicy: " + checks + " comprobaciones, " + failures + " fallos.");
         if (failures > 0) {
             System.out.println("RESULTADO: FALLO");

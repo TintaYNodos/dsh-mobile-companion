@@ -97,7 +97,11 @@ export const MOBILE_CLIENT_UI = `  // El latido periodico de checkState ya no ti
       } else if (themeMode === 'dark') {
         dark = true;
       } else if (window.AndroidCompanion && typeof window.AndroidCompanion.isDark === 'function') {
-        try { dark = window.AndroidCompanion.isDark(); } catch(e) { dark = false; }
+        // P1: los getters exigen el nonce; sin el, se usa prefers-color-scheme.
+        var nativeDark = callBridgeValue('isDark', [], null);
+        dark = typeof nativeDark === 'boolean'
+          ? nativeDark
+          : Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
       } else {
         dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       }
@@ -147,19 +151,25 @@ export const MOBILE_CLIENT_UI = `  // El latido periodico de checkState ya no ti
       }
     });
 
+    var syncThemeFromBridge = function() {
+      // P1: getThemeMode/isDark exigen el nonce; sin el no se llama al puente.
+      var mode = callBridgeValue('getThemeMode', [], null);
+      if (typeof mode !== 'string') return;
+      var nativeDark = callBridgeValue('isDark', [], false);
+      window.__DSH_SET_THEME__(mode, Boolean(nativeDark));
+    };
+
     var attachThemeObserver = function() {
       if (document.body) {
         themeObserver.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] });
-        if (window.AndroidCompanion && typeof window.AndroidCompanion.getThemeMode === 'function') {
-          try {
-            window.__DSH_SET_THEME__(window.AndroidCompanion.getThemeMode(), window.AndroidCompanion.isDark());
-          } catch(e) {}
-        }
+        syncThemeFromBridge();
       } else {
         document.addEventListener('DOMContentLoaded', attachThemeObserver);
       }
     };
     attachThemeObserver();
+    // Si el nonce llega despues de este bloque, el armado avisa y se relee.
+    window.addEventListener('dsh-bridge-armed', syncThemeFromBridge);
   } catch(e) {}
 
   window.__DSH_EXTRACT_CHAT_TEXT__ = function() {

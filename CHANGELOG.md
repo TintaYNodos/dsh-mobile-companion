@@ -79,6 +79,31 @@ Android `versionCode` increments once per published build.
 - **P23**: el puerto del panel (57421) ya no está entre los candidatos del backend de Harness;
   antes el descubrimiento podía apuntar al panel.
 
+## 5.1.9 — `versionCode` 49 (última de la serie 5)
+
+### Añadido
+
+- **Watchdog totalmente configurable**: silencio antes de reconectar (1/3/5 min), reintentos antes
+  de reiniciar (1/2/3), avisar si no recupera (on/off) y botón "Probar ahora" en Ajustes. Los
+  cambios se aplican en caliente en el siguiente tick.
+- **Arranque tras reiniciar el teléfono**: `BootReceiver` arranca el servicio solo si el usuario
+  dejó activos los avisos de la PC y el watchdog (`RECEIVE_BOOT_COMPLETED`).
+
+### Corregido
+
+- **P1 completo**: el nonce cubre **los 23 métodos** expuestos por `CompanionBridge` (no solo 9).
+  Sin nonce válido no se ejecuta nada; los getters devuelven `fallback` y no se llama al puente.
+- **P22**: el descubrimiento ya no acepta "algo responde"; `probeDshIdentity` distingue identidad
+  confirmada / posible / ninguna y solo se engancha a DSH.
+- **P2**: `verify_registry_safety` deja un respaldo `.test-bak` con fsync y restaura al arrancar si
+  la ejecución anterior quedó a medias.
+
+### Cierre de la serie 5
+
+- `AUDIT_CLOSURE.md` fija el estado de los 17 puntos abiertos o en disputa del informe externo:
+  7 cerrados en 5.1.8, 2 en 5.1.9, 4 aceptados con mitigación y 4 verificados como no aplicables.
+- **Esta es la última versión de la serie 5.** Lo siguiente se publicará como pre-release 5.2.x.
+
 ## 5.1.8 — `versionCode` 48
 
 ### Añadido

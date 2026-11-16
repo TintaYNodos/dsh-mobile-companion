@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tintaynodos.dshcompanion"
-    android:versionCode="48"
-    android:versionName="5.1.8">
+    android:versionCode="49"
+    android:versionName="5.1.9">
 
     <uses-sdk
         android:minSdkVersion="26"
@@ -19,6 +19,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="false"
@@ -50,6 +51,18 @@
             android:name=".PcEventsService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- Arranque tras reiniciar el telefono: solo atiende BOOT_COMPLETED y,
+             en el codigo, solo arranca el servicio si el usuario dejo activos
+             los avisos de la PC y el vigilante. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".CompanionWidget"

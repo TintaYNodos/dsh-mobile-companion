@@ -9,7 +9,6 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -26,17 +25,13 @@ import java.nio.charset.StandardCharsets;
  * Avisos de la PC con la aplicacion cerrada.
  *
  * Servicio en primer plano: mantiene una conexion SSE con el puente
- * (/dsh-companion/pc-events) y muestra una notificacion cuando Harness termina
- * de responder en la computadora. El aviso nace en el puente, que vigila las
- * sesiones en disco, asi que no depende del WebView ni de que la app este
- * abierta. Android puede matar un proceso en segundo plano, pero no un servicio
- * en primer plano con su notificacion permanente.
+ * (/dsh-companion/pc-events) y avisa cuando Harness termina de responder, aunque
+ * la aplicacion este cerrada. Android puede matar un proceso en segundo plano,
+ * pero no un servicio en primer plano con su notificacion permanente.
  *
- * Vigilante: un SSE puede quedarse colgado sin error (TCP abierta, `readLine()`
- * sin datos) y los avisos mueren en silencio. Cada minuto, solo con el servicio
- * en primer plano, se evalua {@link WatchdogPolicy}: sin actividad cierra y
- * reabre el SSE; dos reconexiones sin recuperar reinician la escucha; si en
- * 5 min tampoco vuelve, avisa que los avisos estan detenidos.
+ * Vigilante: cada minuto se evalua {@link WatchdogPolicy} con los umbrales de
+ * Ajustes: sin actividad cierra y reabre el SSE; N reconexiones sin recuperar
+ * reinician la escucha; si tampoco vuelve, avisa (con el aviso activado).
  */
 public class PcEventsService extends Service {
 
@@ -52,7 +47,8 @@ public class PcEventsService extends Service {
 
     private final Object connectionLock = new Object();
     private final Object watchdogLock = new Object();
-    private final WatchdogPolicy policy = new WatchdogPolicy();
+    /** Se reconstruye en cada tick con los valores de Ajustes (aplica en caliente). */
+    private volatile WatchdogPolicy policy = new WatchdogPolicy();
     private final WatchdogPolicy.State watchdog = new WatchdogPolicy.State();
 
     private volatile boolean running = false;
@@ -63,6 +59,8 @@ public class PcEventsService extends Service {
     private Handler mainHandler = null;
 
     private static volatile boolean serviceRunning = false;
+    /** Instancia viva para "Probar ahora" desde Ajustes (null si no escucha). */
+    private static volatile PcEventsService active = null;
 
     /** Tick del vigilante. Sin AlarmManager: no despierta el telefono. */
     private final Runnable watchdogTick = () -> {
@@ -88,13 +86,16 @@ public class PcEventsService extends Service {
     }
 
     /** ¿Esta el servicio escuchando ahora mismo? (para mostrarlo en Ajustes) */
-    public static boolean isRunning() {
-        return serviceRunning;
-    }
+    public static boolean isRunning() { return serviceRunning; }
 
+    // Ruta BOOT: tras reiniciar el telefono, BootReceiver recibe BOOT_COMPLETED
+    // y solo si pc_events_enabled y pc_events_watchdog_enabled siguen activos
+    // llama a PcEventsService.start(); el arranque entra aqui igual que desde la
+    // app, con startForegroundService y su notificacion permanente.
     @Override
     public void onCreate() {
         super.onCreate();
+        active = this;
         // Canales: si el servicio arranca antes que la app (o tras reiniciar el
         // telefono), un canal inexistente descarta el aviso en silencio.
         NotificationHelper.initChannels(this);
@@ -102,20 +103,22 @@ public class PcEventsService extends Service {
     }
 
     public static boolean isEnabled(Context context) {
-        if (context == null) return false;
-        SharedPreferences prefs = context.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE);
-        return prefs.getBoolean(PREF_ENABLED, false);
+        return context != null && context.getSharedPreferences(MainActivity.PREFS, Context.MODE_PRIVATE)
+                .getBoolean(PREF_ENABLED, false);
+    }
+
+    /** ¿Esta activo el interruptor "Reiniciar el servicio si se cuelga"? */
+    public static boolean isWatchdogEnabled(Context context) {
+        return context != null && context.getSharedPreferences(PrefKeys.PREFS, Context.MODE_PRIVATE)
+                .getBoolean(PrefKeys.KEY_PC_EVENTS_WATCHDOG, true);
     }
 
     public static void start(Context context) {
         if (context == null) return;
         Intent intent = new Intent(context, PcEventsService.class);
         intent.setAction(ACTION_START);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent);
-        } else {
-            context.startService(intent);
-        }
+        // minSdk 26: startForegroundService existe desde Android 8.
+        context.startForegroundService(intent);
     }
 
     public static void stop(Context context) {
@@ -123,6 +126,17 @@ public class PcEventsService extends Service {
         Intent intent = new Intent(context, PcEventsService.class);
         intent.setAction(ACTION_STOP);
         context.startService(intent);
+    }
+
+    /**
+     * "Probar ahora" de Ajustes: evalua el vigilante ya mismo, con la misma
+     * ruta que el tick. No reinicia el servicio si la escucha esta sana; solo
+     * devuelve null cuando no se puede probar (servicio o vigilante apagados).
+     */
+    public static WatchdogPolicy.Action probeNow(Context context) {
+        PcEventsService service = active;
+        if (service == null || !serviceRunning || !isEnabled(context) || !isWatchdogEnabled(context)) return null;
+        try { return service.evaluateWatchdog(); } catch (Throwable error) { Log.w(TAG, "watchdog: prueba: " + error); return null; }
     }
 
     @Override
@@ -156,8 +170,7 @@ public class PcEventsService extends Service {
     }
 
     private void startListening() {
-        listenEpoch++;
-        final int epoch = listenEpoch;
+        final int epoch = ++listenEpoch;
         running = true;
         worker = new Thread(() -> listenLoop(epoch), "dsh-pc-events");
         worker.setDaemon(true);
@@ -177,11 +190,7 @@ public class PcEventsService extends Service {
             }
             if (!running || epoch != listenEpoch) break;
             long wait = Math.min(30_000L, 2_000L * Math.max(1, attempt));
-            try {
-                Thread.sleep(wait);
-            } catch (InterruptedException stop) {
-                break;
-            }
+            try { Thread.sleep(wait); } catch (InterruptedException stop) { break; }
         }
     }
 
@@ -256,16 +265,19 @@ public class PcEventsService extends Service {
         return json.substring(start, end);
     }
 
-    /** Evalua la politica y ejecuta la accion que propone. */
-    private void evaluateWatchdog() {
+    /** Evalua la politica (umbrales de Ajustes) y ejecuta la accion propuesta. */
+    private WatchdogPolicy.Action evaluateWatchdog() {
         SharedPreferences prefs = getSharedPreferences(PrefKeys.PREFS, MODE_PRIVATE);
         long now = System.currentTimeMillis();
         WatchdogPolicy.Action action;
         synchronized (watchdogLock) {
+            // Se releen los umbrales en cada tick: cambiarlos en Ajustes aplica
+            // sin reiniciar el servicio ni el hilo de escucha.
+            policy = PrefKeys.watchdogPolicy(prefs);
             watchdog.enabled = prefs.getBoolean(PrefKeys.KEY_PC_EVENTS_WATCHDOG, true);
             action = policy.decide(watchdog, now);
         }
-        if (action == WatchdogPolicy.Action.OK) return;
+        if (action == WatchdogPolicy.Action.OK) return action;
 
         String note = action == WatchdogPolicy.Action.RECONNECT ? "reconectó el flujo"
                 : action == WatchdogPolicy.Action.RESTART ? "reinició la escucha"
@@ -286,6 +298,7 @@ public class PcEventsService extends Service {
             // Aviso honesto: los avisos estan detenidos y abrir la app reconecta.
             NotificationHelper.notifyPcEventsStalled(this);
         }
+        return action;
     }
 
     /**
@@ -307,9 +320,7 @@ public class PcEventsService extends Service {
 
     private void markAttempt() {
         long now = System.currentTimeMillis();
-        synchronized (watchdogLock) {
-            policy.markAttempt(watchdog, now);
-        }
+        synchronized (watchdogLock) { policy.markAttempt(watchdog, now); }
     }
 
     private void markConnected() {
@@ -330,33 +341,22 @@ public class PcEventsService extends Service {
 
     private void markEvent() {
         long now = System.currentTimeMillis();
-        synchronized (watchdogLock) {
-            policy.markEvent(watchdog, now);
-        }
+        synchronized (watchdogLock) { policy.markEvent(watchdog, now); }
     }
 
     private void setConnection(HttpURLConnection conn) {
-        synchronized (connectionLock) {
-            connection = conn;
-        }
+        synchronized (connectionLock) { connection = conn; }
     }
 
     private void clearConnection(HttpURLConnection conn) {
-        synchronized (connectionLock) {
-            if (connection == conn) connection = null;
-        }
+        synchronized (connectionLock) { if (connection == conn) connection = null; }
     }
 
     /** Cierra el SSE actual; el hilo de escucha reabre solo. */
     private void disconnectCurrent() {
         HttpURLConnection conn;
-        synchronized (connectionLock) {
-            conn = connection;
-            connection = null;
-        }
-        if (conn != null) {
-            try { conn.disconnect(); } catch (Throwable ignored) {}
-        }
+        synchronized (connectionLock) { conn = connection; connection = null; }
+        if (conn != null) try { conn.disconnect(); } catch (Throwable ignored) {}
     }
 
     private void stopListening() {
@@ -365,9 +365,7 @@ public class PcEventsService extends Service {
         disconnectCurrent();
         Thread thread = worker;
         worker = null;
-        if (thread != null) {
-            try { thread.interrupt(); } catch (Throwable ignored) {}
-        }
+        if (thread != null) try { thread.interrupt(); } catch (Throwable ignored) {}
     }
 
     private void stopEverything() {
@@ -378,13 +376,12 @@ public class PcEventsService extends Service {
         }
         stopListening();
         NotificationsPc.cancelPcService(this);
-        try {
-            NotificationHelper.cancelPcEventsStalled(this);
-        } catch (Throwable ignored) {}
+        try { NotificationHelper.cancelPcEventsStalled(this); } catch (Throwable ignored) {}
     }
 
     @Override
     public void onDestroy() {
+        active = null;
         stopEverything();
         super.onDestroy();
     }

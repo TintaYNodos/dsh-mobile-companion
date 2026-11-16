@@ -23,9 +23,10 @@ import java.security.SecureRandom;
  *  - WebBridge genera un nonce por navegación principal y lo inyecta como
  *    `window.__DSH_BRIDGE_TOKEN__` (solo en el frame raíz).
  *  - El cliente JS del búnker llama a armBridge(nonce) para marcar la página.
- *  - Los métodos sensibles exigen el nonce en cada llamada: un iframe
- *    cross-origin no puede leer las propiedades del padre, así que no puede
- *    aportarlo aunque el frame principal ya haya armado el puente.
+ *  - Desde 5.1.9 TODOS los métodos de CompanionBridge (sensibles, informativos y
+ *    getters de lectura) exigen el nonce en cada llamada: un iframe cross-origin
+ *    no puede leer las propiedades del padre, así que no puede aportarlo aunque
+ *    el frame principal ya haya armado el puente.
  *  - Además se comprueba que la URL del frame principal (la que entrega
  *    onPageStarted/onPageFinished, equivalente a webView.getUrl() en ese
  *    instante) siga siendo el mismo origen que el búnker activo.

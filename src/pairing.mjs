@@ -102,10 +102,15 @@ export const waitingPage = ({ code = "", hostLabel = "" } = {}) =>
        function loadSystemNow() {
          if (done) return;
          done = true;
-         if (window.AndroidCompanion && typeof window.AndroidCompanion.onApproved === 'function') {
+         // P1 (5.1.9): onApproved exige el nonce de pagina. En el WebView el
+         // token esta inyectado; se arma y se pasa. Nunca se llama sin token:
+         // si no hay, se usa la navegacion normal de siempre.
+         var bridge = window.AndroidCompanion;
+         var token = window.__DSH_BRIDGE_TOKEN__;
+         if (bridge && token && typeof bridge.onApproved === 'function') {
            try {
-             window.AndroidCompanion.onApproved();
-             return;
+             if (typeof bridge.armBridge === 'function') bridge.armBridge(token);
+             if (bridge.onApproved(token) !== false) return;
            } catch(e) {}
          }
          window.location.replace('/?t=' + Date.now());

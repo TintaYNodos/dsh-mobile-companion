@@ -22,19 +22,25 @@ o desde la consola.
   `uninstall-launchd.sh`.
 - **Linux**: `install-systemd.sh` instala la unidad de usuario. Para quitarla: `uninstall-systemd.sh`.
 
-El puente se enlaza a la interfaz del túnel. Si la detección falla, se puede fijar `DSH_BIND_HOST`
-con la IP privada; el diagnóstico avisa cuando esa variable está activa (`bind-host-override`).
+El puente se enlaza a la interfaz del túnel que elige el doctor (`$interfaces` en `doctor.ps1` es
+la lista de IPv4 no loopback ni APIPA). Si hay varias redes privadas, `doctor.ps1 -Json` devuelve
+`candidates[]` en orden de preferencia y `bindHost` con la elegida; para usar otra, arranca el
+puente con `DSH_BIND_HOST=<ip>`. El diagnóstico lo avisa con un WARN ("DSH_BIND_HOST esta fijado
+a ...") y `tunnel` sigue mostrando la red elegida. Empareja los `checks[]` por el **texto** del
+mensaje, no por el `id`: el id es un slug que cambia con la ruta, el puerto o la IP.
 
 ## Firewall de Windows
 
-Si el diagnóstico marca `firewall-rule-missing`, aplica como administrador:
+Si el diagnóstico marca un FAIL con el mensaje "No hay ninguna regla de firewall para el puerto ...",
+aplica como administrador:
 
 ```powershell
 netsh advfirewall firewall add rule name="DSH Companion" dir=in action=allow protocol=TCP localport=57420
 ```
 
-El puerto debe coincidir con `DSH_LISTEN_PORT` (57420 por defecto). Un `firewall-query-failed` solo
-indica que la consulta necesita permisos; si el teléfono conecta, no bloquea.
+El puerto debe coincidir con `DSH_LISTEN_PORT` (57420 por defecto). El AVISO "No se pudo consultar
+el firewall (puede requerir permisos)..." solo indica que la consulta necesita permisos; si el
+teléfono conecta, no bloquea.
 
 ## Emparejamiento con `panel.bat`
 
@@ -71,7 +77,19 @@ En el teléfono: Ajustes -> "Notificaciones de la PC" (activado) -> "Probar desd
 
 ## Evidencia mínima antes de continuar al informe
 
-- JSON del diagnóstico final con `ok: true` y `generatedAt` reciente.
+- JSON del diagnóstico final con `ok: true`, `generatedAt` reciente, `bindHost`/`tunnel` no vacíos
+  y `candidates[]` con la red usada.
+- Recibo del informe verificado: `node tools/verify-receipt.mjs doctor-report.json`.
 - Salida humana de `doctor.ps1` (túnel, URL, versión, panel).
 - Confirmación del usuario de que el teléfono quedó emparejado y de que el aviso de prueba llegó.
 - Resultado del mapeo del informe con `scripts/verify-fixes.mjs report doctor-report.json`.
+
+## Actualizado en 5.1.9
+
+El doctor ya no usa `$candidates = Get-NetIPAddress...`; ahora recorre `$interfaces` y puede
+listar varias redes privadas. Si hay más de una, fija la correcta antes de arrancar:
+
+    $env:DSH_BIND_HOST = "<ip-de-la-vpn>"
+    powershell -ExecutionPolicy Bypass -File doctor.ps1 -Json
+
+No aceptes la LAN doméstica como red privada; el puente la ignora a propósito.

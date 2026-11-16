@@ -67,6 +67,14 @@ class PrefKeys {
     // Vigilante del servicio de avisos de la PC (ver WatchdogPolicy).
     /** Interruptor de Ajustes "Reiniciar el servicio si se cuelga". ON por defecto. */
     static final String KEY_PC_EVENTS_WATCHDOG = "pc_events_watchdog_enabled";
+    /** "Silencio antes de reconectar": 1, 3 o 5 minutos; 3 por defecto. */
+    static final String KEY_PC_EVENTS_WATCHDOG_STALE_MIN = "pc_events_watchdog_stale_min";
+    static final int PC_EVENTS_WATCHDOG_STALE_MIN_DEFAULT = 3;
+    /** "Reintentos antes de reiniciar": 1, 2 o 3; 2 por defecto. */
+    static final String KEY_PC_EVENTS_WATCHDOG_RETRIES = "pc_events_watchdog_retries";
+    static final int PC_EVENTS_WATCHDOG_RETRIES_DEFAULT = 2;
+    /** "Avisar si no recupera": ON por defecto. */
+    static final String KEY_PC_EVENTS_WATCHDOG_ALERT = "pc_events_watchdog_alert";
     /** Ultima conexion SSE establecida (para "Ultima conexion: hace X"). */
     static final String KEY_PC_EVENTS_LAST_OK = "pc_events_last_ok_at";
     /** Ultimo RESTART del vigilante (limite de 1 cada 10 min). */
@@ -84,6 +92,19 @@ class PrefKeys {
     static final long MAX_BACKOFF_MS = 8000L;
     static final int MAX_TELEMETRY_HISTORY = 30;
     static final long DISCONNECTION_THRESHOLD_MS = 10 * 60 * 1000L;
+
+    /**
+     * Política del vigilante con los valores configurados en Ajustes. El
+     * servicio la reconstruye en cada tick, así que cambiarlos aplica sin
+     * reiniciar nada; cualquier valor inválido cae en el de por defecto.
+     */
+    static WatchdogPolicy watchdogPolicy(SharedPreferences prefs) {
+        if (prefs == null) return new WatchdogPolicy();
+        return WatchdogPolicy.fromValues(
+                prefs.getInt(KEY_PC_EVENTS_WATCHDOG_STALE_MIN, PC_EVENTS_WATCHDOG_STALE_MIN_DEFAULT),
+                prefs.getInt(KEY_PC_EVENTS_WATCHDOG_RETRIES, PC_EVENTS_WATCHDOG_RETRIES_DEFAULT),
+                prefs.getBoolean(KEY_PC_EVENTS_WATCHDOG_ALERT, true));
+    }
 
     private PrefKeys() {}
 }

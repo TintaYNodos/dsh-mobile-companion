@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "releases": [
     {
@@ -9,7 +9,7 @@
       "commit": "788aee02842731b11d51dc5610fa15a05b062371",
       "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (D1, H1, H2, H3, H4, H5, D3, D4, D5, D6). Detalle en CHANGELOG.md y RELEASE_5.1.10.md."
+      "notes": "VersiÃ³n final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (D1, H1, H2, H3, H4, H5, D3, D4, D5, D6). Detalle en CHANGELOG.md y RELEASE_5.1.10.md."
     },
     {
       "version": "5.2.0",
@@ -19,7 +19,18 @@
       "commit": "31bab3dd56b67ccb57084d76c732042154c9f66c",
       "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión estable congelada (versionCode 51): /healthz real y healthcheck de Docker, contrato con Harness con degradación, backup/restore verificables, OPERACION.md y política de solo correcciones de seguridad. Detalle en CHANGELOG.md y RELEASE_5.2.0.md."
+      "notes": "VersiÃ³n estable congelada (versionCode 51): /healthz real y healthcheck de Docker, contrato con Harness con degradaciÃ³n, backup/restore verificables, OPERACION.md y polÃ­tica de solo correcciones de seguridad. Detalle en CHANGELOG.md y RELEASE_5.2.0.md."
+    },
+    {
+      "version": "5.2.1",
+      "versionCode": 51,
+      "channel": "stable",
+      "releasedAt": "2026-11-16",
+      "commit": "523ed0b",
+      "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Parche de seguridad solo puente: /healthz sin topologia fuera de loopback y contrato turn/end estricto. El APK no cambia (5.2.0 / versionCode 51)."
     }
   ]
 }
+

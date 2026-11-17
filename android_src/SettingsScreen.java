@@ -146,15 +146,32 @@ class SettingsScreen {
                             Toast.LENGTH_SHORT).show();
                 }));
 
+        // «Guardar ahora» fuerza la captura del chat abierto (no espera al
+        // pagehide) y explica el motivo si no hay copia; «Leer el último chat»
+        // abre el lector nativo cifrado.
+        Button btnSaveOfflineChat = UiKit.actionCompact(a, "Guardar ahora", true,
+                () -> WebBridge.captureOfflineChatNow(a));
         Button btnReadOfflineChat = UiKit.actionCompact(a, "Leer el último chat", false, () -> {
             if (a.settingsDialog != null) a.settingsDialog.dismiss();
             a.startActivity(new Intent(a, OfflineChatActivity.class));
         });
-        LinearLayout.LayoutParams offlineReadParams = new LinearLayout.LayoutParams(
+        LinearLayout offlineRow = new LinearLayout(a);
+        offlineRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams saveParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        saveParams.setMarginEnd(ThemePalette.dp(a, 4));
+        btnSaveOfflineChat.setLayoutParams(saveParams);
+        LinearLayout.LayoutParams readParams = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        readParams.setMarginStart(ThemePalette.dp(a, 2));
+        btnReadOfflineChat.setLayoutParams(readParams);
+        offlineRow.addView(btnSaveOfflineChat);
+        offlineRow.addView(btnReadOfflineChat);
+        LinearLayout.LayoutParams offlineRowParams = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        offlineReadParams.bottomMargin = ThemePalette.dp(a, 14);
-        btnReadOfflineChat.setLayoutParams(offlineReadParams);
-        form.addView(btnReadOfflineChat);
+        offlineRowParams.bottomMargin = ThemePalette.dp(a, 6);
+        offlineRow.setLayoutParams(offlineRowParams);
+        form.addView(offlineRow);
 
         form.addView(UiKit.sectionHeader(a, "MODO PÁNICO / EMERGENCIA"));
         final AlertDialog[] settingsDialogRef = new AlertDialog[1];

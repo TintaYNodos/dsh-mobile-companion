@@ -68,17 +68,37 @@ public class OfflineChatActivity extends Activity {
         root.addView(subtitle);
 
         OfflineChatStore.Load loaded = OfflineChatStore.load(this);
-        if (loaded.status == OfflineChatStore.Load.STATUS_OK && loaded.chat != null) {
+        if (!OfflineChatStore.isEnabled(this)) {
+            showMessage(root, "Copia desactivada",
+                    "La copia del chat para uso sin conexión está apagada en Ajustes. "
+                            + "Actívala y pulsa «Guardar ahora» para guardar el chat cifrado en el teléfono.");
+        } else if (loaded.status == OfflineChatStore.Load.STATUS_OK && loaded.chat != null) {
             showChat(root, loaded.chat);
         } else if (loaded.status == OfflineChatStore.Load.STATUS_UNAVAILABLE) {
             showMessage(root, "Copia no disponible",
                     "El cifrado de este teléfono no está disponible o la copia no se puede "
                             + "descifrar. Por privacidad el chat nunca se guarda en claro: no hay "
                             + "nada que mostrar.");
+        } else if (!conectadoAPc()) {
+            showMessage(root, "Sin conexión con la PC",
+                    "La copia se toma del chat abierto en el búnker. Conéctate a la PC, "
+                            + "abre un chat y pulsa «Guardar ahora» en Ajustes; después podrás leerlo "
+                            + "aunque la PC esté apagada.");
         } else {
             showMessage(root, "Todavía no hay copia",
-                    "Activa «Copia del chat para uso sin conexión» en Ajustes y oculta la app. "
-                            + "El último chat se guardará cifrado en el teléfono para leerlo sin la PC.");
+                    "Abre un chat y pulsa «Guardar ahora» en Ajustes (o activa «Copia del chat "
+                            + "para uso sin conexión» y oculta la app). El último chat se guardará "
+                            + "cifrado en el teléfono para leerlo sin la PC.");
+        }
+    }
+
+    /** true si la app sigue conectada al búnker, para explicar las capturas. */
+    private static boolean conectadoAPc() {
+        try {
+            MainActivity instance = MainActivity.getInstance();
+            return instance != null && instance.isOnline();
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 

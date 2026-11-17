@@ -61,36 +61,103 @@ export const MOBILE_CLIENT_OFFLINE = `  /**
   var OFFLINE_COPY_MIN = 30;
 
   /**
+   * Texto del chat para la copia. Usa el extractor del bloque de UI y, si no
+   * esta disponible (pagina antigua o bloque no cargado), aplica la misma
+   * busqueda aqui: la copia no debe perderse porque falte una funcion global.
+   */
+  function offlineChatText() {
+    try {
+      if (typeof window.__DSH_EXTRACT_CHAT_TEXT__ === 'function') {
+        var value = window.__DSH_EXTRACT_CHAT_TEXT__();
+        if (value && value.trim()) return value;
+      }
+    } catch (e) {}
+    try {
+      var nodes = document.querySelectorAll('[data-role], [data-message-role], article, .message');
+      var lines = [];
+      for (var index = 0; index < nodes.length; index++) {
+        var text = (nodes[index].innerText || nodes[index].textContent || '').trim();
+        if (text) lines.push(text);
+      }
+      return lines.join('\\n\\n---\\n\\n');
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /**
    * P56: manda la copia al lector nativo cifrado, con el nonce de pagina.
    *
    * Usa callBridgeWithToken (core): exige frame principal, puente armado y
-   * nonce, y sin token NO llama al puente (fail-closed). Si el APK no trae
-   * saveOfflineChat devuelve false y no pasa nada: localStorage sigue siendo
-   * la copia de respaldo del lector web. Nunca se llama con el interruptor
-   * apagado.
+   * nonce, y sin token NO llama al puente (fail-closed). Si el nonce se renovo
+   * entre la carga y el guardado, se rearma una vez y se reintenta. Si el APK
+   * no trae saveOfflineChat devuelve false: localStorage sigue siendo la copia
+   * de respaldo del lector web. Nunca se llama con el interruptor apagado.
    */
   function sendOfflineChatToNative(title, text, updatedAt) {
     if (!offlineCopyEnabled) return false;
-    return Boolean(callBridgeWithToken('saveOfflineChat', [title, text, updatedAt]));
+    if (callBridgeWithToken('saveOfflineChat', [title, text, updatedAt])) return true;
+    var nonce = rearmBridgeForCall();
+    var bridge = window.AndroidCompanion;
+    if (!nonce || !bridge || typeof bridge.saveOfflineChat !== 'function') return false;
+    try {
+      return bridge.saveOfflineChat(nonce, title, text, updatedAt) !== false;
+    } catch (e) {
+      return false;
+    }
   }
 
-  function cacheLastChat() {
-    if (!offlineCopyEnabled) return;
+  /** Resultado de una captura: ok y motivo exacto cuando no se pudo guardar. */
+  function offlineCaptureStatus(ok, reason, chars) {
+    return { ok: Boolean(ok), reason: reason, chars: chars || 0 };
+  }
+
+  /**
+   * Guarda la copia en localStorage y en el lector nativo cifrado. Devuelve el
+   * motivo cuando no hay nada que guardar, para que Ajustes lo pueda explicar.
+   */
+  function captureLastChat() {
+    if (!offlineCopyEnabled) return offlineCaptureStatus(false, 'disabled', 0);
+    var text = offlineChatText();
+    if (!text || !text.trim()) return offlineCaptureStatus(false, 'no-chat', 0);
+    if (text.length <= OFFLINE_COPY_MIN) return offlineCaptureStatus(false, 'too-short', text.length);
+    if (text.length > OFFLINE_COPY_LIMIT) text = text.slice(-OFFLINE_COPY_LIMIT);
+    var title = cleanDocTitle() || 'Conversacion reciente';
+    var updatedAt = new Date().toISOString();
+    var stored = false;
     try {
-      var text = window.__DSH_EXTRACT_CHAT_TEXT__();
-      if (!text || text.length <= OFFLINE_COPY_MIN) return;
-      if (text.length > OFFLINE_COPY_LIMIT) text = text.slice(-OFFLINE_COPY_LIMIT);
-      var title = cleanDocTitle() || 'Conversacion reciente';
-      var updatedAt = new Date().toISOString();
       localStorage.setItem('dsh_last_synced_chat', JSON.stringify({
         title: title,
         text: text,
         updatedAt: updatedAt
       }));
-      // P56: la copia cifrada del telefono, para leerla sin PC ni red.
-      sendOfflineChatToNative(title, text, updatedAt);
-    } catch(e) {}
+      stored = true;
+    } catch (e) {}
+    // P56: la copia cifrada del telefono, para leerla sin PC ni red.
+    var nativeOk = sendOfflineChatToNative(title, text, updatedAt);
+    if (nativeOk) return offlineCaptureStatus(true, 'saved', text.length);
+    return offlineCaptureStatus(false, stored ? 'no-encryption' : 'storage', text.length);
   }
+
+  function cacheLastChat() {
+    try {
+      captureLastChat();
+    } catch (e) {}
+  }
+
+  /**
+   * Captura forzada desde Ajustes («Guardar ahora»). Devuelve "ok" o el motivo
+   * exacto (no-chat, too-short, disabled, no-encryption, storage, error) para
+   * que el nativo pueda explicar por que no hay copia.
+   */
+  window.__DSH_CAPTURE_CHAT_NOW__ = function() {
+    try {
+      var result = captureLastChat();
+      return result.ok ? 'ok' : result.reason;
+    } catch (e) {
+      return 'error';
+    }
+  };
 
   document.addEventListener('visibilitychange', function() {
     if (document.visibilityState === 'hidden') cacheLastChat();

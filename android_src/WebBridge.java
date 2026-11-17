@@ -46,6 +46,7 @@ class WebBridge {
      */
     static void beginBridgePage(MainActivity a, String pageUrl) {
         if (a.webView == null) return;
+        a.dockPushRetries = 0;
         String nonce = BridgeGuard.rotateForPage(pageUrl);
         WebBridge.evalBridgeToken(a, nonce);
     }
@@ -170,6 +171,36 @@ class WebBridge {
         a.webView.evaluateJavascript(js, null);
     }
 
+    /**
+     * «Guardar ahora» de Ajustes: fuerza la captura del chat actual en el
+     * cliente (no espera al pagehide) y explica el motivo si no hay copia:
+     * sin PC, sin chat, sin cifrado o sin captura todavía.
+     */
+    static void captureOfflineChatNow(MainActivity a) {
+        if (a.webView == null || !WebBridge.isOfflineCopyEnabled(a)) {
+            Toast.makeText(a, "Abre un chat y activa «Copia del chat para uso sin conexión».",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        String js = "(function(){ return typeof window.__DSH_CAPTURE_CHAT_NOW__ === 'function'"
+                + " ? window.__DSH_CAPTURE_CHAT_NOW__() : ''; })()";
+        a.webView.evaluateJavascript(js, result -> {
+            // El cliente responde "ok" o el motivo; evaluateJavascript lo entrega entre comillas.
+            String reason = result == null ? "" : result.trim().replace("\"", "");
+            String message;
+            if ("ok".equals(reason)) message = "Copia del chat guardada y cifrada en el teléfono.";
+            else if ("no-encryption".equals(reason)) message = "No se pudo cifrar la copia en este teléfono.";
+            else if ("no-chat".equals(reason)) message = a.isOnline()
+                    ? "No encontré texto en el chat. Abre una conversación y pulsa «Guardar ahora»."
+                    : "Sin conexión con la PC: no hay un chat abierto que copiar.";
+            else if ("too-short".equals(reason)) message = "El chat es demasiado corto para guardar una copia.";
+            else if ("disabled".equals(reason)) message = "La copia sin conexión está desactivada.";
+            else message = "No se pudo guardar la copia. Abre un chat y reintenta.";
+            Toast.makeText(a, message, Toast.LENGTH_LONG).show();
+            a.vibrateHaptic("ok".equals(reason) ? "confirm" : "reject");
+        });
+    }
+
     static boolean isCodeKeysEnabled(MainActivity a) {
         return a.prefs == null || a.prefs.getBoolean(KEY_SHOW_CODE_KEYS, true);
     }
@@ -185,9 +216,23 @@ class WebBridge {
         String raw = a.prefs == null ? null : a.prefs.getString(KEY_QUICK_COMMANDS, null);
         String config = PrefKeys.quickDockJson(raw,
                 WebBridge.isQuickActionsEnabled(a), WebBridge.isCodeKeysEnabled(a));
-        String js = "(function(){ if (window.__DSH_SET_DOCK_PREFS__) { window.__DSH_SET_DOCK_PREFS__("
-                + config + "); } })();";
-        a.webView.evaluateJavascript(js, null);
+        // Si el cliente aun no definio el receptor (script en el <head> que
+        // todavia no corrio), se reintenta un numero acotado de veces: con un
+        // unico push el dock se quedaba con los valores por defecto.
+        String js = "(function(){"
+                + " if (typeof window.__DSH_SET_DOCK_PREFS__ !== 'function') return false;"
+                + " window.__DSH_SET_DOCK_PREFS__(" + config + ");"
+                + " return true;"
+                + " })();";
+        a.webView.evaluateJavascript(js, result -> {
+            if ("true".equals(result)) {
+                a.dockPushRetries = 0;
+                return;
+            }
+            if (a.dockPushRetries >= 4) return;
+            a.dockPushRetries++;
+            a.ui.postDelayed(() -> WebBridge.applyDockPreferencesToWeb(a), 400);
+        });
     }
 
     static void reloadMainSession(MainActivity a) {

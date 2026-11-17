@@ -99,7 +99,10 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
     { id: 'alt', label: 'Alt', kind: 'event', event: 'Alt', desc: 'Envía Alt sin cerrar el teclado.' },
     { id: 'comments', label: '//', kind: 'text', text: '// ', desc: 'Comentario de línea.' },
     { id: 'arrow.fn', label: '=>', kind: 'text', text: ' => ', desc: 'Flecha de función.' },
-    { id: 'dollar', label: '$', kind: 'text', text: '$', desc: 'Signo de dólar.' },
+    // El signo dolar va con fromCharCode: este catalogo viaja dentro del
+    // reemplazo de String.replace que arma el HTML (mobile.mjs) y un literal
+    // del signo seguido de comilla simple truncaria todo el script inyectado.
+    { id: 'dollar', label: String.fromCharCode(36), kind: 'text', text: String.fromCharCode(36), desc: 'Signo de dólar.' },
     { id: 'hash', label: '#', kind: 'text', text: '#', desc: 'Numeral.' },
     { id: 'amp', label: '&', kind: 'text', text: '&', desc: 'Ampersand.' },
     { id: 'percent', label: '%', kind: 'text', text: '%', desc: 'Porcentaje.' },

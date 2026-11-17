@@ -225,28 +225,23 @@ public class CompanionBridge {
      * P56: copia cifrada del último chat para el lector nativo sin conexión.
      *
      * Mismo contrato que {@link #saveOfflineDraft}: exige el nonce de la página
-     * (fail-closed) y el trabajo se hace en el hilo principal, donde el
-     * AndroidKeyStore y el archivo privado de la app se usan como en Ajustes.
-     * El texto llega ya recortado a 20 000 caracteres desde el cliente; aun así
-     * {@link OfflineChatStore} lo vuelve a acotar antes de cifrar. Si el
-     * interruptor está apagado, el nativo descarta la copia (doble candado).
+     * (fail-closed). El guardado SÍ es síncrono: se ejecuta en el hilo del
+     * puente (nunca en el principal) y devuelve el resultado real de
+     * {@link OfflineChatStore}, de modo que el JS distingue "copia guardada" de
+     * "no se pudo cifrar" y Ajustes puede decir el motivo. Si el interruptor
+     * está apagado, el nativo descarta la copia (doble candado). El texto llega
+     * recortado a 20 000 caracteres desde el cliente; el almacén lo vuelve a
+     * acotar antes de cifrar.
      */
     @JavascriptInterface
     public boolean saveOfflineChat(String nonce, String title, String text, String updatedAt) {
-        if (!BridgeGuard.authorize(MainActivity.getInstance(), nonce)) {
+        MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.authorize(instance, nonce)) {
             BridgeGuard.logRejected("saveOfflineChat");
             return false;
         }
-        final String safeTitle = title;
-        final String safeText = text;
-        final String safeUpdatedAt = updatedAt;
-        mainHandler.post(() -> {
-            MainActivity instance = MainActivity.getInstance();
-            if (instance != null) {
-                instance.saveOfflineChat(safeTitle, safeText, safeUpdatedAt);
-            }
-        });
-        return true;
+        if (instance == null) return false;
+        return instance.saveOfflineChat(title, text, updatedAt);
     }
 
     /** P1: getters de lectura; el nonce es defensa en profundidad (fail-closed). */

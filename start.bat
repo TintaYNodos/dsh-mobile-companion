@@ -3,7 +3,13 @@ setlocal
 echo ========================================================
 echo   Iniciando DSH Mobile Companion en segundo plano...
 echo ========================================================
-wscript.exe "%~dp0run-hidden.vbs"
+rem Una bandera companion.stop de un stop interrumpido impediria arrancar
+rem (el supervisor sale si la ve). Al arrancar, el usuario quiere el puente.
+if exist "%~dp0companion.stop" del "%~dp0companion.stop" >nul 2>&1
+
+rem El supervisor de run-hidden.vbs se queda en primer plano (bucle); se lanza
+rem en segundo plano para que este script pueda comprobar la salud y terminar.
+start "" wscript.exe "%~dp0run-hidden.vbs"
 
 rem Comprueba de verdad que el puente responde (antes se anunciaba "OK"
 rem aunque el puerto estuviera ocupado o node fallara al arrancar).

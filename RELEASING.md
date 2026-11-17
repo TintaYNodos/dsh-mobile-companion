@@ -59,12 +59,12 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
   "schemaVersion": 1,
   "releases": [
     {
-      "version": "5.1.10",
-      "versionCode": 50,
+      "version": "5.2.10",
+      "versionCode": 54,
       "channel": "stable",
-      "releasedAt": "2026-11-16",
-      "commit": "788aee02842731b11d51dc5610fa15a05b062371",
-      "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
+      "releasedAt": "2026-11-17",
+      "commit": "5dc4ee7ca8d155bd25d647c50d3e4da30bbf5b43",
+      "apkSha256": "cfe79d6e1272fba592878c5301ddc561bf66de63a3c28b9b7685f057b8d970ce",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Resumen de una línea de la release."
     }
@@ -78,7 +78,7 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
 | `releases[]` | array | Una entrada por versión publicada, en orden de `versionCode` ascendente. La nueva se añade al final. |
 | `version` | string | `MAJOR.MINOR.PATCH` de `src/config.mjs`. |
 | `versionCode` | número | `apkVersionCode` de `src/config.mjs` en el commit publicado. |
-| `channel` | string | `stable` para una versión estable; `prerelease` para las 5.2.0-pre.x. |
+| `channel` | string | `stable` para una versión estable; `prerelease` para una versión preliminar. |
 | `releasedAt` | string | Fecha de la publicación en GitHub, `AAAA-MM-DD`. |
 | `commit` | string | SHA completo del **commit de origen** con el que se compiló el APK (el commit de versión). El registro se añade en el commit siguiente, que es el que se etiqueta: un commit no puede contener su propio SHA. |
 | `apkSha256` | string | 64 hex en minúsculas: el SHA-256 que imprime `build-apk.ps1` y que sirve el puente. |
@@ -97,8 +97,8 @@ Reglas:
   completo y el `commit` registrado señala el código exacto que se compiló.
 - `version` y `versionCode` deben coincidir con `src/config.mjs` en ese commit; si no coinciden, la
   release no se publica.
-- Al publicar la 5.2.0 se añade su objeto al final de `releases`, con `channel: "stable"` (o
-  `"prerelease"` para las 5.2.0-pre.x) y los datos del build que se sube.
+- Al publicar una versión se añade su objeto al final de `releases`, con `channel: "stable"` (o
+  `"prerelease"` para una versión preliminar) y los datos del build que se sube.
 
 ## 2. Verificar
 

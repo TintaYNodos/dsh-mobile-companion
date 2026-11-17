@@ -81,5 +81,5 @@ emparejamiento, QR, modo apaisado y operación en Windows.
 | --- | --- |
 | Versión | `versionCode 54` / `versionName 5.2.10` |
 | Tamaño | 268 296 bytes (262 KB) |
-| SHA-256 | `cfe79d6e1272fba592878c5301ddc561bf66de63a3c28b9b7685f057b8d970ce` |
+| SHA-256 | `c476f212131de48e90855d7ada97ec543cb72d70523304ae86dae5d215a17eee` |
 | Firma | v2+v3, certificado de release RSA 4096 (sin cambios desde 5.1.7: se instala encima de 5.2.9) |

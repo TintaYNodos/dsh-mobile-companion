@@ -243,12 +243,6 @@ export const startPcWatcher = () => {
   log("pc", "Vigilando turnos de sesion para avisar al telefono");
 };
 
-export const stopWatching = () => {
-  watching = false;
-  if (timer) clearInterval(timer);
-  timer = null;
-};
-
 export const emitTestEvent = () => {
   // P45: el evento de prueba tampoco incluye nombres de espacio/sesion.
   broadcast({
@@ -285,4 +279,3 @@ export const handlePcEvents = (req, res) => {
   res.on("close", cleanup);
 };
 
-export const pcEventsSubscribers = () => subscribers.size;

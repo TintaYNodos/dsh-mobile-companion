@@ -178,6 +178,10 @@ Zum Beenden oder Entfernen aus dem Autostart: `stop.bat`, `uninstall-autostart.b
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | Maximale Größe von `synced_chats/` in MB |
 | `DSH_LOG_MAX_MB` | `5` | Maximale Größe von `bridge.log` in MB vor der Rotation (Minimum 1) |
 | `DSH_LOG_KEEP` | `3` | Aufbewahrte `bridge.log.N`-Dateien (1–10) |
+| `DSH_VPN_IP` | automatisch | Erzwingt die private IP, wenn der Adaptername unbekannt ist |
+| `DSH_ALLOW_PROXY_ACCESS` | — | `1` akzeptiert Proxy-Header (nur mit vorgeschalteter Identitätsschicht) |
+| `DSH_PANEL_TOKEN` | automatisch | Einmal-Ticket zum Öffnen des lokalen Panels |
+| `DSH_VISUAL_URL` | `http://127.0.0.1:57420` | URL der Aufnahme-Sonde `visual-lab` |
 
 ### Einmalige Freigabe vom Computer
 
@@ -408,6 +412,31 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 ## Kommerzielle Nutzung
 
 Der Produktionseinsatz in einem Unternehmen, die Integration in ein Produkt oder einen Dienst und die Weitergabe erfordern eine separate Lizenz (Business Source License 1.1). Unternehmen können eine Anfrage über das Formular **Commercial license** stellen: [github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose). Details in [LICENSING.md](LICENSING.md).
+
+## Gesundheit, Backups und Fernsupport
+
+- **Echte Gesundheit.** `/healthz` meldet Brücke und DeepSeek Harness getrennt und antwortet mit HTTP 503, wenn Harness ausgefallen ist; `degraded` zeigt eine geänderte Vertragskomponente. `/dsh-companion/status` liefert den geprüften Vertrag.
+- **Backups.** [backup.bat](backup.bat) sichert Geräteregister, Zugriffsschlüssel und Panel-Token mit Hash-Manifest; [restore.bat](restore.bat) prüft das Manifest vor dem Schreiben. Ablage in `%USERPROFILE%\.dsh\backups\`.
+- **Fernsupport (optional).** [RustDesk](https://rustdesk.com) ist nur eine Empfehlung und wird nie mitgeliefert: eigener Server oder nur über ZeroTier/Tailscale, starkes Dauerpasswort und 2FA, danach abschalten.
+- **Verfahren.** [OPERACION.md](OPERACION.md) beschreibt Freigaben, Neustarts, Logs, Gesundheit, Backups und APK-Update; Support unter [SUPPORT.md](SUPPORT.md).
+
+## Vom Agenten installierbar (DeepSeek Harness)
+
+Der komplette Ablauf liegt als Skill in [skills/mobile-companion-setup](skills/mobile-companion-setup/); jedes `FAIL`/`AVISO` von `doctor.ps1` hat seinen Befehl in [doctor-fixes.json](doctor-fixes.json).
+
+```powershell
+New-Item -ItemType Directory -Force .dsh\skills | Out-Null
+cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
+```
+
+## Projektdokumente
+
+[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [AGENT_COMPAT.md](AGENT_COMPAT.md) · [LICENSE](LICENSE)
+
+## iPhone / iPad
+
+Keine iOS-App. Safari → *Zum Home-Bildschirm* führt die vollständige Oberfläche aus, solange der PC läuft (unter iOS keine Hintergrund-Hinweise). Der Offline-Leser braucht weiterhin den Computer.
+
 
 ## Lizenz
 

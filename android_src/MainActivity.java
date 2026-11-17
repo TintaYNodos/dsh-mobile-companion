@@ -329,6 +329,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        // H-04b: volcar la cookie de dispositivo para no perder el emparejamiento.
+        WebViewSetup.flushCookies();
         ConnectionController.onPause(this);
         super.onPause();
     }

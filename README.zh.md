@@ -178,6 +178,10 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | `synced_chats/` 的最大大小（MB） |
 | `DSH_LOG_MAX_MB` | `5` | `bridge.log` 轮转前的最大大小（MB，最小 1） |
 | `DSH_LOG_KEEP` | `3` | 保留的 `bridge.log.N` 文件数（1–10） |
+| `DSH_VPN_IP` | 自动 | 适配器名称无法识别时强制使用该私有 IP |
+| `DSH_ALLOW_PROXY_ACCESS` | — | `1` 接受代理请求头（仅当前面有身份层时） |
+| `DSH_PANEL_TOKEN` | 自动 | 打开本地面板的一次性票据 |
+| `DSH_VISUAL_URL` | `http://127.0.0.1:57420` | 截图探针 `visual-lab` 使用的 URL |
 
 ### 从电脑进行一次性批准
 
@@ -396,6 +400,31 @@ PC 面板有一个 **“Notas recibidas”（已接收笔记）** 收件箱，�
 ## 商业使用
 
 企业生产环境使用、集成到产品或服务以及再分发需要单独许可（Business Source License 1.1）。企业可通过 **Commercial license** 表单提出咨询：[github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose)。详情见 [LICENSING.md](LICENSING.md)。
+
+## 健康检查、备份和远程支持
+
+- **真实健康状态。** `/healthz` 分别报告桥接和 DeepSeek Harness，Harness 停止时返回 HTTP 503；`degraded` 表示契约的某一部分发生变化。`/dsh-companion/status` 返回已验证的契约。
+- **备份。** [backup.bat](backup.bat) 保存设备注册表、访问密钥和面板令牌，并带有哈希清单；[restore.bat](restore.bat) 在写入前校验该清单。存放于 `%USERPROFILE%\.dsh\backups\`。
+- **远程支持（可选）。** [RustDesk](https://rustdesk.com) 仅为建议，从不随包分发：使用自建服务器或仅通过 ZeroTier/Tailscale 访问，设置强固定密码和 2FA，用完关闭。
+- **流程。** [OPERACION.md](OPERACION.md) 覆盖批准、重启、日志、健康、备份和 APK 更新；支持政策见 [SUPPORT.md](SUPPORT.md)。
+
+## 可由代理安装（DeepSeek Harness）
+
+完整流程打包为 [skills/mobile-companion-setup](skills/mobile-companion-setup/) 技能；`doctor.ps1` 的每个 `FAIL`/`AVISO` 都在 [doctor-fixes.json](doctor-fixes.json) 中有对应命令。
+
+```powershell
+New-Item -ItemType Directory -Force .dsh\skills | Out-Null
+cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
+```
+
+## 项目文档
+
+[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [AGENT_COMPAT.md](AGENT_COMPAT.md) · [LICENSE](LICENSE)
+
+## iPhone / iPad
+
+没有 iOS 应用。Safari 的“添加到主屏幕”在电脑开机时可运行完整界面（iOS 没有后台通知）。离线阅读器仍然需要电脑。
+
 
 ## 许可证
 

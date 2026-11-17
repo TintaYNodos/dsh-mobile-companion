@@ -230,3 +230,43 @@ hace falta escritorio remoto.
 - [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md): instalación guiada por un agente de IA.
 - [VPN_OPTIONS.md](VPN_OPTIONS.md): redes privadas compatibles y cómo se detectan.
 - [RELEASING.md](RELEASING.md): cómo se publica una versión.
+
+## 11. Endurecimiento del entorno (requiere administrador)
+
+Estos pasos **no** los puede hacer el puente por ti: tocan el sistema. Son opcionales pero reducen
+la superficie si el equipo se mueve entre redes.
+
+### Firewall: cerrar `node.exe` a un solo puerto y a la subred de la VPN
+
+El instalador de Node suele dejar reglas que permiten **todo** el tráfico entrante a `node.exe`.
+Sustitúyelas por una regla de puerto y subred (ajusta la IP del SDK y la subred de tu VPN):
+
+```powershell
+# Ejecutar en PowerShell COMO ADMINISTRADOR
+$node = "C:\Users\<TU_USUARIO>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe"
+$vpn  = "10.0.0.0/24"   # la subred de tu VPN (ZeroTier/Tailscale)
+
+New-NetFirewallRule -DisplayName "DSH Companion 57420 (VPN)" -Direction Inbound -Action Allow `
+  -Protocol TCP -LocalPort 57420 -Program $node -Profile Public,Private -RemoteAddress $vpn
+
+# Quita las reglas amplias del mismo node.exe (revisa antes con Get-NetFirewallRule)
+Get-NetFirewallRule -Direction Inbound -Action Allow | Where-Object {
+  ($_ | Get-NetFirewallApplicationFilter).Program -like "*dsh-primary-runtime*"
+} | Where-Object { $_.DisplayName -eq "node.exe" } | Remove-NetFirewallRule
+```
+
+Comprobación: `Get-NetFirewallRule | ? DisplayName -like "*DSH Companion*"` debe mostrar solo la
+regla de 57420; el teléfono sigue entrando por la VPN y el panel 57421 no necesita regla (loopback).
+
+### Secretos en disco
+
+`%USERPROFILE%\.dsh` guarda la clave de acceso, el token del panel y el registro **en claro**. Desde
+la 5.2.10 la carpeta tiene herencia desactivada y solo `SYSTEM`, `Administradores` y tu usuario
+pueden leerla. No la muevas fuera de tu perfil y no la copies a unidades compartidas. Las copias de
+`backups\` heredan los mismos permisos; si necesitas cifrarlas, usa una unidad BitLocker o un
+contenedor cifrado, no un ZIP con contraseña.
+
+### Qué no hace este producto (a propósito)
+
+No abre puertos en el router, no usa túneles públicos, no habla con `api.deepseek.com` y no
+empaqueta RustDesk. Si algo te pide lo contrario, no es este proyecto.

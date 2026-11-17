@@ -17,7 +17,6 @@ let loadedMtime = -1;
 let readOnly = false;
 let warnedReadOnly = false;
 
-export const DEVICE_ROLES = Object.freeze(["full", "viewer"]);
 export const DEFAULT_DEVICE_ROLE = "full";
 
 const empty = () => ({ devices: [], pending: [], history: [], denied: [] });
@@ -59,8 +58,6 @@ const warnReadOnly = (reason) => {
   warnedReadOnly = true;
   log("pair", `Registro de dispositivos ilegible (${reason}). No se escribira.`);
 };
-
-export const registryFile = () => registryPath;
 
 export const loadRegistry = () => {
   let stat;

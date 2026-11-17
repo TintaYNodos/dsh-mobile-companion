@@ -200,6 +200,10 @@ To stop it or remove it from startup: `stop.bat`, `uninstall-autostart.bat` (Win
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | Maximum size of `synced_chats/` in MB |
 | `DSH_LOG_MAX_MB` | `5` | Maximum size of `bridge.log` in MB before rotating (minimum 1) |
 | `DSH_LOG_KEEP` | `3` | Rotated `bridge.log.N` files kept (1–10) |
+| `DSH_VPN_IP` | auto | Forces the private IP when the adapter name is unknown |
+| `DSH_ALLOW_PROXY_ACCESS` | — | `1` accepts proxy headers (only with an identity layer in front) |
+| `DSH_PANEL_TOKEN` | auto | Single-use ticket to open the local panel |
+| `DSH_VISUAL_URL` | `http://127.0.0.1:57420` | URL used by the capture probe `visual-lab` |
 
 ### One-time approval from the computer
 

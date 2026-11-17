@@ -377,12 +377,3 @@ export const contractSnapshot = () => ({
     critical: check.critical,
   })),
 });
-
-/** Cierto cuando el contrato critico (sesion + arranque + puerto) esta completo. */
-export const contractCriticalOk = () => latest.ok;
-
-/** Para pruebas: fija un estado sin lanzar sondas. */
-export const __setContractForTests = (next) => {
-  latest = { ...latest, ...next };
-  previousSignature = latest.checks.map((check) => `${check.id}:${check.status}`).join("|");
-};

@@ -44,6 +44,19 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  */
 class WebViewSetup {
 
+    /**
+     * H-04b: la cookie de dispositivo la fija el puente por HTTP y WebView la
+     * guarda en memoria; si Android mata el proceso sin un flush, el telefono
+     * vuelve a "Acceso pendiente" y hay que re-aprobar. Se vuelca al disco al
+     * salir de primer plano para conservarla entre reinicios.
+     */
+    static void flushCookies() {
+        try {
+            CookieManager.getInstance().flush();
+        } catch (Throwable ignored) {
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     static void configureWebView(MainActivity a) {
         WebSettings settings = a.webView.getSettings();

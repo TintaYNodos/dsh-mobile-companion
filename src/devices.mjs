@@ -357,9 +357,6 @@ export async function resolveTargetPortForDevice(device, { force = false } = {})
   return resolveTargetPort(force);
 }
 
-/** Descarta la cache de sondas (pruebas y cambios de perfil). */
-export const clearTargetProbeCache = () => targetProbes.clear();
-
 export function removeDevice(id) {
   const current = loadRegistry();
   const index = current.devices.findIndex((device) => device.id === id);

@@ -312,7 +312,14 @@ const shutdown = (signal) => {
   shuttingDown = true;
   log("bridge", `Cerrando por ${signal}`);
   server.close(() => process.exit(0));
-  if (loopbackServer) loopbackServer.close();
+  // Un cierre ordenado no debe esperar a que el telefono suelte el WebSocket:
+  // con conexiones vivas, server.close() no llama al callback hasta que mueren
+  // y stop.bat acababa forzando. Se cortan aqui y el proceso sale en <1 s.
+  if (typeof server.closeAllConnections === "function") server.closeAllConnections();
+  if (loopbackServer) {
+    loopbackServer.close();
+    if (typeof loopbackServer.closeAllConnections === "function") loopbackServer.closeAllConnections();
+  }
   setTimeout(() => process.exit(0), 3000).unref();
 };
 

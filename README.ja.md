@@ -178,6 +178,10 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 | `DSH_SYNC_MAX_TOTAL_MB` | `200` | `synced_chats/` の最大サイズ（MB） |
 | `DSH_LOG_MAX_MB` | `5` | ローテーション前の `bridge.log` 最大サイズ（MB、最小 1） |
 | `DSH_LOG_KEEP` | `3` | 保持する `bridge.log.N` の数（1–10） |
+| `DSH_VPN_IP` | 自動 | アダプター名が不明なときにプライベート IP を強制 |
+| `DSH_ALLOW_PROXY_ACCESS` | — | `1` でプロキシヘッダーを許可（手前に識別層がある場合のみ） |
+| `DSH_PANEL_TOKEN` | 自動 | ローカルパネルを開く使い捨てチケット |
+| `DSH_VISUAL_URL` | `http://127.0.0.1:57420` | キャプチャ用プローブ `visual-lab` の URL |
 
 ### パソコンからの初回承認
 
@@ -405,6 +409,31 @@ PC のパネルには**「Notas recibidas」**（受信したノート）の受�
 ## 商用利用
 
 企業の本番環境での利用、製品やサービスへの組み込み、再配布には別途ライセンスが必要です（Business Source License 1.1）。企業は **Commercial license** フォームから相談できます：[github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose](https://github.com/TintaYNodos/dsh-mobile-companion/issues/new/choose)。詳細は [LICENSING.md](LICENSING.md)。
+
+## ヘルス、バックアップ、リモートサポート
+
+- **実際のヘルス。** `/healthz` はブリッジと DeepSeek Harness を分けて報告し、Harness 停止時は HTTP 503 を返します。`degraded` は契約の一部が変わったことを示します。`/dsh-companion/status` は確認済みの契約を返します。
+- **バックアップ。** [backup.bat](backup.bat) は端末登録、アクセスキー、パネルトークンをハッシュ目録付きで保存し、[restore.bat](restore.bat) は書き込み前に検証します。保存先は `%USERPROFILE%\.dsh\backups\`。
+- **リモートサポート（任意）。** [RustDesk](https://rustdesk.com) は推奨のみで同梱しません。自前サーバーか ZeroTier/Tailscale 経由に限定し、強力な固定パスワードと 2FA を使い、終了後は停止してください。
+- **手順。** [OPERACION.md](OPERACION.md) に承認、再起動、ログ、ヘルス、バックアップ、APK 更新を記載。サポート: [SUPPORT.md](SUPPORT.md)。
+
+## エージェントからインストール可能（DeepSeek Harness）
+
+手順全体は [skills/mobile-companion-setup](skills/mobile-companion-setup/) のスキルとして同梱されています。`doctor.ps1` の各 `FAIL`/`AVISO` には [doctor-fixes.json](doctor-fixes.json) のコマンドがあります。
+
+```powershell
+New-Item -ItemType Directory -Force .dsh\skills | Out-Null
+cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
+```
+
+## プロジェクト文書
+
+[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [AGENT_COMPAT.md](AGENT_COMPAT.md) · [LICENSE](LICENSE)
+
+## iPhone / iPad
+
+iOS アプリはありません。Safari の「ホーム画面に追加」で、PC 起動中は完全な UI が動きます（iOS ではバックグラウンド通知なし）。オフラインリーダーは引き続き PC が必要です。
+
 
 ## ライセンス
 

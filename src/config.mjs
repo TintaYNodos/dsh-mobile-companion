@@ -57,11 +57,11 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.2.12",
-  apkVersion: "5.2.12",
-  apkVersionCode: 56,
-  previousApkVersion: "5.2.11",
-  previousApkVersionCode: 55,
+  version: "5.2.13",
+  apkVersion: "5.2.13",
+  apkVersionCode: 57,
+  previousApkVersion: "5.2.12",
+  previousApkVersionCode: 56,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710, "DSH_TARGET_PORT"),

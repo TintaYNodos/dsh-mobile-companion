@@ -110,8 +110,8 @@ class SettingsScreen {
         form.addView(enterCard);
 
         form.addView(UiKit.settingSwitchCard(a,
-                "Comandos rápidos",
-                "Muestra la fila Auditar, Explicar, Pruebas y Continuar sobre el compositor mientras escribes.",
+                "Mostrar comandos rápidos",
+                "Muestra los comandos del perfil activo sobre el compositor mientras escribes.",
                 WebBridge.isQuickActionsEnabled(a),
                 (view, checked) -> {
                     a.prefs.edit().putBoolean(KEY_SHOW_QUICK_ACTIONS, checked).apply();
@@ -119,13 +119,15 @@ class SettingsScreen {
                 }));
 
         form.addView(UiKit.settingSwitchCard(a,
-                "Teclas de código",
-                "Muestra Tab, Esc, /, { }, [ ], ( ), |, ~ y ` sobre el compositor mientras escribes.",
+                "Mostrar teclas de código",
+                "Muestra las teclas del perfil activo sobre el compositor mientras escribes.",
                 WebBridge.isCodeKeysEnabled(a),
                 (view, checked) -> {
                     a.prefs.edit().putBoolean(KEY_SHOW_CODE_KEYS, checked).apply();
                     WebBridge.applyDockPreferencesToWeb(a);
                 }));
+
+        addQuickCommandsSection(a, form);
 
         // P54 (bloque F): la copia del chat para el lector sin conexión se
         // puede desactivar; por defecto sigue activa.
@@ -215,5 +217,85 @@ class SettingsScreen {
 
         UiKit.styleDialog(a, dialog);
         dialog.show();
+    }
+
+    /**
+     * Seccion «Comandos rapidos»: perfil (Auto/Escritura/Codigo) y un
+     * interruptor con descripcion por comando, agrupado. «Notas» aparece
+     * deshabilitado con la nota de que siempre esta.
+     */
+    private static void addQuickCommandsSection(MainActivity a, LinearLayout form) {
+        form.addView(UiKit.sectionHeader(a, "COMANDOS RÁPIDOS"));
+        final String raw = a.prefs.getString(KEY_QUICK_COMMANDS, null);
+        final String perfil = PrefKeys.quickProfileOf(raw);
+        String[] activos = PrefKeys.quickActiveOf(raw);
+
+        TextView hint = new TextView(a);
+        hint.setText("Se muestran 4 comandos en el dock y el resto detrás de «+». «Notas» está siempre visible; Auto usa el perfil con el que más trabajas.");
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        hint.setTextColor(ThemePalette.inkDim(a));
+        hint.setPadding(ThemePalette.dp(a, 4), 0, ThemePalette.dp(a, 4), ThemePalette.dp(a, 8));
+        form.addView(hint);
+
+        LinearLayout profileRow = new LinearLayout(a);
+        profileRow.setOrientation(LinearLayout.HORIZONTAL);
+        final String[] values = {PROFILE_AUTO, PROFILE_ESCRITURA, PROFILE_CODIGO};
+        final String[] names = {"Auto", "Escritura", "Código"};
+        for (int index = 0; index < values.length; index++) {
+            final String value = values[index];
+            final String name = names[index];
+            Button button = UiKit.actionCompact(a, name, value.equals(perfil), () -> {
+                a.prefs.edit().putString(KEY_QUICK_COMMANDS, PrefKeys.quickSetProfile(raw, value)).apply();
+                WebBridge.applyDockPreferencesToWeb(a);
+                if (a.settingsDialog != null) a.settingsDialog.dismiss();
+                SettingsScreen.openSettingsDialog(a);
+                Toast.makeText(a, "Perfil de comandos: " + name, Toast.LENGTH_SHORT).show();
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp.setMarginEnd(ThemePalette.dp(a, index < values.length - 1 ? 4 : 0));
+            button.setLayoutParams(lp);
+            profileRow.addView(button);
+        }
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowParams.bottomMargin = ThemePalette.dp(a, 8);
+        profileRow.setLayoutParams(rowParams);
+        form.addView(profileRow);
+
+        for (int group = 0; group < QUICK_GROUPS.length; group++) {
+            TextView label = new TextView(a);
+            label.setText(QUICK_GROUP_LABELS[group]);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+            label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            label.setTextColor(ThemePalette.ink(a));
+            label.setPadding(ThemePalette.dp(a, 4), ThemePalette.dp(a, 6), 0, ThemePalette.dp(a, 2));
+            form.addView(label);
+            for (String[] command : QUICK_COMMANDS) {
+                if (!QUICK_GROUPS[group].equals(command[3])) continue;
+                final String id = command[0];
+                boolean siempre = PrefKeys.quickAlwaysOn(id);
+                LinearLayout card = UiKit.settingSwitchCard(a, command[1], command[2],
+                        siempre || containsId(activos, id),
+                        (view, checked) -> {
+                            String next = PrefKeys.quickToggle(
+                                    a.prefs.getString(KEY_QUICK_COMMANDS, null), id, checked);
+                            a.prefs.edit().putString(KEY_QUICK_COMMANDS, next).apply();
+                            WebBridge.applyDockPreferencesToWeb(a);
+                        });
+                if (siempre) {
+                    Switch toggle = SettingsNotifications.firstSwitch(card);
+                    if (toggle != null) toggle.setEnabled(false);
+                }
+                form.addView(card);
+            }
+        }
+    }
+
+    private static boolean containsId(String[] values, String id) {
+        for (String value : values) {
+            if (value.equals(id)) return true;
+        }
+        return false;
     }
 }

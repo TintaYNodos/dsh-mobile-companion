@@ -198,7 +198,7 @@ class SettingsNotifications {
     }
 
     /** Primer {@link Switch} de una tarjeta de ajuste (la que crea UiKit). */
-    private static Switch firstSwitch(View view) {
+    static Switch firstSwitch(View view) {
         if (view instanceof Switch) return (Switch) view;
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;

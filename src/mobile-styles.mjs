@@ -381,4 +381,14 @@ body[data-ds-theme="ink-paper"] *,
 html.ink-paper * {
   border-color: #E5E2DC;
 }
+
+/* Hoja inferior del chip "+" (comandos y teclas que no caben): filas de 48 dp
+   con descripción en el aria-label y scroll propio. En apaisado con teclado
+   nunca supera el 72% del alto visible, así que el campo no queda tapado. */
+.dsh-sheet-overlay { background: rgba(0, 0, 0, 0.42); }
+.dsh-sheet { max-height: min(72vh, 520px); overflow-y: auto; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; border-radius: 16px 16px 0 0; background: var(--dsw-alias-bg-surface, #1b1b1f); color: var(--dsw-alias-label-primary, #e6edf3); }
+.dsh-sheet-title { font-size: 15px; font-weight: 700; }
+.dsh-sheet-group { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--dsw-alias-label-secondary, #8c959f); }
+.dsh-sheet-item { display: block; box-sizing: border-box; width: 100%; min-height: 48px; margin: 4px 0; padding: 10px 12px; border: 1px solid rgba(128, 128, 128, 0.4); border-radius: 10px; background: rgba(128, 128, 128, 0.12); color: inherit; font-size: 13px; line-height: 1.35; text-align: left; touch-action: manipulation; }
+.dsh-sheet-item:focus-visible { outline: 2px solid var(--dsw-alias-accent, #388bfd); outline-offset: 2px; }
 `.trim();

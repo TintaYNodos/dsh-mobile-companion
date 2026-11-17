@@ -89,15 +89,6 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     return btn;
   }
 
-  function quickActionButton(act, extraCss) {
-    return compactButton(act.label, extraCss, function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      haptic('confirm');
-      if (window.__DSH_INSERT_INTO_COMPOSER__) window.__DSH_INSERT_INTO_COMPOSER__(act.prompt);
-    });
-  }
-
   /** Fila unica del apaisado: comandos y teclas en un scroll horizontal. */
   function buildCompactRow() {
     var row = document.createElement('div');
@@ -117,21 +108,11 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var quick = document.createElement('div');
     quick.id = 'dsh-compact-quick';
     quick.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
-    QUICK_ACTIONS.forEach(function(act) {
-      quick.appendChild(quickActionButton(act, 'font-size:11.5px;padding:0 9px;'));
-    });
     row.appendChild(quick);
 
     var keys = document.createElement('div');
     keys.id = 'dsh-compact-keys';
     keys.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
-    CODE_KEY_SYMBOLS.forEach(function(sym) {
-      keys.appendChild(compactButton(sym, 'min-width:34px;padding:0 8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCodeKey(sym);
-      }, 'Tecla ' + sym));
-    });
     row.appendChild(keys);
 
     return row;
@@ -182,6 +163,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
   function updateComposerDockVisibility() {
     var dock = document.getElementById('dsh-composer-dock');
     if (!dock) return;
+
+    // Perfil/ids activos: repinta los chips si cambiaron (o si DSH recreo el dock).
+    dshRefreshDockChips();
 
     // Cada fila respeta su interruptor de Ajustes; el bloque entero desaparece
     // si ambas estan desactivadas.
@@ -293,13 +277,6 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var row = document.createElement('div');
     row.id = 'dsh-quick-actions';
     row.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;';
-
-    // Sin preventFocusLoss, pulsar un comando le quita el foco al compositor y
-    // el teclado se cierra a media tarea.
-    QUICK_ACTIONS.forEach(function(act) {
-      row.appendChild(quickActionButton(act, 'border-radius:15px;padding:0 12px;'));
-    });
-
     return row;
   }
 
@@ -309,27 +286,6 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Teclas de programacion');
     row.style.cssText = 'display:flex;align-items:stretch;gap:6px;width:100%;user-select:none;-webkit-user-select:none;';
-
-    CODE_KEY_SYMBOLS.forEach(function(sym) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = sym;
-      btn.setAttribute('aria-label', 'Tecla ' + sym);
-      // Reparto equitativo del ancho: las nueve teclas caben sin recortes en
-      // pantallas de 360dp.
-      btn.style.cssText = 'flex:1 1 0;min-width:0;min-height:32px;display:inline-flex;align-items:center;justify-content:center;background:rgba(128,128,128,0.16);border:1px solid rgba(128,128,128,0.40);color:inherit;border-radius:8px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12.5px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
-
-      preventFocusLoss(btn);
-
-      btn.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleCodeKey(sym);
-      };
-
-      row.appendChild(btn);
-    });
-
     return row;
   }
 

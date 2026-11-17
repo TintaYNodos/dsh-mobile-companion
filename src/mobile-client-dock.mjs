@@ -8,17 +8,8 @@
  * Preferencias y geometria del dock: comandos rapidos, deteccion del
  * teclado en pantalla y colores solidos del bloque.
  */
-export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de codigo, ancladas al compositor.
-  var QUICK_ACTIONS = [
-    { label: "Auditar", prompt: "Audita el codigo anterior buscando vulnerabilidades, edge cases y optimizaciones." },
-    { label: "Explicar", prompt: "Explica de forma clara y estructurada el funcionamiento del contenido anterior." },
-    { label: "Pruebas", prompt: "Escribe pruebas unitarias completas y casos limite para el codigo anterior." },
-    { label: "Continuar", prompt: "Continua exactamente desde donde se quedo, sin repetir lo anterior." },
-    { label: "Notas", prompt: "Revisa mis notas del telefono. Indice: companion/synced_chats/notes/INDICE.md" }
-  ];
-
-  var CODE_KEY_SYMBOLS = ['Tab', 'Esc', '/', '{ }', '[ ]', '( )', '|', '~', '\`'];
-
+export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoja inferior: code-keys. Aqui solo
+  // viven las preferencias del dock y su geometria.
   function isEditableTarget(el) {
     if (!el) return false;
     if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return true;
@@ -29,25 +20,24 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
   var keyboardBaseline = 0;
 
   /**
-   * Preferencias de Ajustes del telefono: que filas del bloque se muestran.
-   * P1: quickActionsEnabled/codeKeysEnabled exigen el nonce de pagina, asi que
-   * sin puente armado no se llama y se usan los valores por defecto; cuando el
-   * armado avisa, se releen sin recargar.
+   * Preferencias de Ajustes del telefono: que filas se muestran, perfil y
+   * lista de ids activos. P1: los getters exigen el nonce de pagina, asi que
+   * sin puente armado no se llaman y quedan los valores por defecto; el perfil
+   * y los activos llegan por __DSH_SET_DOCK_PREFS__ al cargar y al cambiar.
    */
-  var dockPrefs = { quick: true, keys: true };
+  var DEFAULT_ACTIVE = ['escena', 'estilo', 'fuentes', 'continuar'];
+  var dockPrefs = { quick: true, keys: true, perfil: 'auto', activos: DEFAULT_ACTIVE.slice() };
 
   function readDockPrefs() {
-    var prefs = { quick: true, keys: true };
     var quick = callBridgeValue('quickActionsEnabled', [], null);
-    if (typeof quick === 'boolean') prefs.quick = quick;
+    if (typeof quick === 'boolean') dockPrefs.quick = quick;
     var keys = callBridgeValue('codeKeysEnabled', [], null);
-    if (typeof keys === 'boolean') prefs.keys = keys;
-    return prefs;
+    if (typeof keys === 'boolean') dockPrefs.keys = keys;
   }
 
-  dockPrefs = readDockPrefs();
+  readDockPrefs();
   window.addEventListener('dsh-bridge-armed', function() {
-    dockPrefs = readDockPrefs();
+    readDockPrefs();
     updateComposerDockVisibility();
   });
 
@@ -55,6 +45,10 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
     if (!next) return;
     if (typeof next.quick === 'boolean') dockPrefs.quick = next.quick;
     if (typeof next.keys === 'boolean') dockPrefs.keys = next.keys;
+    if (typeof next.perfil === 'string') dockPrefs.perfil = next.perfil;
+    if (next.activos && typeof next.activos.length === 'number') {
+      dockPrefs.activos = dshNormalizeActive(next.activos);
+    }
     updateComposerDockVisibility();
   };
 

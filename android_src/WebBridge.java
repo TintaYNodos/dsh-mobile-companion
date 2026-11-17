@@ -57,6 +57,8 @@ class WebBridge {
         String nonce = BridgeGuard.currentNonce();
         if (nonce == null) nonce = BridgeGuard.rotateForPage(pageUrl);
         WebBridge.evalBridgeToken(a, nonce);
+        // El dock se configura solo al cargar: perfil, ids activos e interruptores.
+        WebBridge.applyDockPreferencesToWeb(a);
     }
 
     private static void evalBridgeToken(MainActivity a, String nonce) {
@@ -172,11 +174,19 @@ class WebBridge {
         return a.prefs == null || a.prefs.getBoolean(KEY_SHOW_CODE_KEYS, true);
     }
 
-    /** Aplica al instante los interruptores del bloque del compositor, sin recargar. */
+    /**
+     * Aplica al instante los interruptores, el perfil y los ids activos del
+     * dock (JSON en SharedPreferences) sin recargar la pagina. Tambien llega
+     * al terminar cada carga, porque el cliente arranca con los valores por
+     * defecto hasta que el nativo se los manda.
+     */
     static void applyDockPreferencesToWeb(MainActivity a) {
         if (a.webView == null) return;
-        String js = "(function(){ if (window.__DSH_SET_DOCK_PREFS__) { window.__DSH_SET_DOCK_PREFS__({ quick: "
-                + WebBridge.isQuickActionsEnabled(a) + ", keys: " + WebBridge.isCodeKeysEnabled(a) + " }); } })();";
+        String raw = a.prefs == null ? null : a.prefs.getString(KEY_QUICK_COMMANDS, null);
+        String config = PrefKeys.quickDockJson(raw,
+                WebBridge.isQuickActionsEnabled(a), WebBridge.isCodeKeysEnabled(a));
+        String js = "(function(){ if (window.__DSH_SET_DOCK_PREFS__) { window.__DSH_SET_DOCK_PREFS__("
+                + config + "); } })();";
         a.webView.evaluateJavascript(js, null);
     }
 

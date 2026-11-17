@@ -6,6 +6,7 @@
 package com.tintaynodos.dshcompanion;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -128,17 +129,30 @@ class SettingsScreen {
 
         // P54 (bloque F): la copia del chat para el lector sin conexión se
         // puede desactivar; por defecto sigue activa.
+        // P56: al apagarla se borra también la copia nativa cifrada, y el botón
+        // de debajo abre el lector nativo que funciona con la PC apagada.
         form.addView(UiKit.settingSwitchCard(a,
                 "Copia del chat para uso sin conexión",
-                "Guarda una copia del último chat en el teléfono para poder leerlo aunque se pierda la conexión.",
+                "Guarda una copia cifrada del último chat en el teléfono para poder leerlo aunque se pierda la conexión.",
                 WebBridge.isOfflineCopyEnabled(a),
                 (view, checked) -> {
                     a.prefs.edit().putBoolean(KEY_OFFLINE_COPY, checked).apply();
+                    if (!checked) OfflineChatStore.clear(a);
                     WebBridge.applyOfflineCopyToWeb(a);
                     Toast.makeText(a,
                             checked ? "Copia sin conexión activada" : "Copia sin conexión desactivada",
                             Toast.LENGTH_SHORT).show();
                 }));
+
+        Button btnReadOfflineChat = UiKit.actionCompact(a, "Leer el último chat", false, () -> {
+            if (a.settingsDialog != null) a.settingsDialog.dismiss();
+            a.startActivity(new Intent(a, OfflineChatActivity.class));
+        });
+        LinearLayout.LayoutParams offlineReadParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        offlineReadParams.bottomMargin = ThemePalette.dp(a, 14);
+        btnReadOfflineChat.setLayoutParams(offlineReadParams);
+        form.addView(btnReadOfflineChat);
 
         form.addView(UiKit.sectionHeader(a, "MODO PÁNICO / EMERGENCIA"));
         final AlertDialog[] settingsDialogRef = new AlertDialog[1];

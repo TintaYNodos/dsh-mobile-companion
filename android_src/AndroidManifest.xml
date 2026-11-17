@@ -70,6 +70,14 @@
             android:label="@string/app_name"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- P56: lector nativo de la copia cifrada del último chat. No exportada:
+             solo se abre desde el Hub y desde Ajustes, y no acepta extras ni
+             intenciones de otras apps (no hay IntentGuard que aplicar). -->
+        <activity
+            android:name=".OfflineChatActivity"
+            android:exported="false"
+            android:label="@string/app_name" />
+
         <service
             android:name=".PcEventsService"
             android:exported="false"

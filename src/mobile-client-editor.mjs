@@ -150,6 +150,37 @@ export const MOBILE_CLIENT_EDITOR = `  /**
     }, 280);
   }, true);
 
+  /**
+   * Con el teclado abierto el campo puede quedar por debajo del area visible
+   * (el WebView se redimensiona tarde o el teclado se dibuja encima). Mirar solo
+   * el foco no basta: el primer caracter y los saltos de linea llegan despues.
+   * Tras cada cambio se comprueba que el campo siga dentro de lo visible y, si
+   * no, se acerca lo justo; no se mueve si ya se ve (block:'nearest').
+   */
+  var typedTextCheckTimer = 0;
+
+  function keepTypedTextVisible() {
+    typedTextCheckTimer = 0;
+    var el = findEditor();
+    if (!el || !isEditableTarget(document.activeElement)) return;
+    var rect = null;
+    try { rect = el.getBoundingClientRect(); } catch (e) { return; }
+    if (!rect || !rect.height) return;
+    var limit = visibleBottomEdge() - 6;
+    if (rect.bottom <= limit) return;
+    try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}
+    if (typeof updateComposerDockVisibility === 'function') updateComposerDockVisibility();
+  }
+
+  function scheduleTypedTextCheck() {
+    if (typedTextCheckTimer) return;
+    typedTextCheckTimer = setTimeout(keepTypedTextVisible, 60);
+  }
+
+  document.addEventListener('input', scheduleTypedTextCheck, true);
+  document.addEventListener('selectionchange', scheduleTypedTextCheck);
+  window.addEventListener('keyup', scheduleTypedTextCheck, true);
+
   function composerTargetFor(event) {
     if (isComposerTarget(event.target)) return event.target;
     var active = document.activeElement;

@@ -156,11 +156,15 @@ class WebBridge {
     /**
      * P54 (bloque F): comunica al cliente inyectado si debe guardar la copia
      * del chat para el lector sin conexión. Se reaplica en cada carga de página.
+     * P56: si el interruptor está apagado, además se borra la copia nativa
+     * cifrada (también cubre una preferencia apagada al arrancar la app).
      */
     static void applyOfflineCopyToWeb(MainActivity a) {
+        boolean enabled = WebBridge.isOfflineCopyEnabled(a);
+        if (!enabled) OfflineChatStore.clear(a);
         if (a.webView == null) return;
         String js = "(function(){ if (window.__DSH_SET_OFFLINE_COPY__) { window.__DSH_SET_OFFLINE_COPY__("
-                + WebBridge.isOfflineCopyEnabled(a) + "); } })();";
+                + enabled + "); } })();";
         a.webView.evaluateJavascript(js, null);
     }
 

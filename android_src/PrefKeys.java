@@ -63,6 +63,8 @@ class PrefKeys {
     static final String KEY_BIOMETRIC_LOCK = "biometric_lock_enabled";
     static final String KEY_SECURE_SCREEN = "secure_screen_enabled";
     static final String KEY_OFFLINE_COPY = "offline_copy_enabled";
+    /** Marca sin contenido: el lector nativo no pudo cifrar o descifrar la copia. */
+    static final String KEY_OFFLINE_CHAT_UNAVAILABLE = "offline_chat_unavailable";
 
     // Vigilante del servicio de avisos de la PC (ver WatchdogPolicy).
     /** Interruptor de Ajustes "Reiniciar el servicio si se cuelga". ON por defecto. */

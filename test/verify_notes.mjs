@@ -9,8 +9,8 @@
  * (ids.json), bandeja inbox.jsonl, HTML neutralizado, traversal, unicidad,
  * listado GET (auth, `id` en el JSON, viewer 403 por privacidad de metadatos,
  * orden, tolerancia a lineas corruptas), rechazo de `localOnly` (defensa en
- * profundidad), tope de la bandeja tras un POST aunque no haya syncs, retencion
- * (podas por archivos/MB y de la bandeja) y ruta de
+ * profundidad), tope de la bandeja tras un POST aunque no haya syncs, indice
+ * legible notes/INDICE.md, retencion (podas por archivos/MB y de la bandeja) y ruta de
  * absorcion retirada. El campo retirado `chatTarget` se envia a proposito para
  * comprobar que se ignora. Levanta su propio puente aislado y restaura lo que
  * escribe: no toca el puente real.
@@ -22,7 +22,7 @@ import path from "node:path";
 import { startBridge } from "./ci/start-bridge.mjs";
 import {
   IDS, INBOX, ISO_RE, NOTES_DIR, NOTE_NAME_RE, createNotesClient, createRetentionHarness, request,
-  runInboxCapCheck, runReadLimitChecks, runRetentionChecks, setNotesSyncDir, sleep,
+  runInboxCapCheck, runNotesIndexChecks, runReadLimitChecks, runRetentionChecks, setNotesSyncDir, sleep,
 } from "./notes-harness.mjs";
 import { runChaosKillChecks, runConcurrencyChecks, runStoreCrashChecks } from "./notes-crash-harness.mjs";
 
@@ -356,7 +356,7 @@ try {
   // 13c. Regresiones H-13/H-18/H-19/H-20: lectura de 205 notas, cortes de
   // escritura y rafagas/podas concurrentes (helpers aparte por el tope de 400).
   await runReadLimitChecks(check, client); await runStoreCrashChecks(check, client);
-  await runConcurrencyChecks(check, client, bridge, richFile); await runChaosKillChecks(check, bridge);
+  await runConcurrencyChecks(check, client, bridge, richFile); await runChaosKillChecks(check, bridge); await runNotesIndexChecks(check, client, bridge);
   // 14. La ruta y el recurso retirados siguen fuera (nombres armados por partes
   // para que el grep de limpieza del repositorio siga en cero).
   const removedRoute = "/dsh-companion/absorb-" + ["sate", "llite"].join("");

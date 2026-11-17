@@ -175,6 +175,16 @@ body[data-ds-dark-theme] {
     max-height: 48px !important;
     font-size: 14px !important;
   }
+  /* DSH no usa <textarea>: el campo real es un contenteditable de Lexical. Sin
+     suelo propio se aplasta y sin tope crece hasta empujar la tarjeta fuera de
+     la franja visible con el teclado abierto; con el tope, el propio editor se
+     desplaza y la linea que se teclea queda siempre a la vista. */
+  [data-lexical-editor="true"] {
+    min-height: 26px !important;
+    max-height: 60px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
   /* Miniaturas de adjuntos en fila mínima para no comerse el alto útil. */
   [class*="thumbnail"], [class*="attachment_preview"], [class*="preview_card"] {
     max-height: 36px !important;

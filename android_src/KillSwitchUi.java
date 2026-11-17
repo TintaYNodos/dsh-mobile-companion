@@ -111,6 +111,9 @@ class KillSwitchUi {
 
     static void executeKillSwitch(MainActivity a) {
         a.vibrateHaptic("alert");
+        // P56: la copia cifrada del chat es privada; el pánico la borra también,
+        // sin esperar a la confirmación de la computadora.
+        OfflineChatStore.clear(a);
         String base = a.activeUrl != null ? a.activeUrl : PcRegistryStore.urlForSlot(a, 1);
         String target = base.replaceAll("/+$", "") + "/dsh-companion/kill-switch";
 

@@ -16,6 +16,13 @@
  * clave). Apagarla borra la copia ya guardada porque es una medida de
  * privacidad: desactivarla no debe seguir reteniendo el chat en el telefono.
  * Volver a activarla regenera la copia en el siguiente visibilitychange/pagehide.
+ *
+ * P56: ademas de localStorage, con el interruptor activo se manda la misma copia
+ * ({title, text, updatedAt}) al lector NATIVO por el puente con nonce
+ * (`saveOfflineChat`, mismo guardian que `saveOfflineDraft`). El nativo la cifra
+ * con el AndroidKeyStore y la guarda en el almacenamiento privado de la app, de
+ * modo que se puede leer con la PC apagada y sin red. Sin interruptor no se
+ * envia NADA al puente; el nativo ademas rechaza la copia como segundo candado.
  */
 export const MOBILE_CLIENT_OFFLINE = `  /**
    * Interruptor de la copia sin conexion (P54).
@@ -32,7 +39,9 @@ export const MOBILE_CLIENT_OFFLINE = `  /**
     if (!offlineCopyEnabled) {
       // Apagar la copia es una decision de privacidad: se borra lo ya guardado
       // para que offline.html no muestre una conversacion que el usuario cree
-      // eliminada. Si se vuelve a activar, se rehace al ocultar o cerrar.
+      // eliminada. Si se vuelve a activar, se rehace al ocultar o cerrar. El
+      // lado nativo borra ademas su copia cifrada al aplicar la preferencia
+      // (WebBridge/SettingsScreen, P56).
       try { localStorage.removeItem('dsh_last_synced_chat'); } catch (e) {}
     }
     return offlineCopyEnabled;
@@ -49,19 +58,37 @@ export const MOBILE_CLIENT_OFFLINE = `  /**
    * nada ni toca localStorage.
    */
   var OFFLINE_COPY_LIMIT = 20000;
+  var OFFLINE_COPY_MIN = 30;
+
+  /**
+   * P56: manda la copia al lector nativo cifrado, con el nonce de pagina.
+   *
+   * Usa callBridgeWithToken (core): exige frame principal, puente armado y
+   * nonce, y sin token NO llama al puente (fail-closed). Si el APK no trae
+   * saveOfflineChat devuelve false y no pasa nada: localStorage sigue siendo
+   * la copia de respaldo del lector web. Nunca se llama con el interruptor
+   * apagado.
+   */
+  function sendOfflineChatToNative(title, text, updatedAt) {
+    if (!offlineCopyEnabled) return false;
+    return Boolean(callBridgeWithToken('saveOfflineChat', [title, text, updatedAt]));
+  }
 
   function cacheLastChat() {
     if (!offlineCopyEnabled) return;
     try {
       var text = window.__DSH_EXTRACT_CHAT_TEXT__();
-      if (!text || text.length <= 30) return;
+      if (!text || text.length <= OFFLINE_COPY_MIN) return;
       if (text.length > OFFLINE_COPY_LIMIT) text = text.slice(-OFFLINE_COPY_LIMIT);
       var title = cleanDocTitle() || 'Conversacion reciente';
+      var updatedAt = new Date().toISOString();
       localStorage.setItem('dsh_last_synced_chat', JSON.stringify({
         title: title,
         text: text,
-        updatedAt: new Date().toISOString()
+        updatedAt: updatedAt
       }));
+      // P56: la copia cifrada del telefono, para leerla sin PC ni red.
+      sendOfflineChatToNative(title, text, updatedAt);
     } catch(e) {}
   }
 

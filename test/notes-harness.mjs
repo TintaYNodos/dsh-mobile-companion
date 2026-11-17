@@ -234,6 +234,11 @@ export function runRetentionChecks(check, retention) {
   check("retencion de la bandeja elimina la linea cuyo .md ya no existe y protege ids.json",
     !keptInbox.some((line) => line.includes("2026-01-01-000000-borrada.md")) &&
     fs.existsSync(inboxIds) && JSON.parse(fs.readFileSync(inboxIds, "utf8"))["id-borrado"] === "2026-01-01-000000-borrada.md");
+  const fixtureIndex = path.join(inboxFixture.dir, "INDICE.md");
+  const fixtureIndexText = fs.existsSync(fixtureIndex) ? fs.readFileSync(fixtureIndex, "utf8") : "";
+  check("retencion: el indice legible se rehace tras podar la bandeja y no lista la nota sin archivo",
+    fixtureIndexText.includes(liveNote) && !fixtureIndexText.includes("2026-01-01-000000-borrada.md"),
+    `bytes=${fixtureIndexText.length}`);
 }
 
 /**
@@ -273,6 +278,92 @@ export async function runReadLimitChecks(check, client) {
   const notes = Array.isArray(res.json?.notes) ? res.json.notes : [];
   check("H-13: GET /notes devuelve 205 notas (tope alineado con la retencion de 500)",
     res.status === 200 && notes.length === 205, `status=${res.status} n=${notes.length}`);
+}
+
+/**
+ * Indice legible para agentes (notes/INDICE.md): existe junto a las notas, la
+ * cabecera explica como pedir una, cada nota aparece con fecha, titulo,
+ * perfil/tipo, estado y archivo; se rehace al reenviar el mismo id, no cuenta
+ * como nota en GET /notes, no lista notas podadas, tolera lineas corruptas y se
+ * regenera al arrancar el puente (proceso hijo con el mismo DSH_SYNC_DIR).
+ */
+export async function runNotesIndexChecks(check, client, bridge) {
+  const indexFile = path.join(NOTES_DIR, "INDICE.md");
+  const readIndex = () => {
+    try { return fs.readFileSync(indexFile, "utf8"); } catch { return ""; }
+  };
+  const initial = readIndex();
+  check("indice: existe junto a las notas y trae la cabecera legible",
+    initial.includes("# Índice de notas del teléfono") &&
+    initial.includes("pídele a un agente que lea el archivo indicado"), `bytes=${initial.length}`);
+
+  const created = await client.postNote({
+    id: "indice-id_01", title: "Nota para el índice", body: "cuerpo",
+    profile: "writer", type: "reunion", status: "borrador",
+  });
+  const file = client.remember(created.json?.file);
+  const afterCreate = readIndex();
+  check("indice: tras guardar una nota incluye su titulo y su nombre de archivo",
+    created.status === 200 && Boolean(file) && afterCreate.includes("Nota para el índice") &&
+    afterCreate.includes(`\`${file}\``), `status=${created.status} file=${file}`);
+  const line = afterCreate.split("\n").find((entry) => entry.includes(`\`${file}\``)) || "";
+  check("indice: la linea usa el formato fecha · titulo · perfil/tipo · estado · archivo",
+    /^- \d{4}-\d{2}-\d{2} \d{2}:\d{2} · Nota para el índice · writer\/reunion · borrador · `[^`]+\.md`$/.test(line),
+    line.slice(0, 100));
+
+  await sleep(10);
+  const updated = await client.postNote({
+    id: "indice-id_01", title: "Nota para el índice v2", body: "cuerpo dos",
+    profile: "writer", type: "reunion", status: "revisado",
+  });
+  const afterUpdate = readIndex();
+  const linesForFile = afterUpdate.split("\n").filter((entry) => entry.includes(`\`${file}\``));
+  check("indice: se rehace al reenviar el mismo id (titulo nuevo, una sola linea)",
+    updated.status === 200 && updated.json?.updated === true && updated.json?.file === file &&
+    afterUpdate.includes("Nota para el índice v2") &&
+    !afterUpdate.includes("Nota para el índice · writer/reunion · borrador") &&
+    linesForFile.length === 1, `status=${updated.status} lineas=${linesForFile.length}`);
+
+  const listed = await client.getNotes();
+  const listedFiles = Array.isArray(listed.json?.notes) ? listed.json.notes.map((entry) => entry.file) : [];
+  check("indice: INDICE.md no se cuenta como nota en GET /dsh-companion/notes",
+    listed.status === 200 && listedFiles.includes(file) && !listedFiles.includes("INDICE.md"),
+    `status=${listed.status} n=${listedFiles.length}`);
+
+  // Poda real: al borrar el .md, la poda de la bandeja quita su linea huerfana y
+  // el indice se rehace sin la nota.
+  const doomed = await client.postNote({ id: "indice-poda_01", title: "Nota que sera podada", body: "x" });
+  const doomedFile = client.remember(doomed.json?.file);
+  check("indice: lista la nota antes de la poda", readIndex().includes(`\`${doomedFile}\``), `file=${doomedFile}`);
+  fs.unlinkSync(client.notePath(doomedFile));
+  const sync = await client.syncChat("Poda del índice");
+  const afterPrune = readIndex();
+  check("indice: tras la poda de la bandeja ya no lista la nota podada",
+    sync.status === 200 && !afterPrune.includes(`\`${doomedFile}\``) && !afterPrune.includes("Nota que sera podada"),
+    `status=${sync.status} file=${doomedFile}`);
+
+  // Linea corrupta en la bandeja: se omite sin romper la regeneracion.
+  fs.appendFileSync(INBOX, '{"file":"roto-sin-comillas.md"\n', "utf8");
+  const afterCorrupt = await client.postNote({ title: "Nota tras linea corrupta", body: "x" });
+  client.remember(afterCorrupt.json?.file);
+  const corruptIndex = readIndex();
+  check("indice: una linea corrupta de la bandeja se omite sin romper el indice",
+    afterCorrupt.status === 200 && corruptIndex.includes("Nota tras linea corrupta") &&
+    !corruptIndex.includes("roto-sin-comillas"), `status=${afterCorrupt.status}`);
+
+  // Arranque: con la carpeta de notas existente, importar el modulo rehace el
+  // indice aunque el archivo se haya borrado a mano.
+  fs.rmSync(indexFile, { force: true });
+  const restart = spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", "await import('./src/notes-store.mjs');"],
+    { cwd: REPO_ROOT, env: bridge.env, encoding: "utf8", timeout: 30_000, windowsHide: true }
+  );
+  const afterRestart = readIndex();
+  check("indice: se rehace al arrancar el puente si la carpeta de notas existe",
+    restart.status === 0 && afterRestart.includes("Nota tras linea corrupta") &&
+    afterRestart.includes("# Índice de notas del teléfono"),
+    `exit=${restart.status} bytes=${afterRestart.length} err=${String(restart.stderr || "").trim().slice(0, 100)}`);
 }
 
 

@@ -182,6 +182,13 @@ class HubSheet {
         });
         sheet.addView(btnNotes);
 
+        // P56: lector nativo de la copia cifrada del último chat, sin PC ni red.
+        Button btnOfflineChat = UiKit.actionCompact(a, "Último chat guardado", false, () -> {
+            HubSheet.dismissHub(a);
+            a.startActivity(new Intent(a, OfflineChatActivity.class));
+        });
+        sheet.addView(btnOfflineChat);
+
         sheet.addView(UiKit.sectionHeader(a, "SISTEMA"));
         View telem = SystemCards.buildTelemetryCard(a);
         if (telem != null) sheet.addView(telem);

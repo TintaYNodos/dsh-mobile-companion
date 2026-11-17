@@ -5,26 +5,15 @@
  */
 
 /**
- * Dock del compositor: colocacion debajo o encima de la tarjeta, filas de
- * comandos y teclas de codigo, y observacion de cambios de tamano.
+ * Dock del compositor: filas de comandos y teclas, y su geometria. En apaisado
+ * con teclado pasa a UNA fila compacta que reserva su franja en vez de tapar
+ * el campo de escritura.
  */
-export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() {
-    var dock = document.getElementById('dsh-composer-dock');
-    if (!dock) return;
+export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = automatico (abre si cabe), true = abierto
+  // a peticion del usuario, false = plegado (queda el boton que lo reabre).
+  var dockCompactOpen = null;
 
-    // Cada fila respeta su interruptor de Ajustes; el bloque entero desaparece
-    // si ambas estan desactivadas.
-    var quickRow = document.getElementById('dsh-quick-actions');
-    if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
-    var keysRow = document.getElementById('dsh-code-keys');
-    if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
-
-    var anyRow = dockPrefs.quick || dockPrefs.keys;
-    // En apaisado con teclado el alto util se queda en ~150-300 px: el bloque
-    // tapaba el compositor y no se veia lo que se escribia. Ahi se oculta y el
-    // espacio entero es para el editor; en vertical y en pantallas altas sigue.
-    var shortLandscape = window.innerWidth > window.innerHeight && viewportHeight() <= 520;
-    var visible = anyRow && isKeyboardOpen() && !shortLandscape;
+  function setDockDisplay(dock, visible) {
     var current = dock.getAttribute('data-visible') === '1';
     if (visible !== current) {
       dock.setAttribute('data-visible', visible ? '1' : '0');
@@ -32,72 +21,275 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
       if (visible) dock.removeAttribute('aria-hidden');
       else dock.setAttribute('aria-hidden', 'true');
     }
+  }
 
-    if (!visible) return;
-
-    // El bloque va DEBAJO de la tarjeta del compositor, hacia el teclado: por
-    // encima se montaba sobre la fila del espacio de trabajo y la de "Modo".
-    var editor = findEditor();
-    if (!editor) return;
+  /**
+   * Modo de siempre (vertical y pantallas altas): dos filas pegadas a la
+   * tarjeta del compositor, por abajo o por arriba. Devuelve true si hubo que
+   * ocultarlo (red de seguridad: nunca sobre el area de texto).
+   */
+  function positionClassicDock(dock, editor) {
     var rect = editor.getBoundingClientRect();
-    if (!rect || !rect.height) return;
-
+    if (!rect || !rect.height) {
+      setDockDisplay(dock, false);
+      return true;
+    }
     var card = composerCardRect(editor);
     var vh = viewportHeight();
     var dockHeight = dock.offsetHeight || 92;
     var gap = 6;
 
-    // Preferencia: debajo de la tarjeta (hacia el teclado). En una conversacion
-    // el compositor ya esta pegado al borde inferior del WebView, no cabe ahi y
-    // el clamp lo montaba sobre la caja de texto; en ese caso se coloca encima
-    // de la tarjeta completa, nunca sobre el campo de escritura.
     var below = Math.round(card.bottom + gap);
     if (below + dockHeight <= vh - 4) {
       dock.style.top = below + 'px';
-      // Debajo de la tarjeta: esquinas inferiores redondeadas.
       dock.style.borderRadius = '0 0 14px 14px';
       dock.style.borderTop = '1px solid rgba(128,128,128,0.35)';
       dock.style.borderBottom = 'none';
     } else {
       var above = Math.round(card.top - dockHeight - gap);
       dock.style.top = Math.max(4, above) + 'px';
-      // Pegado al borde superior del compositor: esquinas superiores
-      // redondeadas para que se lea como parte de la caja, no como una barra
-      // suelta flotando sobre el historial.
       dock.style.borderRadius = '14px 14px 0 0';
       dock.style.borderBottom = '1px solid rgba(128,128,128,0.35)';
     }
     dock.style.bottom = 'auto';
 
-    // Red de seguridad: si por cualquier geometria el bloque pisara el area de
-    // texto, se oculta antes que taparlo. Nunca se escribe a ciegas.
     var topPx = parseFloat(dock.style.top) || 0;
     if (topPx < rect.bottom + 2 && topPx + dockHeight > rect.top - 2) {
-      dock.setAttribute('data-visible', '0');
-      dock.setAttribute('aria-hidden', 'true');
-      dock.style.display = 'none';
-      return;
+      setDockDisplay(dock, false);
+      return true;
     }
+    return false;
+  }
 
-    // Los tokens de color de DSH viven en su contenedor con tema, no en body:
-    // colgado del body no puede resolverlos. Se copian los colores reales del
-    // editor para que el bloque se vea igual en tema claro y oscuro.
+  /**
+   * Fondo opaco del bloque: los tokens de DSH viven en su contenedor con tema,
+   * no en body; se copian los colores reales del editor.
+   */
+  function paintDockSurface(el, editor) {
     try {
       var style = window.getComputedStyle(editor);
-      if (style && style.color) dock.style.color = style.color;
+      if (style && style.color) el.style.color = style.color;
       var cardStyle = editor.parentElement ? window.getComputedStyle(editor.parentElement) : null;
       var bodyBg = '';
       try { bodyBg = window.getComputedStyle(document.body).backgroundColor; } catch(e) {}
-
-      dock.style.background = solidDockBackground([
+      el.style.background = solidDockBackground([
         cardStyle ? cardStyle.backgroundColor : '',
         style.backgroundColor,
         bodyBg
       ]);
-
       var border = style.borderTopColor;
-      if (border && border !== 'rgba(0, 0, 0, 0)') dock.style.borderTopColor = border;
+      if (border && border !== 'rgba(0, 0, 0, 0)') el.style.borderTopColor = border;
     } catch(e) {}
+  }
+
+  function compactButton(label, extraCss, onClick, ariaLabel) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
+    btn.style.cssText = 'flex:0 0 auto;min-height:30px;padding:0 10px;border-radius:8px;border:1px solid rgba(128,128,128,0.40);background:rgba(128,128,128,0.14);color:inherit;font-size:12px;font-weight:600;line-height:1.15;white-space:nowrap;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;' + (extraCss || '');
+    preventFocusLoss(btn);
+    btn.onclick = onClick;
+    return btn;
+  }
+
+  function quickActionButton(act, extraCss) {
+    return compactButton(act.label, extraCss, function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      haptic('confirm');
+      if (window.__DSH_INSERT_INTO_COMPOSER__) window.__DSH_INSERT_INTO_COMPOSER__(act.prompt);
+    });
+  }
+
+  /** Fila unica del apaisado: comandos y teclas en un scroll horizontal. */
+  function buildCompactRow() {
+    var row = document.createElement('div');
+    row.id = 'dsh-dock-compact';
+    row.setAttribute('role', 'toolbar');
+    row.setAttribute('aria-label', 'Comandos y teclas');
+    row.style.cssText = 'display:none;align-items:center;gap:4px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;';
+
+    row.appendChild(compactButton('⌨', 'min-width:32px;padding:0 8px;', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      haptic('tick');
+      dockCompactOpen = false;
+      updateComposerDockVisibility();
+    }, 'Ocultar comandos y teclas'));
+
+    var quick = document.createElement('div');
+    quick.id = 'dsh-compact-quick';
+    quick.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
+    QUICK_ACTIONS.forEach(function(act) {
+      quick.appendChild(quickActionButton(act, 'font-size:11.5px;padding:0 9px;'));
+    });
+    row.appendChild(quick);
+
+    var keys = document.createElement('div');
+    keys.id = 'dsh-compact-keys';
+    keys.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
+    CODE_KEY_SYMBOLS.forEach(function(sym) {
+      keys.appendChild(compactButton(sym, 'min-width:34px;padding:0 8px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleCodeKey(sym);
+      }, 'Tecla ' + sym));
+    });
+    row.appendChild(keys);
+
+    return row;
+  }
+
+  /**
+   * Boton que reabre el dock cuando no cabe la fila o cuando el usuario la
+   * pliega. Se coloca encima de la tarjeta para no tapar ni el campo ni los
+   * botones, y deja claro que los comandos siguen ahi.
+   */
+  function ensureDockLatch() {
+    var latch = document.getElementById('dsh-dock-latch');
+    if (latch) return latch;
+    latch = document.createElement('button');
+    latch.id = 'dsh-dock-latch';
+    latch.type = 'button';
+    latch.textContent = '⌨ Comandos';
+    latch.setAttribute('aria-label', 'Abrir comandos y teclas');
+    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;align-items:center;min-height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(128,128,128,0.45);background:#1b1b1f;color:#e6edf3;font-size:12px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,0.45);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+    preventFocusLoss(latch);
+    latch.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      haptic('tick');
+      dockCompactOpen = true;
+      updateComposerDockVisibility();
+    };
+    (document.body || document.documentElement).appendChild(latch);
+    return latch;
+  }
+
+  function positionDockLatch(latch, editor) {
+    if (!latch) return;
+    var inset = visualKeyboardInset();
+    var layoutH = window.innerHeight;
+    var card = composerCardRect(editor);
+    var above = Math.round(layoutH - card.top + 6);
+    if (above < inset + 6) above = inset + 6;
+    if (above > layoutH - 34) above = layoutH - 34;
+    latch.style.bottom = Math.max(4, above) + 'px';
+    latch.style.display = 'inline-flex';
+    paintDockSurface(latch, editor);
+  }
+
+  function updateComposerDockVisibility() {
+    var dock = document.getElementById('dsh-composer-dock');
+    if (!dock) return;
+
+    // Cada fila respeta su interruptor de Ajustes; el bloque entero desaparece
+    // si ambas estan desactivadas.
+    var quickRow = document.getElementById('dsh-quick-actions');
+    var keysRow = document.getElementById('dsh-code-keys');
+    var compactRow = document.getElementById('dsh-dock-compact');
+    var latch = document.getElementById('dsh-dock-latch');
+    var anyRow = dockPrefs.quick || dockPrefs.keys;
+    var editor = findEditor();
+    var keyboardOpen = Boolean(editor) && anyRow && isKeyboardOpen();
+
+    if (!keyboardOpen) {
+      dockCompactOpen = null;
+      restoreDockReserve();
+      setDockDisplay(dock, false);
+      if (compactRow) compactRow.style.display = 'none';
+      if (latch) latch.style.display = 'none';
+      return;
+    }
+
+    if (!isShortLandscape()) {
+      // Comportamiento de siempre (vertical y pantallas altas): sin reservar.
+      dockCompactOpen = null;
+      restoreDockReserve();
+      if (compactRow) compactRow.style.display = 'none';
+      if (latch) latch.style.display = 'none';
+      if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
+      if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
+      dock.style.flexDirection = 'column';
+      dock.style.alignItems = 'stretch';
+      dock.style.gap = '5px';
+      dock.style.height = 'auto';
+      dock.style.padding = '5px 10px 6px 10px';
+      dock.style.left = '0';
+      dock.style.right = '0';
+      setDockDisplay(dock, true);
+      if (!positionClassicDock(dock, editor)) paintDockSurface(dock, editor);
+      return;
+    }
+
+    // --- Apaisado de telefono con teclado: una sola fila compacta ---
+    if (quickRow) quickRow.style.display = 'none';
+    if (keysRow) keysRow.style.display = 'none';
+    var compactQuick = document.getElementById('dsh-compact-quick');
+    if (compactQuick) compactQuick.style.display = dockPrefs.quick ? 'flex' : 'none';
+    var compactKeys = document.getElementById('dsh-compact-keys');
+    if (compactKeys) compactKeys.style.display = dockPrefs.keys ? 'flex' : 'none';
+
+    var inset = visualKeyboardInset();
+    var layoutH = window.innerHeight;
+    var editorRect = editor.getBoundingClientRect();
+    var seat = findComposerSeat(editor);
+    var seatPosition = '';
+    if (seat) {
+      try { seatPosition = window.getComputedStyle(seat).position; } catch (e) {}
+    }
+    var canReserve = seatPosition === 'sticky' || seatPosition === 'absolute';
+    // Distancia del asiento al borde superior del campo: no cambia al subir el
+    // asiento entero, asi que sirve para decidir si cabe sin oscilar.
+    var distance = seat ? (seat.getBoundingClientRect().bottom - editorRect.top) : 0;
+    var fits = canReserve
+      ? visibleBottomEdge() >= distance + COMPACT_DOCK_HEIGHT + 2
+      : composerCardRect(editor).bottom <= layoutH - inset - COMPACT_DOCK_HEIGHT + 2;
+    var showRow = dockCompactOpen === null ? fits : dockCompactOpen;
+
+    if (!showRow) {
+      restoreDockReserve();
+      setDockDisplay(dock, false);
+      if (compactRow) compactRow.style.display = 'none';
+      positionDockLatch(latch, editor);
+      return;
+    }
+
+    if (latch) latch.style.display = 'none';
+    if (compactRow) compactRow.style.display = 'flex';
+    dock.style.flexDirection = 'row';
+    dock.style.alignItems = 'center';
+    dock.style.gap = '0';
+    dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
+    dock.style.padding = '0';
+    dock.style.left = '0';
+    dock.style.right = '0';
+    dock.style.top = 'auto';
+    dock.style.bottom = inset + 'px';
+    dock.style.borderRadius = '0';
+    dock.style.borderTop = '1px solid rgba(128,128,128,0.35)';
+    dock.style.borderBottom = 'none';
+    // Si el usuario lo abre a mano aunque no quepa, se sube solo lo justo para
+    // que el campo no quede cortado por arriba: el dock nunca tapa el texto.
+    var lift = inset + COMPACT_DOCK_HEIGHT;
+    if (!fits) lift = Math.min(lift, Math.max(0, visibleBottomEdge() - distance - 4));
+    if (canReserve) applyDockReserve(lift);
+    else restoreDockReserve();
+    setDockDisplay(dock, true);
+    paintDockSurface(dock, editor);
+
+    // Red de seguridad: si aun asi rozara el area de texto, se pliega y queda
+    // el boton que lo abre. Nunca se escribe a ciegas.
+    var dockRect = dock.getBoundingClientRect();
+    var nowRect = editor.getBoundingClientRect();
+    if (dockRect.height && nowRect.height && dockRect.top < nowRect.bottom - 2 && dockRect.bottom > nowRect.top + 2) {
+      dockCompactOpen = false;
+      restoreDockReserve();
+      setDockDisplay(dock, false);
+      if (compactRow) compactRow.style.display = 'none';
+      positionDockLatch(latch, editor);
+    }
   }
 
   function buildQuickActionsRow() {
@@ -105,21 +297,10 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
     row.id = 'dsh-quick-actions';
     row.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;';
 
+    // Sin preventFocusLoss, pulsar un comando le quita el foco al compositor y
+    // el teclado se cierra a media tarea.
     QUICK_ACTIONS.forEach(function(act) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = act.label;
-      btn.style.cssText = 'flex:0 0 auto;min-height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(128,128,128,0.45);background:rgba(128,128,128,0.14);color:inherit;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
-      // Sin esto, pulsar un comando le quita el foco al compositor y el teclado
-      // se cierra a media tarea.
-      preventFocusLoss(btn);
-      btn.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        haptic('confirm');
-        if (window.__DSH_INSERT_INTO_COMPOSER__) window.__DSH_INSERT_INTO_COMPOSER__(act.prompt);
-      };
-      row.appendChild(btn);
+      row.appendChild(quickActionButton(act, 'border-radius:15px;padding:0 12px;'));
     });
 
     return row;
@@ -162,9 +343,11 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
    */
   function ensureComposerDock() {
     if (!findEditor()) return;
+    ensureDockLatch();
 
     var dock = document.getElementById('dsh-composer-dock');
     if (dock && dock.isConnected !== false) {
+      if (!document.getElementById('dsh-dock-compact')) dock.appendChild(buildCompactRow());
       updateComposerDockVisibility();
       return;
     }
@@ -178,6 +361,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
 
     dock.appendChild(buildQuickActionsRow());
     dock.appendChild(buildCodeKeysRow());
+    dock.appendChild(buildCompactRow());
 
     (document.body || document.documentElement).appendChild(dock);
     observeEditorForDock();

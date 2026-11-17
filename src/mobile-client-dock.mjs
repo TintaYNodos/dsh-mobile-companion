@@ -164,4 +164,121 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
     };
   }
 
+  // --- Apaisado con teclado: una franja compacta que RESERVA su alto ---------
+
+  /** Alto de la unica fila compacta del dock en apaisado (pedido: <= 48 px). */
+  var COMPACT_DOCK_HEIGHT = 40;
+
+  /** Telefono en apaisado: el alto vertical util es escaso. */
+  function isShortLandscape() {
+    return window.innerWidth > window.innerHeight && viewportHeight() <= 520;
+  }
+
+  /**
+   * Pixeles del layout que tapa el teclado. Con adjustResize el layout ya se
+   * encoge y esto queda en 0; con adjustPan o edge-to-edge el layout sigue
+   * completo y hay que subir a mano el dock y el compositor. Se mide con
+   * visualViewport (el area realmente visible), no con innerHeight.
+   */
+  function visualKeyboardInset() {
+    var vv = window.visualViewport;
+    if (!vv) return 0;
+    var inset = Math.round(window.innerHeight - ((vv.offsetTop || 0) + vv.height));
+    return inset > 0 ? inset : 0;
+  }
+
+  /** Borde inferior de lo visible, en coordenadas del layout. */
+  function visibleBottomEdge() {
+    var vv = window.visualViewport;
+    if (!vv) return window.innerHeight;
+    return (vv.offsetTop || 0) + vv.height;
+  }
+
+  /**
+   * Asiento del compositor: en DSH es el ancestro que queda pegado al fondo del
+   * scroller (sticky en conversacion, absolute con overlay). Se busca por clase
+   * y, si DSH la renombra, subiendo desde el editor.
+   */
+  function findComposerSeat(el) {
+    var byClass = document.querySelector('[class*="composerSeat"]');
+    if (byClass && byClass.contains && byClass.contains(el)) return byClass;
+    var node = el;
+    for (var depth = 0; depth < 40 && node; depth++) {
+      node = node.parentElement;
+      if (!node || node === document.body) break;
+      var position = '';
+      try { position = window.getComputedStyle(node).position; } catch (e) {}
+      if (position === 'sticky') return node;
+    }
+    return null;
+  }
+
+  /** Scroller del chat: el que desplaza el historial de mensajes. */
+  function findChatScroller(el) {
+    var node = el;
+    for (var depth = 0; depth < 40 && node; depth++) {
+      node = node.parentElement;
+      if (!node || node === document.body) break;
+      var style = null;
+      try { style = window.getComputedStyle(node); } catch (e) {}
+      if (!style) break;
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') return node;
+    }
+    return null;
+  }
+
+  var dockReserveSeat = null;
+  var dockReserveSeatBottom = '';
+  var dockReserveScroller = null;
+  var dockReserveScrollerPadding = '';
+  var dockReserveScrollerScrollPadding = '';
+  var dockReserveActive = false;
+
+  /** Devuelve los estilos que tenia DSH antes de reservar. */
+  function restoreDockReserve() {
+    if (!dockReserveActive) return;
+    if (dockReserveSeat) dockReserveSeat.style.bottom = dockReserveSeatBottom;
+    if (dockReserveScroller) {
+      dockReserveScroller.style.paddingBottom = dockReserveScrollerPadding;
+      dockReserveScroller.style.scrollPaddingBottom = dockReserveScrollerScrollPadding;
+    }
+    dockReserveActive = false;
+  }
+
+  /**
+   * Reserva la franja del dock en vez de superponerla: sube el asiento del
+   * compositor (pegado al fondo en DSH) el alto del dock y deja ese mismo hueco
+   * como padding-bottom del scroller, para que la ultima linea del chat pueda
+   * desplazarse por encima del dock. Devuelve false si DSH no ofrece asiento.
+   */
+  function applyDockReserve(pixels) {
+    var editor = findEditor();
+    if (!editor) {
+      restoreDockReserve();
+      return false;
+    }
+    var seat = findComposerSeat(editor);
+    if (!seat) {
+      restoreDockReserve();
+      return false;
+    }
+    var scroller = findChatScroller(seat);
+    if (seat !== dockReserveSeat || scroller !== dockReserveScroller) {
+      restoreDockReserve();
+      dockReserveSeat = seat;
+      dockReserveScroller = scroller;
+      dockReserveSeatBottom = seat.style.bottom || '';
+      dockReserveScrollerPadding = scroller ? (scroller.style.paddingBottom || '') : '';
+      dockReserveScrollerScrollPadding = scroller ? (scroller.style.scrollPaddingBottom || '') : '';
+    }
+    var size = Math.max(0, Math.round(pixels)) + 'px';
+    seat.style.bottom = size;
+    if (scroller) {
+      scroller.style.paddingBottom = size;
+      scroller.style.scrollPaddingBottom = size;
+    }
+    dockReserveActive = true;
+    return true;
+  }
+
 `;

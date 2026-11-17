@@ -14,22 +14,18 @@ import { config } from "./config.mjs";
 import { assertInside, readDirSafe, rebuildIndex, writeAtomic } from "./sync-index.mjs";
 
 /* ------------------------------------------------------------------------- *
- * P9: retencion de synced_chats/.
+ * P9: retencion de synced_chats/. Los chats y las notas crecian sin limite: se
+ * podan los mas antiguos (mtime del par .json/.md) al superar DSH_SYNC_MAX_FILES
+ * (200) o DSH_SYNC_MAX_TOTAL_MB (200), y se reconstruye index.jsonl si falta.
  *
- * Los chats sincronizados y las notas del telefono crecian sin limite. Ahora se
- * podan los mas antiguos (por fecha de modificacion del par .json/.md) cuando
- * se supera cualquiera de los topes configurables, y se reconstruye
- * index.jsonl si falta. Topes: DSH_SYNC_MAX_FILES (200) y
- * DSH_SYNC_MAX_TOTAL_MB (200).
+ * La bandeja notes/inbox.jsonl guarda metadatos en claro: se conservan como
+ * maximo las ultimas 500 lineas correlacionables (JSON valido, `file` y el .md
+ * aun en disco). La poda completa corre en cada sync; tras escribir una nota
+ * solo se mira el tope (routes-notes.mjs). notes/ids.json no se poda nunca.
  *
- * La bandeja de notas `notes/inbox.jsonl` guarda metadatos en claro para la PC,
- * asi que tambien se acota: se conservan como maximo las ultimas 500 lineas y
- * se descartan las no correlacionables (JSON roto o sin `file` valido) y las que
- * apuntan a un .md que ya no existe (huerfanas de la poda o de un borrado
- * manual). La poda completa corre en cada sync de chats; ademas, tras escribir
- * una nota se aplica un modo rapido que solo mira el tope (routes-notes.mjs),
- * para que usar solo notas tampoco haga crecer la bandeja sin limite.
- * `notes/ids.json` no se poda nunca.
+ * Tambien se mantiene notes/INDICE.md, indice legible para agentes con una linea
+ * por nota recibida: se rehace desde la bandeja al guardar y al podar, y no se
+ * poda como si fuera una nota.
  * ------------------------------------------------------------------------- */
 
 const DEFAULT_SYNC_MAX_FILES = 200;
@@ -40,6 +36,8 @@ const NOTES_IDS_FILE = "ids.json";
 const NOTES_DIR_NAME = "notes";
 /** Bandeja de metadatos de las notas (mismo nombre que INBOX_FILE_NAME en notes-store.mjs). */
 const NOTES_INBOX_FILE = "inbox.jsonl";
+/** Indice legible de las notas recibidas, junto a ellas, para que lo lea un agente. */
+export const NOTES_INDEX_FILE = "INDICE.md";
 /**
  * Tope de lineas de la bandeja que se conservan (las mas recientes). Tambien es
  * el tope que lee GET /dsh-companion/notes (H-13): antes leia 200 mientras la
@@ -112,6 +110,119 @@ export const sanitizeNotesStore = () => {
   return removed;
 };
 
+/* ------------------------------------------------------------------------- *
+ * Indice legible para agentes: notes/INDICE.md. Se calcula desde la bandeja (la
+ * misma fuente que GET /dsh-companion/notes), no desde un contador: una nota
+ * "solo en el telefono" no llega y no aparece, y una linea corrupta o sin
+ * archivo valido se omite sin romper. writeAtomic + cola propia, y se salta en
+ * collectChatUnits para que la retencion no lo pode como una nota.
+ * ------------------------------------------------------------------------- */
+const INDEX_HEADER = [
+  "# Índice de notas del teléfono",
+  "",
+  "Notas recibidas del teléfono en esta carpeta; para leer una, pídele a un agente que lea el archivo indicado.",
+  "",
+];
+
+const pad2 = (value) => String(value).padStart(2, "0");
+
+/** Marca AAAA-MM-DD HH:MM de la nota: receivedAt, luego createdAt, luego el nombre. */
+const indexStamp = (record) => {
+  for (const value of [record.receivedAt, record.createdAt]) {
+    const parsed = Date.parse(String(value ?? ""));
+    if (!Number.isFinite(parsed)) continue;
+    const date = new Date(parsed);
+    return (
+      `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())} ` +
+      `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+    );
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})-(\d{2})(\d{2})/.exec(String(record.file ?? ""));
+  return match ? `${match[1]} ${match[2]}:${match[3]}` : "sin fecha";
+};
+
+/** Saneado para UNA linea Markdown: sin controles, sin saltos ni comillas invertidas. */
+const indexText = (value, fallback) => {
+  const cleaned = String(value ?? "").replace(/[\u0000-\u001f\u007f`]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned || fallback;
+};
+
+/** Notas validas de la bandeja, deduplicadas por archivo y de mas reciente a mas antigua. */
+const indexEntries = (raw) => {
+  const byFile = new Map();
+  for (const line of raw.split("\n")) {
+    if (line.trim() === "") continue;
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      continue; // linea corrupta o de otro productor: se omite sin romper
+    }
+    if (record === null || typeof record !== "object" || Array.isArray(record)) continue;
+    const file = typeof record.file === "string" ? record.file.trim() : "";
+    if (!isNoteFileName(file)) continue; // sin archivo valido no hay nota que listar
+    const parsed = Date.parse(String(record.receivedAt ?? record.createdAt ?? ""));
+    byFile.set(file, { ...record, file, ms: Number.isFinite(parsed) ? parsed : 0 });
+  }
+  return [...byFile.values()].sort((left, right) => right.ms - left.ms).slice(0, INBOX_MAX_LINES);
+};
+
+/** Linea del indice: fecha, titulo, perfil/tipo, estado y archivo entre comillas invertidas. */
+const renderIndexLine = (record) =>
+  `- ${indexStamp(record)} · ${indexText(record.title, "sin título")} · ` +
+  `${indexText(record.profile, "general")}/${indexText(record.type, "sin tipo")} · ` +
+  `${indexText(record.status, "sin estado")} · \`${record.file}\``;
+
+/** Serializa las escrituras del indice dentro del proceso (writeAtomic ya es atomico). */
+let indexQueue = Promise.resolve();
+const queueIndexWrite = (task) => {
+  const run = indexQueue.then(task, task);
+  indexQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+};
+
+/** Rehace el indice legible de la carpeta de notas desde su bandeja. */
+export const writeNotesIndex = (directory) =>
+  queueIndexWrite(async () => {
+    let raw = "";
+    try {
+      raw = await fs.promises.readFile(assertInside(directory, NOTES_INBOX_FILE), "utf8");
+    } catch {
+      // Sin bandeja todavia: solo la cabecera, nunca notas inventadas.
+    }
+    const lines = [...INDEX_HEADER, ...indexEntries(raw).map(renderIndexLine)];
+    await writeAtomic(assertInside(directory, NOTES_INDEX_FILE), `${lines.join("\n")}\n`);
+  });
+
+/** Rehace el indice si la carpeta de notas ya existe; nunca tumba la escritura. */
+export const refreshNotesIndexSafe = async () => {
+  const directory = path.join(config.syncDir, NOTES_DIR_NAME);
+  try {
+    if (!(await fs.promises.stat(directory)).isDirectory()) return;
+  } catch {
+    return; // sin notes/: no hay indice que mantener
+  }
+  try {
+    await writeNotesIndex(directory);
+  } catch (error) {
+    console.error(`[notes] No se pudo actualizar el indice de notas: ${String(error.message).replace(/[\r\n]+/g, " ")}`);
+  }
+};
+
+/** Serializa TODAS las escrituras de la bandeja del proceso: notas y poda. */
+let inboxQueue = Promise.resolve();
+export const queueInboxWrite = (task) => {
+  const run = inboxQueue.then(task, task);
+  inboxQueue = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+};
+
 /** Lee un tope entero positivo de una variable de entorno, con valor por defecto. */
 const envPositiveInt = (name, fallback) => {
   const parsed = Number.parseInt(String(process.env[name] ?? "").trim(), 10);
@@ -119,11 +230,9 @@ const envPositiveInt = (name, fallback) => {
 };
 
 /**
- * Agrupa `<id>.json` + `<id>.md` de una carpeta en unidades podables, para no
- * dejar un .json sin su .md al aplicar la retencion. `skipFiles` protege
- * archivos que no forman parte del par podable (en notes/ se salta ids.json,
- * el indice id -> archivo de la idempotencia de notas: si se podara, reenviar
- * una nota desde el telefono crearia un duplicado).
+ * Agrupa `<id>.json` + `<id>.md` de una carpeta en unidades podables. `skipFiles`
+ * protege los archivos que no son parte podable: en notes/ se saltan ids.json (si
+ * se podara, reenviar la nota crearia un duplicado) y INDICE.md (no es una nota).
  */
 const collectChatUnits = async (directory, skipFiles = null) => {
   const units = new Map();
@@ -151,12 +260,14 @@ const collectChatUnits = async (directory, skipFiles = null) => {
 
 /**
  * Nombre de nota aceptado por la bandeja (mismo criterio que notes-store.mjs):
- * un .md suelto dentro de notes/, sin rutas ni saltos.
+ * un .md suelto dentro de notes/, sin rutas ni saltos. El indice legible no es
+ * una nota: ni se lista ni se poda como tal.
  */
 const isNoteFileName = (name) =>
   typeof name === "string" &&
   name.length > 3 &&
   name.endsWith(".md") &&
+  name !== NOTES_INDEX_FILE &&
   !name.includes("/") &&
   !name.includes("\\") &&
   !name.includes("..") &&
@@ -172,41 +283,50 @@ const isNoteFileName = (name) =>
  * el tope termina sin recorrer el disco (la limpieza de huerfanas queda para la
  * poda completa de `pruneSyncedChats`). Con mas de 500 lineas hace la poda
  * completa igualmente, para no dejar crecer la bandeja si no hay syncs.
+ *
+ * Todo el ciclo corre en queueInboxWrite: poda y notas comparten cola (H-20).
  */
 const pruneNotesInbox = async (directory, { quick = false } = {}) => {
   // H-20: en cada poda se limpian los temporales huerfanos (con edad minima para
   // no pisar una escritura en curso de la cola de notas).
   cleanupNotesTempFiles({ maxAgeMs: ORPHAN_MIN_AGE_MS });
-  let raw;
-  try {
-    raw = await fs.promises.readFile(assertInside(directory, NOTES_INBOX_FILE), "utf8");
-  } catch {
-    return 0; // sin bandeja (o sin notes/): no hay nada que podar
-  }
-  const lines = raw.split("\n").filter((line) => line.trim() !== "");
-  if (quick && lines.length <= INBOX_MAX_LINES) return 0;
-  const alive = [];
-  for (const line of lines) {
-    let record;
+  const outcome = await queueInboxWrite(async () => {
+    let raw;
     try {
-      record = JSON.parse(line);
+      raw = await fs.promises.readFile(assertInside(directory, NOTES_INBOX_FILE), "utf8");
     } catch {
-      continue; // linea corrupta: no es correlacionable ni se puede validar
+      return null; // sin bandeja (o sin notes/): no hay nada que podar
     }
-    if (record === null || typeof record !== "object" || Array.isArray(record)) continue;
-    if (!isNoteFileName(record.file)) continue;
-    let exists = false;
-    try {
-      exists = (await fs.promises.stat(assertInside(directory, record.file))).isFile();
-    } catch {
-      exists = false;
+    const lines = raw.split("\n").filter((line) => line.trim() !== "");
+    if (quick && lines.length <= INBOX_MAX_LINES) return { removed: 0, pruned: false };
+    const alive = [];
+    for (const line of lines) {
+      let record;
+      try {
+        record = JSON.parse(line);
+      } catch {
+        continue; // linea corrupta: no es correlacionable ni se puede validar
+      }
+      if (record === null || typeof record !== "object" || Array.isArray(record)) continue;
+      if (!isNoteFileName(record.file)) continue;
+      let exists = false;
+      try {
+        exists = (await fs.promises.stat(assertInside(directory, record.file))).isFile();
+      } catch {
+        exists = false;
+      }
+      if (exists) alive.push(line);
     }
-    if (exists) alive.push(line);
-  }
-  const kept = alive.slice(-INBOX_MAX_LINES);
-  const contents = kept.length === 0 ? "" : `${kept.join("\n")}\n`;
-  if (contents !== raw) await writeAtomic(assertInside(directory, NOTES_INBOX_FILE), contents);
-  return lines.length - kept.length;
+    const kept = alive.slice(-INBOX_MAX_LINES);
+    const contents = kept.length === 0 ? "" : `${kept.join("\n")}\n`;
+    if (contents !== raw) await writeAtomic(assertInside(directory, NOTES_INBOX_FILE), contents);
+    return { removed: lines.length - kept.length, pruned: true };
+  });
+  if (!outcome || !outcome.pruned) return 0;
+  // La poda puede haber quitado lineas huerfanas: el indice se rehace con la
+  // bandeja ya podada para no listar nunca una nota que ya no existe.
+  await writeNotesIndex(directory);
+  return outcome.removed;
 };
 
 /**
@@ -214,7 +334,8 @@ const pruneNotesInbox = async (directory, { quick = false } = {}) => {
  * cuantas unidades elimino. Incluye synced_chats/notes/ para que los topes de
  * archivos y de MB cubran tambien las notas escritas desde el telefono. Al
  * final poda siempre la bandeja de notas (independiente de los topes): es la
- * unica copia de metadatos en claro y no debe crecer sin limite.
+ * unica copia de metadatos en claro y no debe crecer sin limite. La poda de la
+ * bandeja rehace el indice legible de la carpeta.
  */
 export const pruneSyncedChats = async () => {
   const maxFiles = envPositiveInt("DSH_SYNC_MAX_FILES", DEFAULT_SYNC_MAX_FILES);
@@ -223,7 +344,7 @@ export const pruneSyncedChats = async () => {
   const notesDir = path.join(config.syncDir, NOTES_DIR_NAME);
   const units = [
     ...(await collectChatUnits(config.syncDir)),
-    ...(await collectChatUnits(notesDir, new Set([NOTES_IDS_FILE]))),
+    ...(await collectChatUnits(notesDir, new Set([NOTES_IDS_FILE, NOTES_INDEX_FILE]))),
   ];
   units.sort((a, b) => a.mtimeMs - b.mtimeMs || a.id.localeCompare(b.id));
 

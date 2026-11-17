@@ -145,6 +145,7 @@ public class MainActivity extends Activity {
     boolean isCodeKeysEnabled() { return WebBridge.isCodeKeysEnabled(this); }
     public void recordHeartbeat() { ConnectionController.recordHeartbeat(this); }
     public void saveOfflineDraft(String draft) { WebBridge.saveOfflineDraft(this, draft); }
+    public void saveOfflineChat(String title, String text, String updatedAt) { OfflineChatStore.save(this, title, text, updatedAt); }
     public void reloadMainSession() { WebBridge.reloadMainSession(this); }
     public void requestCriticalBiometricApproval(String key, String toolName) {
         BiometricGate.requestCriticalBiometricApproval(this, key, toolName);

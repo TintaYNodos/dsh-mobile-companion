@@ -25,7 +25,8 @@
  * respuesta incluye `updated: true`. Las notas sin id siguen creando un archivo
  * nuevo. Las escrituras se serializan para que dos reintentos simultaneos del
  * mismo id no reserven dos nombres. Las entradas del indice cuyo archivo ya no
- * existe se descartan (saneado) y la retencion no poda `ids.json`.
+ * existe se descartan (saneado), la retencion no poda `ids.json` y se mantiene
+ * el indice legible `notes/INDICE.md` (se rehace al guardar, al podar y al arrancar).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -34,7 +35,7 @@ import { stripControlChars } from "./http.mjs";
 import { sanitizeLogMessage } from "./log.mjs";
 import { NOTE_ID_RE, noteBaseName, renderNote } from "./notes-format.mjs";
 import { assertInside, writeAtomic } from "./sync-index.mjs";
-import { INBOX_MAX_LINES, ORPHAN_MIN_AGE_MS, capNotesInboxSafe, cleanupNotesTempFiles, sanitizeNotesStore } from "./sync-retention.mjs";
+import { INBOX_MAX_LINES, NOTES_INDEX_FILE, ORPHAN_MIN_AGE_MS, capNotesInboxSafe, cleanupNotesTempFiles, queueInboxWrite, refreshNotesIndexSafe, sanitizeNotesStore } from "./sync-retention.mjs";
 
 /** POST /dsh-companion/notes: cuerpo maximo permitido, en bytes. */
 export const NOTES_MAX_BYTES = 64 * 1024;
@@ -57,6 +58,7 @@ const isNoteFileName = (name) =>
   typeof name === "string" &&
   name.length > 3 &&
   name.endsWith(".md") &&
+  name !== NOTES_INDEX_FILE &&
   !name.includes("/") &&
   !name.includes("\\") &&
   !name.includes("..") &&
@@ -168,23 +170,24 @@ const readInboxRaw = () => {
 
 /**
  * Escribe (o reemplaza) la linea de la nota en `inbox.jsonl` con escritura
- * atomica. Se reemplaza la linea del mismo `file` para que reenviar una nota por
- * id no deje dos entradas de la misma nota; la linea actualizada queda al final,
- * que es de donde lee el lado PC.
+ * atomica; la actualizada queda al final, que es de donde lee el lado PC. Todo
+ * el ciclo leer-modificar-escribir va en la cola de la bandeja que comparte con
+ * la poda del sync (H-20): antes dos rutas la reescribian a la vez (EPERM).
  */
-const upsertInboxLine = async (line, file) => {
-  const raw = readInboxRaw();
-  const lines = raw === null ? [] : raw.split("\n").filter((entry) => entry.trim() !== "");
-  const kept = lines.filter((entry) => {
-    try {
-      return JSON.parse(entry).file !== file;
-    } catch {
-      return true;
-    }
+const upsertInboxLine = (line, file) =>
+  queueInboxWrite(async () => {
+    const raw = readInboxRaw();
+    const lines = raw === null ? [] : raw.split("\n").filter((entry) => entry.trim() !== "");
+    const kept = lines.filter((entry) => {
+      try {
+        return JSON.parse(entry).file !== file;
+      } catch {
+        return true;
+      }
+    });
+    kept.push(line);
+    await writeAtomic(inboxPath(), `${kept.join("\n")}\n`);
   });
-  kept.push(line);
-  await writeAtomic(inboxPath(), `${kept.join("\n")}\n`);
-};
 
 /** Agrega la linea de la nota a la bandeja sin tumbar la escritura si falla. */
 const syncInbox = async (note, file, now) => {
@@ -337,9 +340,11 @@ export const saveNote = (note) =>
     cleanupNotesTempFiles({ maxAgeMs: ORPHAN_MIN_AGE_MS });
     const result = await saveNoteUnlocked(note);
     await capNotesInboxSafe();
+    await refreshNotesIndexSafe();
     return result;
   });
-
+// Arranque: si notes/ ya existe se rehace el indice en la misma cola (nada viejo).
+if (fs.existsSync(notesDirectory())) void serialize(refreshNotesIndexSafe);
 /** Convierte el valor textual de una fecha en milisegundos (0 si no se puede). */
 const stampMs = (value) => {
   const parsed = Date.parse(String(value ?? ""));

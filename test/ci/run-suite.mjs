@@ -230,12 +230,17 @@ const main = async () => {
     console.log(`[ci] Puente cerrado tras SIGTERM${exitCode === null ? "" : ` (exit=${exitCode})`}`);
   }
 
-  // H-17: el synced_chats/ y el bridge.log del repositorio no deben cambiar.
+  // H-17: el synced_chats/ del repositorio no debe cambiar y el log del puente
+  // de prueba debe ser temporal. El bridge.log del repo puede cambiar por el
+  // puente REAL del usuario (que sigue escribiendo mientras corre la suite), asi
+  // que compararlo daba falsos positivos: lo que se comprueba es que ESTA suite
+  // no apunta su log al del repo.
   const repoAfter = fingerprintRepo();
-  const isolationOk = repoBefore.sync === repoAfter.sync && repoBefore.log === repoAfter.log;
+  const logIsolated = path.resolve(bridge.env.DSH_LOG_FILE || "") !== path.resolve(REPO_BRIDGE_LOG);
+  const isolationOk = repoBefore.sync === repoAfter.sync && logIsolated;
   console.log(
-    `${isolationOk ? "PASS" : "FAIL"}  H-17 aislamiento: synced_chats/ (${repoAfter.files} archivos) y bridge.log del repo sin cambios`,
-    `sync=${repoAfter.sync.slice(0, 12)} log=${isolationOk ? "igual" : "CAMBIADO"}`
+    `${isolationOk ? "PASS" : "FAIL"}  H-17 aislamiento: synced_chats/ (${repoAfter.files} archivos) intacto y bridge.log de la suite en temporal`,
+    `sync=${repoAfter.sync.slice(0, 12)} log=${logIsolated ? "temporal" : "DEL REPO"}`
   );
   if (!isolationOk) process.exitCode = 1;
 

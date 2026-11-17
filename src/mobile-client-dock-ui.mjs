@@ -6,11 +6,10 @@
 
 /**
  * Dock del compositor: filas de comandos y teclas, y su geometria. En apaisado
- * con teclado pasa a UNA fila compacta que reserva su franja en vez de tapar
- * el campo de escritura.
+ * con teclado la fila compacta no se superpone al campo: o cabe encima, o se
+ * abre sobre la fila de botones, o queda el boton que la abre.
  */
-export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = automatico (abre si cabe), true = abierto
-  // a peticion del usuario, false = plegado (queda el boton que lo reabre).
+export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra franja), true = abierto, false = plegado.
   var dockCompactOpen = null;
 
   function setDockDisplay(dock, visible) {
@@ -23,11 +22,8 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
     }
   }
 
-  /**
-   * Modo de siempre (vertical y pantallas altas): dos filas pegadas a la
-   * tarjeta del compositor, por abajo o por arriba. Devuelve true si hubo que
-   * ocultarlo (red de seguridad: nunca sobre el area de texto).
-   */
+  /** Modo de siempre (vertical y pantallas altas): dos filas pegadas a la
+   * tarjeta, por abajo o por arriba; true si hubo que ocultarlo. */
   function positionClassicDock(dock, editor) {
     var rect = editor.getBoundingClientRect();
     if (!rect || !rect.height) {
@@ -141,11 +137,8 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
     return row;
   }
 
-  /**
-   * Boton que reabre el dock cuando no cabe la fila o cuando el usuario la
-   * pliega. Se coloca encima de la tarjeta para no tapar ni el campo ni los
-   * botones, y deja claro que los comandos siguen ahi.
-   */
+  /** Boton que abre el dock cuando la fila no cabe o el usuario la pliega.
+   * Se coloca encima de la tarjeta, nunca sobre el campo ni los botones. */
   function ensureDockLatch() {
     var latch = document.getElementById('dsh-dock-latch');
     if (latch) return latch;
@@ -167,15 +160,21 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
     return latch;
   }
 
+  /**
+   * Boton que abre la fila compacta cuando no cabe encima del compositor. Se
+   * coloca justo POR ENCIMA de la tarjeta (nunca sobre el campo de texto) y
+   * siempre dentro de la franja visible, es decir, por encima del teclado.
+   */
   function positionDockLatch(latch, editor) {
     if (!latch) return;
-    var inset = visualKeyboardInset();
-    var layoutH = window.innerHeight;
-    var card = composerCardRect(editor);
-    var above = Math.round(layoutH - card.top + 6);
-    if (above < inset + 6) above = inset + 6;
-    if (above > layoutH - 34) above = layoutH - 34;
-    latch.style.bottom = Math.max(4, above) + 'px';
+    var card = composerCardFor(editor);
+    var cardRect = card ? card.getBoundingClientRect() : editor.getBoundingClientRect();
+    var top = Math.round(cardRect.top - 34);
+    var limit = visibleBottomEdge() - 38;
+    if (top > limit) top = limit;
+    if (top < 4) top = 4;
+    latch.style.top = top + 'px';
+    latch.style.bottom = 'auto';
     latch.style.display = 'inline-flex';
     paintDockSurface(latch, editor);
   }
@@ -193,20 +192,29 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
     var anyRow = dockPrefs.quick || dockPrefs.keys;
     var editor = findEditor();
     var keyboardOpen = Boolean(editor) && anyRow && isKeyboardOpen();
+    var tightLandscape = keyboardOpen && isShortLandscape();
+
+    // El CSS compacta la tarjeta del compositor solo mientras el teclado esta
+    // abierto en apaisado; al cerrarlo se devuelve a DSH su geometria normal.
+    var root = document.documentElement;
+    if (tightLandscape) root.setAttribute('data-dshc-keyboard', '1');
+    else root.removeAttribute('data-dshc-keyboard');
 
     if (!keyboardOpen) {
       dockCompactOpen = null;
       restoreDockReserve();
+      restoreComposerScroll();
       setDockDisplay(dock, false);
       if (compactRow) compactRow.style.display = 'none';
       if (latch) latch.style.display = 'none';
       return;
     }
 
-    if (!isShortLandscape()) {
+    if (!tightLandscape) {
       // Comportamiento de siempre (vertical y pantallas altas): sin reservar.
       dockCompactOpen = null;
       restoreDockReserve();
+      restoreComposerScroll();
       if (compactRow) compactRow.style.display = 'none';
       if (latch) latch.style.display = 'none';
       if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
@@ -223,7 +231,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
       return;
     }
 
-    // --- Apaisado de telefono con teclado: una sola fila compacta ---
+    // --- Apaisado de telefono con teclado ---
+    // La franja util la fija el scroller del chat, no la ventana: el asiento es
+    // sticky al fondo y lo que sobra se recorta por ARRIBA, donde esta el campo.
     if (quickRow) quickRow.style.display = 'none';
     if (keysRow) keysRow.style.display = 'none';
     var compactQuick = document.getElementById('dsh-compact-quick');
@@ -231,65 +241,52 @@ export const MOBILE_CLIENT_DOCK_UI = `  // Estado del dock compacto: null = auto
     var compactKeys = document.getElementById('dsh-compact-keys');
     if (compactKeys) compactKeys.style.display = dockPrefs.keys ? 'flex' : 'none';
 
-    var inset = visualKeyboardInset();
-    var layoutH = window.innerHeight;
-    var editorRect = editor.getBoundingClientRect();
     var seat = findComposerSeat(editor);
-    var seatPosition = '';
-    if (seat) {
-      try { seatPosition = window.getComputedStyle(seat).position; } catch (e) {}
-    }
-    var canReserve = seatPosition === 'sticky' || seatPosition === 'absolute';
-    // Distancia del asiento al borde superior del campo: no cambia al subir el
-    // asiento entero, asi que sirve para decidir si cabe sin oscilar.
-    var distance = seat ? (seat.getBoundingClientRect().bottom - editorRect.top) : 0;
-    var fits = canReserve
-      ? visibleBottomEdge() >= distance + COMPACT_DOCK_HEIGHT + 2
-      : composerCardRect(editor).bottom <= layoutH - inset - COMPACT_DOCK_HEIGHT + 2;
-    var showRow = dockCompactOpen === null ? fits : dockCompactOpen;
+    var inset = visualKeyboardInset();
+    var band = composerBand(seat, editor);
+    // La fila solo se reserva si, ademas de ella, cabe la pila compacta entera;
+    // si no, se abre a peticion superponiendose SOLO a la fila de botones (el
+    // texto queda siempre por encima) o se ofrece el boton que la abre.
+    var rowRoom = band >= COMPACT_DOCK_HEIGHT + COMPACT_COMPOSER_MIN;
+    var mode = rowRoom && dockCompactOpen !== false ? 'row'
+      : dockCompactOpen === true ? 'overlay' : 'latch';
+    var reserve = mode === 'row' ? COMPACT_DOCK_HEIGHT + inset : inset;
+    if (reserve > 0) applyDockReserve(reserve);
+    else restoreDockReserve();
+    fitComposerScroll(editor, seat, band, mode === 'row' ? COMPACT_DOCK_HEIGHT : 0);
 
-    if (!showRow) {
-      restoreDockReserve();
+    if (mode === 'latch') {
       setDockDisplay(dock, false);
       if (compactRow) compactRow.style.display = 'none';
       positionDockLatch(latch, editor);
       return;
     }
-
     if (latch) latch.style.display = 'none';
     if (compactRow) compactRow.style.display = 'flex';
     dock.style.flexDirection = 'row';
     dock.style.alignItems = 'center';
     dock.style.gap = '0';
-    dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
     dock.style.padding = '0';
     dock.style.left = '0';
     dock.style.right = '0';
-    dock.style.top = 'auto';
-    dock.style.bottom = inset + 'px';
     dock.style.borderRadius = '0';
     dock.style.borderTop = '1px solid rgba(128,128,128,0.35)';
     dock.style.borderBottom = 'none';
-    // Si el usuario lo abre a mano aunque no quepa, se sube solo lo justo para
-    // que el campo no quede cortado por arriba: el dock nunca tapa el texto.
-    var lift = inset + COMPACT_DOCK_HEIGHT;
-    if (!fits) lift = Math.min(lift, Math.max(0, visibleBottomEdge() - distance - 4));
-    if (canReserve) applyDockReserve(lift);
-    else restoreDockReserve();
+    if (mode === 'row') {
+      dock.style.top = 'auto';
+      dock.style.bottom = inset + 'px';
+      dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
+    } else {
+      // Apaisado muy justo: la fila se superpone a la fila de botones de DSH,
+      // justo debajo de la linea de texto; el campo sigue visible y editable.
+      var rowRect = composerRowRect(editor);
+      var editorRect = editor.getBoundingClientRect();
+      dock.style.bottom = 'auto';
+      dock.style.top = Math.max(4, Math.round((rowRect ? rowRect.top : editorRect.bottom + 4) - 2)) + 'px';
+      dock.style.height = Math.round((rowRect ? rowRect.height : 28) + 2) + 'px';
+    }
     setDockDisplay(dock, true);
     paintDockSurface(dock, editor);
-
-    // Red de seguridad: si aun asi rozara el area de texto, se pliega y queda
-    // el boton que lo abre. Nunca se escribe a ciegas.
-    var dockRect = dock.getBoundingClientRect();
-    var nowRect = editor.getBoundingClientRect();
-    if (dockRect.height && nowRect.height && dockRect.top < nowRect.bottom - 2 && dockRect.bottom > nowRect.top + 2) {
-      dockCompactOpen = false;
-      restoreDockReserve();
-      setDockDisplay(dock, false);
-      if (compactRow) compactRow.style.display = 'none';
-      positionDockLatch(latch, editor);
-    }
   }
 
   function buildQuickActionsRow() {

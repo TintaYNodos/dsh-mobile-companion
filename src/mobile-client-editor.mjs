@@ -139,13 +139,17 @@ export const MOBILE_CLIENT_EDITOR = `  /**
 
   document.addEventListener('focusin', function(event) {
     noteComposerTarget(event.target);
-    // Con el teclado abierto, el campo debe seguir viendose: si el navegador
-    // dejo el cursor bajo el borde, se acerca lo justo sin saltar la pagina.
+    // Con el teclado abierto el campo puede quedar tapado si el WebView no se
+    // redimensiona: solo entonces se acerca lo justo. Si su borde inferior ya
+    // se ve no se toca: con el asiento sticky, un scrollIntoView a ciegas movia
+    // el chat sin descubrir el campo recortado por arriba.
     var el = event.target;
     if (!el || !isComposerTarget(el)) return;
     setTimeout(function() {
       try {
-        if (el.isConnected !== false) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        if (el.isConnected === false) return;
+        if (el.getBoundingClientRect().bottom <= visibleBottomEdge() - 6) return;
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       } catch (e) {}
     }, 280);
   }, true);

@@ -29,7 +29,9 @@ import java.util.function.Consumer;
  * `announceForAccessibility` con el mismo texto). «Enviar a la PC» se
  * deshabilita, con explicación, en las notas que solo viven en el teléfono; al
  * abrir el teclado el cuerpo se desplaza a la vista para que el cursor quede
- * visible.
+ * visible. «Copiar para el chat» reutiliza el envío cuando la nota no está
+ * enviada y deja en el portapapeles una referencia al archivo de la nota en la
+ * PC.
  */
 final class NotesEditor implements NotesEditorView.Actions {
 
@@ -122,6 +124,13 @@ final class NotesEditor implements NotesEditorView.Actions {
     @Override
     public void onSend() {
         send();
+    }
+
+    @Override
+    public void onCopyForChat() {
+        ui.removeCallbacks(autoSave);
+        saveNow();
+        NotesChatCopy.copy(activity, store, draft, noteId);
     }
 
     @Override

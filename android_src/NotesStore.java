@@ -122,9 +122,8 @@ public final class NotesStore {
     }
 
     /**
-     * Reemplaza todos los campos editables de una nota. El `id` y `createdAt` se
-     * conservan; `updatedAt` avanza y la nota queda pendiente de enviar. Devuelve
-     * null si no existe, si el título queda vacío o si no se pudo escribir.
+     * Reemplaza los campos editables. Si algo cambia, `updatedAt` avanza y la nota
+     * queda pendiente de enviar; guardar sin cambios conserva `synced`.
      */
     public synchronized Note update(String id, Draft draft) {
         if (id == null || !hasTitle(draft)) return null;
@@ -148,10 +147,7 @@ public final class NotesStore {
         return false;
     }
 
-    /**
-     * Marca la nota como enviada a la PC; nunca la borra ni cambia datos ni el
-     * id. Si ya estaba marcada no reescribe el archivo (idempotente).
-     */
+    /** Marca la nota como enviada; idempotente, sin borrarla ni cambiar el id. */
     public synchronized boolean markSynced(String id) {
         if (id == null) return false;
         List<Note> notes = load();
@@ -200,8 +196,11 @@ public final class NotesStore {
 
     private Note applyDraft(List<Note> notes, int index, Draft draft) {
         Note current = notes.get(index);
-        long now = System.currentTimeMillis();
-        if (now <= current.updatedAt) now = current.updatedAt + 1L;
+        // Sin cambios no se reescribe ni reencola: conserva `updatedAt` y `synced`.
+        Note candidate = build(current.id, draft, current.createdAt, current.updatedAt,
+                current.synced);
+        if (NotesPayload.sameContent(current, candidate)) return current;
+        long now = Math.max(System.currentTimeMillis(), current.updatedAt + 1L);
         Note updated = build(current.id, draft, current.createdAt, now, false);
         notes.set(index, updated);
         return file.write(notes) ? updated : null;

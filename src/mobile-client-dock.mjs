@@ -13,7 +13,8 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
     { label: "Auditar", prompt: "Audita el codigo anterior buscando vulnerabilidades, edge cases y optimizaciones." },
     { label: "Explicar", prompt: "Explica de forma clara y estructurada el funcionamiento del contenido anterior." },
     { label: "Pruebas", prompt: "Escribe pruebas unitarias completas y casos limite para el codigo anterior." },
-    { label: "Continuar", prompt: "Continua exactamente desde donde se quedo, sin repetir lo anterior." }
+    { label: "Continuar", prompt: "Continua exactamente desde donde se quedo, sin repetir lo anterior." },
+    { label: "Notas", prompt: "Revisa mis notas del telefono. Indice: companion/synced_chats/notes/INDICE.md" }
   ];
 
   var CODE_KEY_SYMBOLS = ['Tab', 'Esc', '/', '{ }', '[ ]', '( )', '|', '~', '\`'];
@@ -166,8 +167,92 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
 
   // --- Apaisado con teclado: una franja compacta que RESERVA su alto ---------
 
-  /** Alto de la unica fila compacta del dock en apaisado (pedido: <= 48 px). */
-  var COMPACT_DOCK_HEIGHT = 40;
+  /** Tarjeta del compositor (atributo estable de DSH, no la clase hasheada). */
+  function composerCardFor(editor) {
+    try { return editor && editor.closest ? editor.closest('[data-composer-card]') : null; } catch (e) { return null; }
+  }
+
+  /** Fila de botones de la tarjeta: en DSH es su ultimo hijo. */
+  function composerRowRect(editor) {
+    var card = composerCardFor(editor);
+    var row = card ? card.lastElementChild : null;
+    if (!row) return null;
+    var rect = row.getBoundingClientRect();
+    return rect && rect.height ? rect : null;
+  }
+
+  /**
+   * Franja vertical realmente visible para el compositor: el alto del scroller
+   * del chat recortado por el teclado. Si la pila del compositor lo supera, el
+   * asiento sticky se recorta por ARRIBA y el campo de texto (lo primero de la
+   * tarjeta) queda fuera aunque la fila de botones se siga viendo.
+   */
+  function composerBand(seat, editor) {
+    var scroller = seat ? findChatScroller(seat) : null;
+    var rect = scroller ? scroller.getBoundingClientRect() : null;
+    if (rect && rect.height) {
+      return Math.max(0, Math.round(Math.min(rect.bottom, visibleBottomEdge()) - rect.top - 2));
+    }
+    if (editor) {
+      return Math.max(0, Math.round(visibleBottomEdge() - editor.getBoundingClientRect().top - 2));
+    }
+    return 0;
+  }
+
+  var dockCompactScroll = null;
+
+  /**
+   * Ajusta el scrollport del borrador a la franja disponible. La linea que se
+   * teclea nunca empuja la tarjeta fuera de la vista: lo que excede la franja se
+   * desplaza dentro del propio scrollport (DSH revela el caret al escribir).
+   */
+  function fitComposerScroll(editor, seat, band, reserve) {
+    var card = composerCardFor(editor);
+    var scroll = null;
+    try { scroll = document.querySelector('[data-input-scroll]'); } catch (e) {}
+    if (!card || !scroll || !band) return;
+    var rowRect = composerRowRect(editor);
+    var rowH = rowRect ? rowRect.height : 28;
+    var style = window.getComputedStyle(card);
+    var padTop = parseFloat(style.paddingTop) || 0;
+    var gap = parseFloat(style.rowGap || style.gap) || 0;
+    var rootPad = 0;
+    try { rootPad = parseFloat(window.getComputedStyle(card.parentElement).paddingBottom) || 0; } catch (e) {}
+    var avail = Math.floor(band - (reserve || 0) - rootPad - padTop - gap - rowH - 2);
+    if (avail < 24) avail = 24;
+    if (avail > 96) avail = 96;
+    dockCompactScroll = scroll;
+    scroll.style.setProperty('max-height', avail + 'px', 'important');
+    // Red de seguridad: si aun asi el borde del campo quedara bajo el borde de
+    // arriba del scroller (fila que envuelve, aviso del compositor), se recorta
+    // otro poco el borrador; el texto sigue viendose y el resto se desplaza.
+    try {
+      var scroller = seat ? findChatScroller(seat) : null;
+      var scrollerTop = scroller ? scroller.getBoundingClientRect().top : 0;
+      var delta = Math.round(scrollerTop - editor.getBoundingClientRect().top - 4);
+      if (delta > 0) {
+        avail = Math.max(24, avail - delta - 2);
+        scroll.style.setProperty('max-height', avail + 'px', 'important');
+      }
+    } catch (e) {}
+  }
+
+  /** Devuelve el scrollport del borrador a los topes normales de DSH. */
+  function restoreComposerScroll() {
+    if (!dockCompactScroll) return;
+    try { dockCompactScroll.style.removeProperty('max-height'); } catch (e) {}
+    dockCompactScroll = null;
+  }
+
+  /** Alto de la unica fila compacta del dock en apaisado. */
+  var COMPACT_DOCK_HEIGHT = 34;
+
+  /**
+   * Franja minima que necesita el compositor compacto: una linea de escritura
+   * (24 px), la fila de botones (28 px) y el relleno, mas un margen para que no
+   * roce el borde del scroller.
+   */
+  var COMPACT_COMPOSER_MIN = 72;
 
   /** Telefono en apaisado: el alto vertical util es escaso. */
   function isShortLandscape() {

@@ -52,6 +52,7 @@ final class NotesStoreTest {
             runRecovery(sub(root, "recovery"));
             NotesStoreExtras.run(sub(root, "extras"));
             NotesStoreCatalogTest.run(sub(root, "catalog"));
+            NotesChatCopyTest.run(sub(root, "chatcopy"));
         } finally {
             deleteRecursively(root);
         }
@@ -61,7 +62,7 @@ final class NotesStoreTest {
             System.exit(1);
         }
         System.out.println("RESULTADO: OK (CRUD, cifrado/migración, búsqueda, perfiles, "
-                + "vencimiento, localOnly, filtros, payload y compartir)");
+                + "vencimiento, localOnly, filtros, payload, compartir y «Copiar para el chat»)");
     }
 
     // ------------------------------------------------------------------
@@ -146,6 +147,10 @@ final class NotesStoreTest {
         expect(false, store.get(first.id).synced, "las demás notas siguen pendientes");
         expect(true, store.markSynced(second.id), "markSynced es idempotente");
         expect(true, store.get(second.id).synced, "idempotente conserva synced");
+        expect(true, store.update(second.id, "Segunda", "nota sobre café y planes").synced,
+                "guardar sin cambios conserva synced (no reencola)");
+        expect(true, new NotesStore(dir, CIPHER).get(second.id).synced,
+                "synced persiste al reabrir");
         expect(false, store.markSynced("no-existe"), "markSynced de id inexistente es false");
         expect(3, store.list().size(), "markSynced no borra notas");
 

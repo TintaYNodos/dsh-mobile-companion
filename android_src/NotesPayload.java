@@ -78,6 +78,21 @@ final class NotesPayload {
         return payload;
     }
 
+    /**
+     * true si dos notas coinciden en todo lo que se envía a la PC (más
+     * `localOnly`, que decide si sale). Lo usa {@link NotesStore} para no
+     * reescribir al guardar sin cambios y conservar `synced`.
+     */
+    static boolean sameContent(NotesStore.Note left, NotesStore.Note right) {
+        if (left == null || right == null) return left == right;
+        return left.title.equals(right.title) && left.body.equals(right.body)
+                && left.profile.equals(right.profile) && left.type.equals(right.type)
+                && left.project.equals(right.project) && left.subject.equals(right.subject)
+                && left.tags.equals(right.tags) && left.status.equals(right.status)
+                && left.priority.equals(right.priority) && left.dueDate.equals(right.dueDate)
+                && left.localOnly == right.localOnly;
+    }
+
     /** Marca de tiempo ISO-8601 en UTC, que es lo que valida el puente. */
     static String isoInstant(long millis) {
         SimpleDateFormat format = new SimpleDateFormat(ISO_PATTERN, Locale.US);

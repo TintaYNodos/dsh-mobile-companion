@@ -27,12 +27,12 @@ import android.widget.TextView;
  * prioridad, cuerpo, fecha límite y privacidad) y barra de acciones fija.
  *
  * La cabecera mide una fila («←» con descripción «Volver», título a una línea
- * con elipsis y estado de guardado en línea) y las acciones («Enviar»,
- * «Compartir», «Borrar») caben en una fila horizontal deslizable, de una sola
- * línea y 48 dp de alto: con el teclado abierto y la letra al 200 % no se parten
- * palabras y el cuerpo conserva al menos cuatro líneas. El cuerpo es un campo
- * multilínea que crece con el texto; {@link NotesEditor} lo desplaza a la vista
- * cuando aparece el teclado.
+ * con elipsis y estado de guardado en línea) y las acciones («Enviar», «Copiar
+ * para el chat», «Compartir», «Borrar») caben en una fila horizontal deslizable,
+ * de una sola línea y 48 dp de alto: con el teclado abierto y la letra al 200 %
+ * no se parten palabras y el cuerpo conserva al menos cuatro líneas. El cuerpo es
+ * un campo multilínea que crece con el texto; {@link NotesEditor} lo desplaza a
+ * la vista cuando aparece el teclado.
  *
  * Se separa de {@link NotesEditor} para que ese archivo quede por debajo del
  * límite de líneas del proyecto. La vista no guarda estado: solo crea los
@@ -46,6 +46,8 @@ final class NotesEditorView {
         void onClose();
 
         void onSend();
+
+        void onCopyForChat();
 
         void onShare();
 
@@ -85,6 +87,7 @@ final class NotesEditorView {
         Button dueButton;
         Button clearDueButton;
         Button sendButton;
+        Button copyButton;
         Button shareButton;
         Button deleteButton;
         ScrollView scroll;
@@ -257,6 +260,12 @@ final class NotesEditorView {
         parts.sendButton = action(activity, "Enviar", true, "Enviar a la PC", actions::onSend);
         NotesSendGuard.watch(parts.sendButton);
         row.addView(parts.sendButton);
+        parts.copyButton = action(activity, "Copiar para el chat", false,
+                "Copiar para el chat: deja una referencia para pegar en el chat",
+                actions::onCopyForChat);
+        // La copia puede enviar la nota: comparte el candado de H-03 con «Enviar».
+        NotesSendGuard.watch(parts.copyButton);
+        row.addView(parts.copyButton);
         parts.shareButton = action(activity, "Compartir", false, "Compartir nota",
                 actions::onShare);
         row.addView(parts.shareButton);

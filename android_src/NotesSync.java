@@ -6,6 +6,7 @@
 package com.tintaynodos.dshcompanion;
 
 import android.app.Activity;
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.CookieManager;
@@ -15,6 +16,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -96,8 +98,15 @@ final class NotesSync {
         sendNotes(activity, store, Collections.singletonList(note), listener);
     }
 
+    /** «Enviar todas» excluye las ya enviadas: una nota no se POSTea dos veces. */
     static void sendAll(Activity activity, NotesStore store, List<NotesStore.Note> notes, Listener listener) {
-        sendNotes(activity, store, notes, listener);
+        List<NotesStore.Note> pending = new ArrayList<>();
+        if (notes != null) {
+            for (NotesStore.Note note : notes) {
+                if (note != null && !note.synced) pending.add(note);
+            }
+        }
+        sendNotes(activity, store, pending, listener);
     }
 
     private static void sendNotes(Activity activity, NotesStore store,
@@ -138,11 +147,13 @@ final class NotesSync {
         // CookieManager se consulta en el hilo de la interfaz, antes del worker.
         String cookie = cookieFor(base);
         final Handler main = new Handler(Looper.getMainLooper());
-
+        // El worker recuerda el archivo que el puente asigna a cada nota enviada.
+        final File files = filesDirectory(activity);
+        final Context app = activity.getApplicationContext();
         Thread worker = new Thread(() -> {
             Report report;
             try {
-                report = sendBatch(endpoint, cookie, store, batch, skipped);
+                report = sendBatch(endpoint, cookie, store, batch, skipped, files, app);
             } catch (Throwable error) {
                 report = new Report(0, batch.size(), Outcome.NETWORK, "", skipped);
             }
@@ -165,14 +176,24 @@ final class NotesSync {
         }
     }
 
+    /** Carpeta privada de la app; null si no está disponible (se sigue enviando). */
+    private static File filesDirectory(Activity activity) {
+        try {
+            return activity.getFilesDir();
+        } catch (Throwable missing) {
+            return null;
+        }
+    }
+
     /** POST de cada nota del lote; lo llama el hilo de trabajo. */
     private static Report sendBatch(String endpoint, String cookie, NotesStore store,
-                                    List<NotesStore.Note> batch, int skipped) {
+                                    List<NotesStore.Note> batch, int skipped,
+                                    File files, Context app) {
         int sent = 0;
         Outcome failure = null;
         String detail = "";
         for (NotesStore.Note note : batch) {
-            PostResult result = post(endpoint, cookie, note);
+            PostResult result = post(endpoint, cookie, note, files, app);
             if (result.outcome == Outcome.SENT) {
                 sent++;
                 store.markSynced(note.id);
@@ -277,7 +298,8 @@ final class NotesSync {
     }
 
     /** POST síncrono: lo llama el hilo de trabajo, nunca el principal. */
-    private static PostResult post(String endpoint, String cookie, NotesStore.Note note) {
+    private static PostResult post(String endpoint, String cookie, NotesStore.Note note,
+                                   File files, Context app) {
         // Solo el título es obligatorio; el cuerpo puede ir vacío (nota con
         // título y nada más). Se evita gastar la petición si falta el título.
         String title = note.title.trim();
@@ -317,7 +339,12 @@ final class NotesSync {
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_OK) {
                 JSONObject response = new JSONObject(readAll(connection.getInputStream()));
-                if (response.optBoolean("ok", false)) return new PostResult(Outcome.SENT, "");
+                if (response.optBoolean("ok", false)) {
+                    // El puente devuelve el archivo escrito: se recuerda para
+                    // «Copiar para el chat» aunque la app se reinicie.
+                    NotesChatCopy.remember(files, app, note.id, response.optString("file", ""));
+                    return new PostResult(Outcome.SENT, "");
+                }
                 return new PostResult(Outcome.SERVER, "respuesta sin confirmación");
             }
             return classify(code, errorText(connection));

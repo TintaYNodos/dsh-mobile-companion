@@ -164,25 +164,38 @@ body[data-ds-dark-theme] {
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3) !important;
   }
 
-  /* Compositor compacto: menos relleno y textarea de 36-48px para que quepa
-     por encima del teclado (capturas 03 y 07). */
-  form:has(textarea), [class*="composer"] {
-    padding: 4px 8px !important;
-    min-height: unset !important;
+  /* Compositor en apaisado con teclado (lo marca el cliente al detectarlo).
+     La franja util baja a ~70-100 px y el asiento del compositor es sticky al
+     fondo: si la pila mide mas que el scroller se recorta por ARRIBA y el
+     campo de texto (lo primero de la tarjeta) desaparece aunque la fila de
+     botones se siga viendo. Se compacta a una linea de escritura + botones y
+     se oculta la fila de estadisticas de DSH, que es lo unico prescindible. */
+  html[data-dshc-keyboard="1"] [data-composer-dock] {
+    display: none !important;
   }
-  form:has(textarea) textarea, [class*="composer"] textarea {
-    min-height: 36px !important;
-    max-height: 48px !important;
-    font-size: 14px !important;
+  html[data-dshc-keyboard="1"] [data-composer-card] {
+    padding-top: 2px !important;
+    gap: 6px !important;
   }
-  /* DSH no usa <textarea>: el campo real es un contenteditable de Lexical. Sin
-     suelo propio se aplasta y sin tope crece hasta empujar la tarjeta fuera de
-     la franja visible con el teclado abierto; con el tope, el propio editor se
-     desplaza y la linea que se teclea queda siempre a la vista. */
-  [data-lexical-editor="true"] {
-    min-height: 26px !important;
-    max-height: 60px !important;
-    overflow-y: auto !important;
+  html[data-dshc-keyboard="1"] [data-composer-card] > :last-child {
+    padding: 0 6px !important;
+  }
+  /* Botones (+, modelo, enviar) a 28 px: la fila y la tarjeta bajan de alto. */
+  html[data-dshc-keyboard="1"] [data-composer-card] > :last-child button {
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    transform: none !important;
+  }
+  /* El scrollport del borrador es el unico tope: ~una linea visible y el resto
+     se desplaza dentro (DSH revela el caret). Asi el texto no empuja la
+     tarjeta fuera de la franja; el cliente afina el alto segun el hueco real. */
+  html[data-dshc-keyboard="1"] [data-input-scroll] {
+    max-height: 30px !important;
+  }
+  html[data-dshc-keyboard="1"] [data-composer-input] {
+    min-height: 24px !important;
+    padding-top: 0 !important;
     overscroll-behavior: contain;
   }
   /* Miniaturas de adjuntos en fila mínima para no comerse el alto útil. */

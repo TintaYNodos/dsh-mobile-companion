@@ -35,7 +35,7 @@ import android.webkit.WebSettings;
 import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
- * Puente JS del cliente: tema, Enter, outbox offline, satelite y compositor.
+ * Puente JS del cliente: tema, Enter, outbox offline y compositor.
  */
 class WebBridge {
 
@@ -48,7 +48,6 @@ class WebBridge {
         if (a.webView == null) return;
         String nonce = BridgeGuard.rotateForPage(pageUrl);
         WebBridge.evalBridgeToken(a, nonce);
-        WebBridge.applyOfflinePageShim(a, pageUrl, nonce);
     }
 
     /** Re-inyecta el mismo nonce (carrera de carga) o lo crea si no hay. */
@@ -58,71 +57,12 @@ class WebBridge {
         String nonce = BridgeGuard.currentNonce();
         if (nonce == null) nonce = BridgeGuard.rotateForPage(pageUrl);
         WebBridge.evalBridgeToken(a, nonce);
-        WebBridge.applyOfflinePageShim(a, pageUrl, nonce);
     }
 
     private static void evalBridgeToken(MainActivity a, String nonce) {
         if (a.webView == null || nonce == null) return;
         String js = ";(function(){ window.__DSH_BRIDGE_TOKEN__ = '" + nonce + "'; })();";
         a.webView.evaluateJavascript(js, null);
-    }
-
-    /**
-     * P1 (5.1.9): adaptador para la pagina estatica /offline. offline-satellite.js
-     * ya pasa el nonce cuando lo tiene, pero conserva una llamada de respaldo sin
-     * argumentos; este shim (solo en /offline y solo en el frame principal) arma
-     * el puente y adapta ambas firmas a `startSatelliteQuery(nonce, payload)` y
-     * `cancelSatelliteQuery(nonce)`. offline.html no contiene iframes y es
-     * contenido propio del bunker, asi que armarlo ahi no abre el puente a
-     * terceros. Sin token no se llama a nada.
-     */
-    static void applyOfflinePageShim(MainActivity a, String pageUrl, String nonce) {
-        if (a.webView == null || nonce == null || pageUrl == null) return;
-        if (!WebBridge.isOfflineRoute(pageUrl)) return;
-        String js = ";(function(){"
-                + " var token = window.__DSH_BRIDGE_TOKEN__;"
-                + " var raw = window.AndroidCompanion;"
-                + " if (!token || !raw) return;"
-                + " var start = raw.startSatelliteQuery;"
-                + " var cancel = raw.cancelSatelliteQuery;"
-                + " if (typeof start !== 'function' || typeof cancel !== 'function') return;"
-                + " if (window.__DSH_OFFLINE_BRIDGE_SHIM__) return;"
-                + " window.__DSH_OFFLINE_BRIDGE_SHIM__ = true;"
-                + " var arm = function() {"
-                + "   try { if (typeof raw.armBridge === 'function') raw.armBridge(token); } catch (e) {}"
-                + " };"
-                + " arm();"
-                + " var shim = {"
-                + "   armBridge: function(n) { try { return raw.armBridge(n); } catch (e) { return false; } },"
-                + "   isOnline: function(n) { try { return raw.isOnline(n); } catch (e) { return true; } },"
-                + "   saveOfflineDraft: function(n, v) { try { return raw.saveOfflineDraft(n, v) !== false; } catch (e) { return false; } },"
-                + "   startSatelliteQuery: function(a, b) {"
-                + "     arm();"
-                + "     if (arguments.length >= 2 && a === token) return start.call(raw, a, b);"
-                + "     return start.call(raw, token, a);"
-                + "   },"
-                + "   cancelSatelliteQuery: function(a) {"
-                + "     arm();"
-                + "     return cancel.call(raw, a === token ? a : token);"
-                + "   }"
-                + " };"
-                + " try { window.AndroidCompanion = shim; } catch (e1) {}"
-                + " if (window.AndroidCompanion === shim) return;"
-                // Si el global no se pudo reemplazar, se parchean los metodos.
-                + " try { raw.startSatelliteQuery = shim.startSatelliteQuery; } catch (e2) {}"
-                + " try { raw.cancelSatelliteQuery = shim.cancelSatelliteQuery; } catch (e3) {}"
-                + "})();";
-        a.webView.evaluateJavascript(js, null);
-    }
-
-    private static boolean isOfflineRoute(String url) {
-        try {
-            String path = android.net.Uri.parse(url).getPath();
-            if (path == null) return false;
-            return path.equals("/offline") || path.endsWith("/offline.html");
-        } catch (Throwable ignored) {
-            return false;
-        }
     }
 
     /**

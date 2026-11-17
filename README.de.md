@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.1-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-387%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,7 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.2.1** (Bridge; APK **5.2.0**, `versionCode` 51).
+Aktuelle Version: **5.2.9** (Bridge und APK, `versionCode` 53).
 
 ---
 
@@ -56,10 +56,8 @@ companion/
 ├── offline.html               Hülle des Bereitschaftsbildschirms
 ├── offline.css                Basislayout, Themes und Tabs
 ├── offline-reader.css         redaktioneller Leser und Konversationsdetail
-├── offline-satellite.css      Satellitenbereich
 ├── offline-core.js            gemeinsamer Zustand, Verbindungsstatus, Navigation
 ├── offline-reader.js          Offline-Leser, Liste, Detail, Lesemodi
-├── offline-satellite.js       Satelliten-Übergabe (Senden, Chunks, Abschluss)
 ├── src/
 │   ├── config.mjs             zentrale Konfiguration und Limits
 │   ├── log.mjs                Logger mit Zeitstempeln
@@ -103,9 +101,9 @@ companion/
 │   ├── PcEventsService.java   Vordergrunddienst für PC-Benachrichtigungen
 │   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
 │   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
-│   └── …                     Erkennung, Telemetrie, Satellit, WOL, Widget
+│   └── …                     Erkennung, Telemetrie, lokale Notizen, WOL, Widget
 ├── test/
-│   ├── verify_*.mjs           vierzehn Verifikations-Suites (235 Prüfungen)
+│   ├── verify_*.mjs           siebzehn Verifikations-Suites (387 Prüfungen)
 │   ├── _harness.mjs           gemeinsamer Client
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              persistierte Konversationen (.md und .json)
@@ -150,10 +148,8 @@ Node.js 22.15 oder neuer, keine npm-Abhängigkeiten.
 
 Zwei gleichwertige Methoden:
 
-- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 222 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
+- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 262 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
 - **Ohne Installation:** Öffnen Sie `http://<VPN_IP>:57420` in Ihrem Browser und wählen Sie „Zum Startbildschirm hinzufügen“.
-
-`/m` antwortet mit einer permanenten Weiterleitung auf `/`: Der alte Satellitenmodus wurde zugunsten der echten Oberfläche eingestellt.
 
 ---
 
@@ -208,6 +204,8 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 - `GET /offline` — Bereitschaftsseite, während Harness startet, plus der Offline-Leser für redaktionelle Inhalte.
 - `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, apkVersion, apkVersionCode, requestAttempts, time }`. Anonyme Aufrufer erhalten diese minimale Form; `apkSha256`, Geräteliste, ausstehende Liste und Telemetrie erfordern Autorisierung.
 - `POST /dsh-companion/sync` — speichert eine Konversation in `synced_chats/` als Markdown und JSON.
+- `POST /dsh-companion/notes` — speichert eine vom Telefon gesendete Notiz als Markdown in `synced_chats/notes/`; mit `id` aktualisiert erneutes Senden dieselbe Datei (idempotent).
+- `GET /dsh-companion/notes` — Metadaten der empfangenen Notizen (ohne Texte) für den Posteingang des Panels.
 - `GET /dsh-companion/chats` — Index der synchronisierten Konversationen.
 - `GET /dsh-companion/chat/:id` — Inhalt der Konversation (JSON oder Markdown mit `?format=md`).
 - `GET /dsh-companion/pc-events` — Server-Sent-Events-Stream, der `response-finished` ausgibt, wenn ein Turn auf dem Computer endet.
@@ -228,7 +226,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 - **Verhalten der Eingabetaste.** Standardmäßig fügt die Eingabetaste einen Zeilenumbruch ein; „Eingabe sendet“ kehrt das um. Implementiert gegen Lexical mit `execCommand`, dem einzigen Schreibvorgang, den die Eingabe akzeptiert.
 - **PC-Benachrichtigungen.** Mit aktiviertem Vordergrunddienst erhält das Telefon eine Benachrichtigung, wenn auf dem Computer ein Turn endet, **sogar bei geschlossener App**. Die Bridge beobachtet das Sitzungsprotokoll und reagiert auf den `turn/end`-Eintrag: genau eine Benachrichtigung pro Turn, egal wie lange das Modell oder ein Werkzeug pausiert.
 - **Vordergrund-Benachrichtigungskanal, kritischer Kanal und Freigabekanal.** Kritische Hinweise (Ergebnis des Kill-Switch, widerrufener Zugriff) erscheinen immer und umgehen den Filter „nur wenn verborgen“.
-- **Biometrische Sperre**, Multi-PC-Auswahl mit QR und manueller Eingabe, Wake-on-LAN, Telemetrie-Pille, Satelliten-Übergabe, System-Widget.
+- **Biometrische Sperre**, Multi-PC-Auswahl mit QR und manueller Eingabe, Wake-on-LAN, Telemetrie-Pille, lokale Notizen (7 Profile nach Bereich, Fristen und Notiz nur auf dem Telefon), System-Widget.
 
 ---
 
@@ -263,9 +261,9 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.2.0**, `versionCode`  51, `minSdk` 26, `targetSdk` 35.
-- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 222 KB.
-- **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, DeepSeek). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
+- `DSH-Companion.apk` — Version **5.2.9**, `versionCode` 53, `minSdk` 26, `targetSdk` 35.
+- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 262 KB.
+- **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, für Update-Prüfungen). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
 - Mikrofonzugriff auf die exakte Origin des Bunkers beschränkt (Schema, Host und Port).
 - Navigation auf die Bunker-Origin beschränkt; externe Links werden an die Systemauswahl delegiert.
@@ -303,13 +301,79 @@ APKs bis 5.1.6 waren mit dem Debug-Zertifikat signiert. **Die Signatur hat sich 
 npm test
 ```
 
-Vierzehn Suites, **235 Prüfungen** (203 in CI), die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, Satelliten-Übergabe, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+
+Siebzehn Suites, **387 Prüfungen** (313 in CI), die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, lokale Notizen, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
 
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
 ---
 
-> **Satellitenmodus (optional):** die Offline-Seite kann eine Unterhaltung mit dem auf dem Telefon hinterlegten API-Schlüssel an `api.deepseek.com` senden. Das ist die einzige Funktion, die das private Netz verlässt; sie ist optional, benötigt diesen Schlüssel und kann seit 5.1.0 nur vom Hauptframe des Bunkers ausgelöst werden.
+## Lokale Notizen
+
+Notizen werden **ausschließlich auf dem Telefon** gespeichert und funktionieren bei ausgeschaltetem
+PC und ohne Internet. Sie brauchen kein Konto, keinen API-Schlüssel und keine Verbindung: Sie
+werden in der App erstellt, bearbeitet und gelöscht und über das Android-Teilen-Menü weitergegeben.
+Ist die Bridge erreichbar, legt **An den PC senden** die Notiz in `synced_chats/notes/` auf dem
+Computer ab; ist der PC aus, bleibt die Notiz auf dem Telefon und kann später gesendet werden.
+
+### Profile nach Bereich
+
+Jede Notiz wählt ein Profil: Das Profil legt ihre Typen und Status sowie die Beschriftung der
+beiden eigenen Felder fest (Projekt und Charakter/Modul).
+
+| Profil | Eigene Felder | Typen | Status |
+| --- | --- | --- | --- |
+| **Allgemein** | Projekt · Detail | Notiz | — |
+| **Autor** | Werk · Charakter | Charakter, Szene, Handlung, Dialog, Korrektur, Recherche, Idee | Idee, Entwurf, Prüfung, Geschlossen |
+| **Programmierer** | Projekt · Modul oder Datei | Bug, Verbesserung, Refactor, Aufgabe, Entscheidung, Idee | Offen, Behoben, Verifiziert |
+| **Lehrkraft** | Fach · Gruppe oder Schüler | Lektion, Aktivität, Prüfung, Raster, Beobachtung, Material | Entwurf, Bereit, Angewendet, Bewertet, Archiviert |
+| **Journalist** | Fall oder Thema · Quelle | Hinweis, Interview, Artikel, Recherche, Korrektur, Idee | Offen, In Arbeit, Prüfung, Veröffentlicht, Archiviert |
+| **Recht** | Akte · Mandant | Schriftsatz, Beweis, Frist, Anhörung, Vertrag, Recherche, Notiz | Offen, In Arbeit, Prüfung, Eingereicht, Geschlossen |
+| **Design** | Kunde · Projekt | Auftrag, Konzept, Wireframe, Mockup, Ressource, Feedback, Notiz | Idee, Entwurf, Prüfung, Freigegeben, Geliefert |
+
+Neben Typ und Status trägt jede Notiz **Tags**, **Priorität** (niedrig, mittel oder hoch) und eine
+optionale **Frist**, die über eine Datumsauswahl gesetzt wird. Die Liste lässt sich **nach Frist
+sortieren** (Notizen mit Datum zuerst, von der nächsten zur fernsten) und die Filter **„Mit Datum“**
+und **„Priorität“** grenzen die Ansicht ein. Die Suche ignoriert **Akzente und Groß-/Kleinschreibung**:
+`garcia` findet `García`.
+
+### Datenschutz
+
+- `notes.json` wird **im Ruhezustand verschlüsselt** gespeichert: **AES-256-GCM** mit einem
+  Schlüssel aus dem **AndroidKeyStore**; eine Klartextdatei aus einer früheren Version wird beim
+  ersten Lesen verschlüsselt.
+- Der Notizbildschirm verwendet **FLAG_SECURE**: Screenshots sind blockiert und im Wechsel der
+  letzten Apps erscheinen keine Notiz-Miniaturansichten.
+- Eine Notiz lässt sich als **„Solo en el teléfono“** (nur auf dem Telefon) markieren: Sie wird nie
+  gesendet, ist von „Alle senden“ ausgeschlossen und beim Teilen wird eine Bestätigung verlangt.
+- Notizen sprechen nie mit dem Internet: keine Konten, keine API-Schlüssel, keine Anfragen an
+  externe Dienste. Sie verlassen das Telefon nur, wenn Sie „An den PC senden“ antippen, über das
+  private Netzwerk.
+
+### Senden an den PC und Posteingang
+
+**An den PC senden** schreibt die Notiz nach `synced_chats/notes/` mit Front Matter, das `id`,
+`dueDate` und `updatedAt` enthält, dazu Profil, Typ, Projekt, Charakter/Modul, Tags, Status und
+Priorität. Das Senden ist **idempotent über `id`**: Dieselbe Notiz erneut zu senden aktualisiert
+dieselbe Datei auf dem PC, statt sie zu duplizieren. Eine **Notiz nur mit Titel** ist erlaubt (der
+Text darf leer sein) und Senden löscht nie etwas auf dem Telefon. Notizen sind an keine
+Konversation gebunden: Das Senden legt nur die Datei auf dem Computer ab.
+
+Das PC-Panel hat einen Posteingang **„Notizen empfangen“** mit den **letzten 10 Notizen**, **nur
+lesbar** (Titel, Typ, Projekt und Datum). Die vollständige Metadatenliste ohne Texte liefert
+`GET /dsh-companion/notes`.
+
+### Barrierefreiheit
+
+- Der Editor ist **bei geöffneter Tastatur scrollbar**, damit das Textfeld nicht verdeckt wird.
+- Berührungsziele messen **≥48 dp** und die Badges halten den **AA**-Kontrast ein.
+- Die Chips melden **TalkBack** die gewählte Option und das **Autospeichern** nutzt eine Live-Region.
+- Jede Karte hat eine **barrierefreie Beschreibung** und der Titel zeigt **2 Zeilen**, bevor er
+  gekürzt wird.
+
+Der **Offline-Leser für Chats** braucht weiterhin den PC: Die synchronisierten Chats liefert die
+Bridge. Der frühere Cloud-Chat-Modus wurde in 5.2.8 entfernt, weil er nur bei eingeschaltetem PC
+funktionierte; lokale Notizen ersetzen ihn ohne Abhängigkeit vom Computer.
 
 ## Ehrliche Einschränkungen
 
@@ -329,7 +393,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.2.0 ist die stabile Version der Serie 5.** Sie ist die eingefrorene Basis: nur Sicherheitskorrekturen, keine neuen Funktionen. Der Zweig `stable/5` enthält genau diesen Baum. 5.1.x bleibt die vorherige Linie.
+**5.2.9 ist die aktuelle stabile Version der Serie 5.2.** Der Zweig `stable/5` enthält diesen Baum; 5.1.x bleibt die vorherige Linie.
 
 ## Bildschirmfotos
 

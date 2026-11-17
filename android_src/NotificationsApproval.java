@@ -52,7 +52,7 @@ final class NotificationsApproval {
 
         String body = (headline != null && !headline.trim().isEmpty()) ? headline : "Una herramienta solicita confirmación";
         // P3: sin botones en la notificacion; se indica donde si se puede aprobar.
-        String hint = "Abre DeepSeek Harness en la computadora para aprobar o rechazar.";
+        String hint = "Abre DSH en la computadora para aprobar o rechazar.";
         String fullText = body + "\n" + hint;
         if (detail != null && !detail.trim().isEmpty()) {
             fullText = body + "\n" + detail;

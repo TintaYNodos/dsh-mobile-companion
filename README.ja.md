@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.1-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-387%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.2.1**（ブリッジ。APK **5.2.0**、`versionCode` 51）。
+現在のバージョン：**5.2.9**（ブリッジと APK、`versionCode` 53）。
 
 ---
 
@@ -56,10 +56,8 @@ companion/
 ├── offline.html               待機画面のシェル
 ├── offline.css                基本レイアウト、テーマ、タブ
 ├── offline-reader.css         エディトリアル・リーダーと会話の詳細
-├── offline-satellite.css      サテライト・セクション
 ├── offline-core.js            共有状態、接続ステータス、ナビゲーション
 ├── offline-reader.js          オフライン・リーダー、一覧、詳細、閲覧モード
-├── offline-satellite.js       サテライトへの受け渡し（送信、チャンク、完了）
 ├── src/
 │   ├── config.mjs             設定と上限値の一元管理
 │   ├── log.mjs                タイムスタンプ付きロガー
@@ -103,9 +101,9 @@ companion/
 │   ├── PcEventsService.java   PC 通知用のフォアグラウンドサービス
 │   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
 │   ├── KeyStoreVault.java     保存キーの Android Keystore 暗号化
-│   └── …                     ディスカバリ、テレメトリ、サテライト、WOL、ウィジェット
+│   └── …                     ディスカバリ、テレメトリ、ローカルノート、WOL、ウィジェット
 ├── test/
-│   ├── verify_*.mjs           14 個の検証スイート（235 チェック）
+│   ├── verify_*.mjs           17 個の検証スイート（387 チェック）
 │   ├── _harness.mjs           共有クライアント
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              永続化された会話（.md および .json）
@@ -150,10 +148,8 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 2 つの同等な方法があります：
 
-- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係がゼロで、約 222 KB：純粋で再現可能な Java、アセットアイコン、テーマのみです。
+- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係がゼロで、約 262 KB：純粋で再現可能な Java、アセットアイコン、テーマのみです。
 - **何もインストールしない方法：** ブラウザで `http://<VPN_IP>:57420` を開き、「ホーム画面に追加」を選択します。
-
-`/m` は `/` への恒久的なリダイレクトを返します。旧式のサテライトモードは廃止され、実際のインターフェースに置き換わりました。
 
 ---
 
@@ -208,6 +204,8 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 - `GET /offline` — Harness の起動中に表示される待機ページと、オフライン・エディトリアル・リーダー。
 - `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, apkVersion, apkVersionCode, requestAttempts, time }`。匿名の呼び出し元にはこの最小限の形だけを返します。`apkSha256`、デバイス一覧、保留一覧、テレメトリには認可が必要です。
 - `POST /dsh-companion/sync` — 会話を Markdown と JSON として `synced_chats/` に保存します。
+- `POST /dsh-companion/notes` — スマートフォンから送られたノートを `synced_chats/notes/` に Markdown で保存します。`id` を付けて再送すると同じファイルを更新します（冪等）。
+- `GET /dsh-companion/notes` — 受信したノートのメタデータ（本文なし）をパネルの受信トレイ用に返します。
 - `GET /dsh-companion/chats` — 同期済み会話のインデックス。
 - `GET /dsh-companion/chat/:id` — 会話の内容（JSON、または `?format=md` を付けると Markdown）。
 - `GET /dsh-companion/pc-events` — パソコン側でターンが終了したときに `response-finished` を送出する Server-Sent Events ストリーム。
@@ -228,7 +226,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 - **Enter キーの動作。** デフォルトでは Enter が改行を挿入し、「Enter で送信」でその動作を反転します。Lexical に対して `execCommand` で実装されており、これがコンポーザーが受け付ける唯一の書き込みです。
 - **PC 通知。** フォアグラウンドサービスを有効にすると、パソコン側でターンが終了したときに、**アプリを閉じていても**スマートフォンに通知が届きます。ブリッジはセッションログを監視し、`turn/end` レコードで発火します。モデルやツールがどれだけ長く停止しても、通知はターンごとにちょうど 1 回です。
 - **フォアグラウンド通知チャネル、クリティカルチャネル、承認チャネル。** クリティカルな通知（キルスイッチの結果、アクセス失効）は常に表示され、「非表示時のみ」のフィルターを回避します。
-- **生体認証ゲート**、QR と手動入力に対応したマルチ PC セレクター、Wake-on-LAN、テレメトリピル、サテライトへの受け渡し、システムウィジェット。
+- **生体認証ゲート**、QR と手動入力に対応したマルチ PC セレクター、Wake-on-LAN、テレメトリピル、ローカルノート（分野別 7 プロファイル、期限、端末内限定ノート）、システムウィジェット。
 
 ---
 
@@ -263,9 +261,9 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.2.0**、`versionCode`  51、`minSdk` 26、`targetSdk` 35。
-- AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 222 KB。
-- **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、DeepSeek）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
+- `DSH-Companion.apk` — バージョン **5.2.9**、`versionCode` 53、`minSdk` 26、`targetSdk` 35。
+- AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 262 KB。
+- **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、更新の確認）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
 - マイクへのアクセスはバンカーの正確なオリジン（スキーム、ホスト、ポート）に限定。
 - ナビゲーションはバンカーのオリジン内に限定。外部リンクはシステムの選択画面に委ねます。
@@ -303,13 +301,76 @@ apksigner verify --print-certs DSH-Companion.apk
 npm test
 ```
 
-14 個のスイート、**231 のチェック**（201 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、サテライトへの受け渡し、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
+
+17 個のスイート、**328 のチェック**（201 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、ローカルノート、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
 
 スイートは**稼働中のブリッジ**と通信します（モックではありません）。先にブリッジを起動してください。実際のキルスイッチの実行は破壊的で、デバイスを失効させキーをローテーションするため、`DSH_TEST_DESTRUCTIVE=1` によるオプトインになっています。
 
 ---
 
-> **サテライトモード（任意）：** オフラインページは、スマートフォンで設定した API キーを使って会話を `api.deepseek.com` に送信できます。プライベートネットワークの外に出る唯一の機能です。任意で、そのキーが必要で、5.1.0 以降はバンカーのメインフレームからのみ起動できます。
+## ローカルノート
+
+ノートは**スマートフォン内だけ**に保存され、PC の電源が切れていても、インターネットがなくても
+使えます。アカウントも API キーも接続も不要で、アプリで作成・編集・削除でき、Android の共有
+メニューで共有できます。ブリッジに接続できるときは、**PC へ送信**でノートをコンピューターの
+`synced_chats/notes/` に保存します。PC の電源が切れている場合はノートはスマートフォンに残り、
+後で送信できます。
+
+### 分野別プロファイル
+
+各ノートはプロファイルを選びます。プロファイルが種類と状態、そして 2 つの固有フィールド
+（プロジェクトと人物／モジュール）のラベルを決めます。
+
+| プロファイル | 固有フィールド | 種類 | 状態 |
+| --- | --- | --- | --- |
+| **一般** | プロジェクト · 詳細 | ノート | — |
+| **作家** | 作品 · 人物 | 人物、シーン、プロット、会話、校正、調査、アイデア | アイデア、下書き、レビュー、完了 |
+| **プログラマー** | プロジェクト · モジュールまたはファイル | バグ、改善、リファクタ、タスク、決定、アイデア | 未対応、修正済み、検証済み |
+| **教員** | 科目 · クラスまたは生徒 | 授業、活動、試験、ルーブリック、観察、教材 | 下書き、準備完了、適用済み、採点済み、アーカイブ済み |
+| **記者** | 案件またはテーマ · 情報源 | 情報、インタビュー、記事、調査、校正、アイデア | 未対応、進行中、レビュー、公開済み、アーカイブ済み |
+| **法務** | 事件ファイル · クライアント | 書面、証拠、期限、審問、契約、調査、ノート | 未対応、進行中、レビュー、提出済み、完了 |
+| **デザイン** | クライアント · プロジェクト | 依頼、コンセプト、ワイヤーフレーム、モックアップ、素材、フィードバック、ノート | アイデア、下書き、レビュー、承認済み、納品済み |
+
+種類と状態に加えて、各ノートには**タグ**、**優先度**（低・中・高）、そして日付セレクターで
+選ぶ任意の**期限**があります。一覧は**期限順に並べ替え**でき（日付のあるノートが先、近い順）、
+**「日付あり」**と**「優先度」**のフィルターで絞り込めます。検索は**アクセントと大文字小文字を
+区別しません**。`garcia` で `García` が見つかります。
+
+### プライバシー
+
+- `notes.json` は **AES-256-GCM** と **AndroidKeyStore** の鍵で**保存時に暗号化**されます。
+  以前のバージョンの平文ファイルは最初の読み込み時に暗号化へ移行されます。
+- ノート画面は **FLAG_SECURE** を使用します。スクリーンショットは撮れず、最近使ったアプリにも
+  ノートのサムネイルは表示されません。
+- ノートは **「Solo en el teléfono」**（この端末のみ）としてマークできます。送信されず、
+  「すべて送信」から除外され、共有時には確認を求めます。
+- ノートがインターネットと通信することはありません。アカウントも API キーも外部サービスへの
+  リクエストもありません。「PC へ送信」を押したときだけ、プライベートネットワーク経由で端末を
+  離れます。
+
+### PC への送信と受信トレイ
+
+**PC へ送信**すると、ノートは `synced_chats/notes/` に、`id`、`dueDate`、`updatedAt` を含む
+フロントマター付きで保存されます。プロファイル、種類、プロジェクト、人物／モジュール、タグ、
+状態、優先度も含まれます。送信は **`id` による冪等**です。同じノートを再送すると、複製せずに
+PC 上の同じファイルを更新します。**タイトルだけのノート**も許可され（本文は空で構いません）、
+送信しても端末からは何も削除されません。ノートはどの会話にも紐づきません。送信はコンピューター
+にファイルを残すだけです。
+
+PC のパネルには**「Notas recibidas」**（受信したノート）の受信トレイがあり、**最新 10 件**を
+**読み取り専用**で表示します（タイトル、種類、プロジェクト、日付）。本文を含まない完全な
+メタデータ一覧は `GET /dsh-companion/notes` で取得できます。
+
+### アクセシビリティ
+
+- エディターは**キーボードを開いたままスクロール**でき、本文欄が隠れません。
+- タッチ領域は **48 dp 以上**、バッジは **AA** コントラストを満たします。
+- チップは選択した項目を **TalkBack** に通知し、**自動保存**はライブリージョンを使用します。
+- 各カードには**アクセシブルな説明**があり、タイトルは切り詰める前に **2 行**表示されます。
+
+**オフラインのチャットリーダー**は引き続き PC が必要です。同期されたチャットはブリッジが
+配信するためです。以前のクラウドチャットモードは PC が起動しているときしか動かなかったため
+5.2.8 で廃止しました。ローカルノートはコンピューターに依存せずにその役割を果たします。
 
 ## 正直な制限
 
@@ -329,7 +390,7 @@ npm test
 
 ## 安定性
 
-**5.2.0 はシリーズ 5 の安定版です。** 固定ベースラインであり、セキュリティ修正のみで新機能は追加しません。`stable/5` ブランチがこのツリーを保持します。5.1.x は前のラインです。
+**5.2.9 はシリーズ 5.2 の現在の安定版です。** `stable/5` ブランチがこのツリーを保持し、5.1.x は前のラインです。
 
 ## スクリーンショット
 

@@ -135,6 +135,9 @@ const RUNTIME_FILES = new Set([
   "companion-devices.json", "companion-access-key", "companion-panel-token",
   "companion-panel-url.txt", "bridge.log", "session.v4.jsonl.zstd",
   ".credentials.yaml", "dsh-companion.service", "doctor-report.json",
+  // Indice id -> archivo que crea el puente en synced_chats/notes/ (idempotencia
+  // de las notas del telefono): vive en el HOME del usuario, no en el repo.
+  "notes.json", "org.json", "ids.json",
 ]);
 for (const m of allText.matchAll(/`([A-Za-z0-9_.\/-]+\.(?:mjs|java|json|md|html|css|js|yml|bat|vbs|sh|plist|svg|webmanifest))`/g)) {
   const name = m[1];

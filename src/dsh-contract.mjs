@@ -261,14 +261,14 @@ const probeSessionEvents = () => {
       "los registros de sesion de Harness no se pudieron descomprimir; los avisos por turno pueden no funcionar"
     );
   }
-  // 5.2.1: estricto de verdad. La senal de que Harness cambio el registro es que
-  // haya turn/start y NINGUN turn/end (la capacidad desaparecio). Un turn/start
-  // sin su turn/end puede ser un turno abortado: no degrada el contrato.
-  if (turnStarts > 0 && turnEnds === 0) {
+  // Un turno en curso o abortado puede dejar turn/start sin turn/end: eso NO es
+  // un cambio de formato y no debe degradar el contrato (falsos positivos). Si
+  // los frames se descomprimen y los registros son JSON, el formato esta bien.
+  if (records === 0) {
     return entry(
       "turn/end",
-      "degraded",
-      `${frames} frame(s), ${records} evento(s): hay ${turnStarts} turn/start pero ningun turn/end; el registro de turnos de Harness cambio`
+      "unknown",
+      `${frames} frame(s) sin registros JSON; los avisos por turno se comprobaran en la proxima ventana`
     );
   }
   const detail = `${frames} frame(s), ${records} evento(s), ${turnStarts} turn/start, ${turnEnds} turn/end`;

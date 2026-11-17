@@ -5,34 +5,17 @@
   const appShell = document.getElementById('appShell');
   const tabStatus = document.getElementById('tabStatus');
   const tabReader = document.getElementById('tabReader');
-  const tabSatellite = document.getElementById('tabSatellite');
   const sectionStatus = document.getElementById('sectionStatus');
   const sectionReader = document.getElementById('sectionReader');
-  const sectionSatellite = document.getElementById('sectionSatellite');
   const viewList = document.getElementById('viewList');
   const viewDetail = document.getElementById('viewDetail');
   const chatListContainer = document.getElementById('chatListContainer');
   const sourceBadge = document.getElementById('sourceBadge');
 
-  const satelliteModel = document.getElementById('satelliteModel');
-  const satelliteMessagesContainer = document.getElementById('satelliteMessages');
-  const satelliteEmpty = document.getElementById('satelliteEmpty');
-  const satelliteInput = document.getElementById('satelliteInput');
-  const satelliteStatus = document.getElementById('satelliteStatus');
-  const btnSatelliteSend = document.getElementById('btnSatelliteSend');
-  const btnSatelliteCancel = document.getElementById('btnSatelliteCancel');
-  const btnSatelliteNew = document.getElementById('btnSatelliteNew');
-  const btnSatelliteAbsorb = document.getElementById('btnSatelliteAbsorb');
-  const btnGoSatellite = document.getElementById('btnGoSatellite');
-
   const STORAGE_KEY_LIST = 'dsh_synced_chats_cache';
   const STORAGE_KEY_PREFIX = 'dsh_chat_cache_';
-  const STORAGE_KEY_SATELLITE_MSGS = 'dsh_satellite_messages';
-  const STORAGE_KEY_SATELLITE_MODEL = 'dsh_satellite_model';
 
   let currentTab = 'status';
-  let satelliteConversation = [];
-  let isSatelliteStreaming = false;
 
   function escapeHtml(text) {
     return String(text ?? '')
@@ -142,15 +125,10 @@
     currentTab = tab;
     tabStatus.classList.remove('active');
     tabReader.classList.remove('active');
-    if (tabSatellite) tabSatellite.classList.remove('active');
 
     sectionStatus.style.display = 'none';
     sectionReader.classList.remove('active');
     sectionReader.style.display = 'none';
-    if (sectionSatellite) {
-      sectionSatellite.classList.remove('active');
-      sectionSatellite.style.display = 'none';
-    }
 
     if (tab === 'reader') {
       tabReader.classList.add('active');
@@ -158,15 +136,6 @@
       sectionReader.style.display = 'block';
       appShell.classList.add('wide');
       loadChatsList();
-    } else if (tab === 'satellite') {
-      if (tabSatellite) tabSatellite.classList.add('active');
-      if (sectionSatellite) {
-        sectionSatellite.classList.add('active');
-        sectionSatellite.style.display = 'flex';
-      }
-      appShell.classList.add('wide');
-      loadSatelliteStorage();
-      renderSatelliteMessages();
     } else {
       tabStatus.classList.add('active');
       sectionStatus.style.display = 'block';
@@ -176,9 +145,7 @@
 
   tabStatus.addEventListener('click', () => setTab('status'));
   tabReader.addEventListener('click', () => setTab('reader'));
-  if (tabSatellite) tabSatellite.addEventListener('click', () => setTab('satellite'));
   document.getElementById('btnGoReader').addEventListener('click', () => setTab('reader'));
-  if (btnGoSatellite) btnGoSatellite.addEventListener('click', () => setTab('satellite'));
 
   async function refresh() {
     try {
@@ -206,3 +173,10 @@
 
   document.getElementById('retry').addEventListener('click', () => location.replace('/'));
   document.getElementById('status').addEventListener('click', refresh);
+
+  if (location.hash === '#reader') {
+    setTab('reader');
+  } else {
+    refresh();
+  }
+  setInterval(refresh, 4000);

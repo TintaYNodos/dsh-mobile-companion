@@ -3,9 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  * See LICENSE file in repository root for full terms.
  */
+import http from "node:http";
 import { config } from "./config.mjs";
+import { resolveAccessKey } from "./crypto.mjs";
 import { discoverListeningPorts, probeDshPort, resolveTargetPort } from "./network.mjs";
 import { escapeHtml } from "./pairing-views.mjs";
+import { NOTE_STATUS_LABELS, NOTE_TYPE_LABELS } from "./notes-format.mjs";
+import { listInboxNotes } from "./notes-store.mjs";
 import {
   approveRequest,
   clearHistory,
@@ -145,6 +149,146 @@ const deviceControls = (device, label) => {
 };
 
 /**
+ * Seccion "Notas recibidas" del panel.
+ *
+ * El panel no comparte credenciales con el telefono, pero corre en el mismo
+ * proceso que el puente: pide `GET /dsh-companion/notes` por loopback con la
+ * clave de acceso efectiva (HTTP Basic), que es como el puente autoriza a la
+ * propia PC. Si esa lectura fallara (por ejemplo con DSH_ACCESS_DISABLE=1 y el
+ * puente sin clave), se cae a leer la bandeja directamente: el panel ya exige
+ * su propia sesion, asi que no se expone nada nuevo.
+ */
+const PANEL_NOTES_LIMIT = 10;
+const PANEL_NOTES_TIMEOUT_MS = 1500;
+
+const notesAuthHeader = () => {
+  let key = "";
+  try {
+    key = resolveAccessKey();
+  } catch {
+    key = "";
+  }
+  if (!key) return {};
+  return { authorization: `Basic ${Buffer.from(`dsh:${key}`, "utf8").toString("base64")}` };
+};
+
+const fetchNotesForPanel = () =>
+  new Promise((resolve) => {
+    let settled = false;
+    const done = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const request = http.request(
+      {
+        hostname: "127.0.0.1",
+        port: config.listenPort,
+        path: "/dsh-companion/notes",
+        method: "GET",
+        headers: notesAuthHeader(),
+        agent: false,
+        timeout: PANEL_NOTES_TIMEOUT_MS,
+      },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => {
+          if (response.statusCode !== 200) return done(null);
+          try {
+            const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+            done(Array.isArray(parsed?.notes) ? parsed.notes : null);
+          } catch {
+            done(null);
+          }
+        });
+      }
+    );
+    request.on("timeout", () => {
+      request.destroy();
+      done(null);
+    });
+    request.on("error", () => done(null));
+    request.end();
+  });
+
+const panelNotes = async () => {
+  const fetched = await fetchNotesForPanel();
+  if (fetched) return fetched;
+  try {
+    return listInboxNotes();
+  } catch {
+    return [];
+  }
+};
+
+/** Etiqueta legible: "reunion" / "en-progreso" / "en_progreso" -> "Reunion" / "En progreso". */
+const humanizeLabel = (value) => {
+  const text = String(value ?? "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+/**
+ * Valor canonico del telefono -> etiqueta en espanol. `humanizeLabel` queda
+ * como reserva para valores desconocidos (texto libre de versiones futuras).
+ */
+const noteLabel = (table, value) => table.get(String(value ?? "").trim().toLowerCase()) || humanizeLabel(value);
+
+const pad2 = (value) => String(value).padStart(2, "0");
+
+/** Marca ISO -> fecha local `dd/mm/aaaa hh:mm`; "" si no es una fecha valida. */
+const localDateTime = (value) => {
+  const date = new Date(String(value ?? ""));
+  if (Number.isNaN(date.getTime())) return "";
+  return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()} ` +
+    `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+};
+
+/** `AAAA-MM-DD` -> `dd/mm/aaaa` sin desplazamientos de zona horaria. */
+const localDueDate = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? "").trim());
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : "";
+};
+
+/**
+ * Fila de una nota: titulo y metadatos legibles. El tipo y el estado se
+ * traducen del valor canonico del telefono al espanol, la fecha se muestra en
+ * local y el vencimiento humanizado. Cada campo se escapa UNA sola vez, ya al
+ * final, para que "I+D & Socios" quede como `I+D &amp; Socios` (no `&amp;amp;`).
+ */
+const noteSummaryRow = (note) => {
+  const title = escapeHtml(note.title || note.file || "nota");
+  const type = escapeHtml(noteLabel(NOTE_TYPE_LABELS, note.type) || "Sin tipo");
+  const due = localDueDate(note.dueDate);
+  const meta = [
+    note.project || "Sin proyecto",
+    noteLabel(NOTE_STATUS_LABELS, note.status),
+    localDateTime(note.receivedAt || note.createdAt),
+    due ? `Vence ${due}` : "",
+  ]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(" &middot; ");
+  return `<li><span class="tag muted">${type}</span>
+      <span><b>${title}</b><br><span class="meta">${meta}</span></span></li>`;
+};
+
+/** Bloque de solo lectura con las ultimas PANEL_NOTES_LIMIT notas recibidas. */
+const renderNotesSection = (notes) => {
+  const list = Array.isArray(notes) ? notes.slice(0, PANEL_NOTES_LIMIT) : [];
+  const rows = list.length
+    ? `<ul class="events">${list.map(noteSummaryRow).join("")}</ul>`
+    : `<div class="card empty">Todavia no hay notas recibidas del telefono.</div>`;
+  const endpoint = `http://127.0.0.1:${config.listenPort}/dsh-companion/notes`;
+  return `<p class="hint" style="margin:6px 0 10px">Ultimas ${PANEL_NOTES_LIMIT} notas del telefono, solo lectura.
+      JSON completo (requiere credencial): <a href="${escapeHtml(endpoint)}" style="color:var(--accent-glow)">${escapeHtml(endpoint)}</a></p>${rows}`;
+};
+
+/**
  * Añade al HTML del panel los controles de perfil por dispositivo.
  *
  * El render de la pagina vive en pairing-views.mjs (fuera de este cambio), asi
@@ -181,6 +325,10 @@ export async function renderPanelBody(html, { devices = [], flash = "" } = {}) {
     const label = escapeHtml(device.name || device.address || "dispositivo");
     return deviceControls(device, label) + match;
   });
+
+  // Notas recibidas: se inyectan antes del pie, al final de la pagina del panel.
+  const notes = await panelNotes();
+  body = body.replace("<footer>", `<h2>Notas recibidas</h2>${renderNotesSection(notes)}<footer>`);
 
   return body;
 }

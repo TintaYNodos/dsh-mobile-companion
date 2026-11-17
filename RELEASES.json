@@ -30,6 +30,16 @@
       "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Parche de seguridad solo puente: /healthz no revela topología fuera de loopback y el contrato de turnos es estricto. El APK no cambia (5.2.0 / versionCode 51)."
+    },
+    {
+      "version": "5.2.8",
+      "versionCode": 52,
+      "channel": "stable",
+      "releasedAt": "2026-11-16",
+      "commit": "e7349f3",
+      "apkSha256": "6592adaa6579c4320d23cb96e46ac71cc3a54776e637d8c47736bc79f20fbddd",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Retira el modo satelite y agrega Notas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PC. El telefono ya no guarda la clave de API ni habla con api.deepseek.com."
     }
   ]
 }

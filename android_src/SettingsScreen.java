@@ -20,7 +20,7 @@ import android.widget.Toast;
 import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
- * Dialogo de Ajustes (tema, avisos, biometria, compositor, satelite y panic).
+ * Dialogo de Ajustes (tema, avisos, biometria, compositor y panic).
  * Las secciones de notificaciones y seguridad viven en clases propias; aqui
  * solo se componen y se construye el marco del dialogo.
  */
@@ -140,8 +140,6 @@ class SettingsScreen {
                             Toast.LENGTH_SHORT).show();
                 }));
 
-        form.addView(UiKit.sectionHeader(a, "MODO SATÉLITE"));
-        form.addView(SatelliteUi.buildSatelliteCard(a));
         form.addView(UiKit.sectionHeader(a, "MODO PÁNICO / EMERGENCIA"));
         final AlertDialog[] settingsDialogRef = new AlertDialog[1];
         form.addView(KillSwitchUi.buildCard(a, settingsDialogRef));

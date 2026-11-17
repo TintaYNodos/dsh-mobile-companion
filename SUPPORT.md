@@ -1,17 +1,16 @@
 # Política de soporte
 
-**Versión estable actual: 5.2.1** (puente; APK 5.2.0, versionCode 51). La línea estable es la única que se mantiene:
-a partir de su publicación **solo recibe correcciones de seguridad**, no funciones nuevas. Cualquier
-función nueva sale en una serie posterior. **5.1.x queda como la versión anterior** y ya no recibe
-cambios: si sigues en ella, actualiza a 5.2.0.
+**Versión estable actual: 5.2.9** (puente y APK, versionCode 53). La línea estable recibe
+correcciones de seguridad y versiones de mantenimiento de la serie 5.2. **5.2.8 queda como la
+versión anterior** y ya no recibe cambios: si sigues en ella, actualiza a 5.2.9.
 
 ## Estado de las versiones
 
 | Versión | Estado | Qué recibe |
 | --- | --- | --- |
-| 5.2.x (estable, versionCode 51 o superior) | **Soportada** | Solo correcciones de seguridad |
-| 5.1.x (anterior) | Sin soporte | Nada; actualiza a la 5.2.0 |
-| 5.0.x y anteriores | Sin soporte | Nada; actualiza a la 5.2.0 |
+| 5.2.9 (estable, versionCode 53) | **Soportada** | Correcciones de seguridad de la serie 5.2 |
+| 5.2.8 y anteriores de la serie 5.2 | Sin soporte | Nada; actualiza a la 5.2.9 |
+| 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.2.9 |
 
 La versión se comprueba en la app (Ajustes) o en `/dsh-companion/status` (`version` y
 `apkVersionCode`). La huella del certificado de release y cómo verificar un APK están en
@@ -27,6 +26,8 @@ soporte de herramientas de terceros. Lo que se intenta resolver:
 - Conexión del teléfono por la red privada y detección de la interfaz (ZeroTier, Tailscale, NetBird
   y las demás de [VPN_OPTIONS.md](VPN_OPTIONS.md)).
 - Notificaciones de fin de turno, prueba desde la PC y canales de notificación.
+- Notas locales: perfiles por área, fecha límite, cifrado local, marca «Solo en el teléfono»,
+  envío a la PC (idempotente por `id`) y bandeja «Notas recibidas» del panel.
 - Salud del puente y contrato de DeepSeek Harness (`/healthz`).
 - Copias de seguridad del registro, la clave de acceso y el token del panel ([backup.bat](backup.bat),
   [restore.bat](restore.bat)).
@@ -45,10 +46,9 @@ guiada desde el teléfono en [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md).
   el proyecto de Harness.
 - **El teléfono**: modelo, ROM, proveedor, ahorro de batería y permisos del sistema no se pueden
   depurar desde aquí.
-- **Los extras opcionales**: el modo satélite (envía a `api.deepseek.com` con tu clave y sale de la
-  red privada), la skill de instalación y **RustDesk** (herramienta de terceros, recomendación
-  opcional que nunca se empaqueta ni forma parte del producto) no están cubiertos como funciones
-  del proyecto.
+- **Los extras opcionales**: la skill de instalación y **RustDesk** (herramienta de terceros,
+  recomendación opcional que nunca se empaqueta ni forma parte del producto) no están cubiertos
+  como funciones del proyecto.
 - **Exposición a Internet del puente**: es una configuración no soportada por diseño. No se ayuda a
   publicar el puente ni el panel fuera de la red privada.
 - **Recuperar secretos perdidos**: la clave de acceso y el token del panel no se pueden reconstruir.

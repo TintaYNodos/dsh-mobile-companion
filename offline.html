@@ -5,17 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0a0e17">
 <title>DSH Companion</title>
-<!-- Puente nativo Android del modo satélite: window.AndroidCompanion.startSatelliteQuery(...) y cancelSatelliteQuery(...); la lógica vive en offline-satellite.js. -->
 <link rel="stylesheet" href="offline.css">
 <link rel="stylesheet" href="offline-reader.css">
-<link rel="stylesheet" href="offline-satellite.css">
 </head>
 <body>
 <div class="app-shell" id="appShell">
   <nav class="tab-bar">
     <button class="tab-btn active" id="tabStatus">Estado del puente</button>
     <button class="tab-btn" id="tabReader">Sesiones sincronizadas (Lector offline)</button>
-    <button class="tab-btn" id="tabSatellite">Satélite</button>
   </nav>
 
   <!-- Pestaña 1: Estado de conexión -->
@@ -32,7 +29,6 @@
 
     <div class="actions">
       <button class="primary" id="retry">Reintentar ahora</button>
-      <button class="secondary" id="btnGoSatellite">Modo Satélite (Planificación y Notas)</button>
       <button class="secondary" id="btnGoReader">Abrir sesiones sincronizadas</button>
       <button id="status">Ver estado del puente</button>
     </div>
@@ -79,49 +75,9 @@
       </article>
     </div>
   </section>
-
-  <!-- Pestaña 3: Modo Satélite -->
-  <section class="satellite-section" id="sectionSatellite">
-    <div class="satellite-banner">
-      Modo Satélite · Planificación y Notas de Campo (Herramientas de PC en espera)
-    </div>
-    <p class="satellite-warning">Este modo envía tu conversación a <code>api.deepseek.com</code> con la clave de API que configures en el teléfono: es la única función que sale de tu red privada. No lo uses con información que no quieras enviar a DeepSeek.</p>
-
-    <div class="satellite-header">
-      <div class="satellite-controls">
-        <label for="satelliteModel" class="satellite-label">Modelo:</label>
-        <select id="satelliteModel" class="satellite-select">
-          <option value="deepseek-chat" selected>deepseek-chat</option>
-          <option value="deepseek-reasoner">deepseek-reasoner</option>
-        </select>
-      </div>
-      <div class="satellite-header-actions">
-        <button class="secondary" id="btnSatelliteNew" type="button">Nueva nota</button>
-        <button class="secondary" id="btnSatelliteAbsorb" type="button">Absorber en PC</button>
-      </div>
-    </div>
-
-    <div class="satellite-messages" id="satelliteMessages">
-      <div class="satellite-empty" id="satelliteEmpty">
-        Sin mensajes en esta sesión satélite. Escribe para planificar o tomar notas de campo directamente con DeepSeek.
-      </div>
-    </div>
-
-    <div class="satellite-composer">
-      <textarea id="satelliteInput" class="satellite-textarea" placeholder="Escribe tu consulta o nota de campo..." rows="3"></textarea>
-      <div class="satellite-composer-bar">
-        <span class="satellite-status" id="satelliteStatus">Listo</span>
-        <div class="satellite-buttons">
-          <button class="secondary" id="btnSatelliteCancel" type="button" style="display: none;">Cancelar</button>
-          <button class="primary" id="btnSatelliteSend" type="button">Enviar</button>
-        </div>
-      </div>
-    </div>
-  </section>
 </div>
 
 <script src="offline-core.js"></script>
 <script src="offline-reader.js"></script>
-<script src="offline-satellite.js"></script>
 </body>
 </html>

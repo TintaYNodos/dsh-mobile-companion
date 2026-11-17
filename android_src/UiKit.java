@@ -5,6 +5,7 @@
  */
 package com.tintaynodos.dshcompanion;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -40,7 +41,7 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Constructores de widgets y estilo comun de dialogos.
  */
 class UiKit {
-    static TextView sectionHeader(MainActivity a, String text) {
+    static TextView sectionHeader(Activity a, String text) {
         TextView label = new TextView(a);
         label.setText(text);
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
@@ -55,13 +56,14 @@ class UiKit {
      * Tarjeta de ajuste con titulo, descripcion e interruptor. El interruptor
      * lleva contentDescription para que TalkBack anuncie de que ajuste se trata.
      */
-    static LinearLayout settingSwitchCard(MainActivity a, String title, String description, boolean checked,
+    static LinearLayout settingSwitchCard(Activity a, String title, String description, boolean checked,
                                            android.widget.CompoundButton.OnCheckedChangeListener onChange) {
         LinearLayout card = new LinearLayout(a);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(ThemePalette.dp(a, 14), ThemePalette.dp(a, 10), ThemePalette.dp(a, 14), ThemePalette.dp(a, 10));
         card.setBackground(ThemePalette.rounded(a, ThemePalette.raised(a), ThemePalette.outline(a), 8f));
+        card.setMinimumHeight(ThemePalette.dp(a, 48));
 
         LinearLayout column = new LinearLayout(a);
         column.setOrientation(LinearLayout.VERTICAL);
@@ -94,18 +96,20 @@ class UiKit {
         return card;
     }
 
-    static TextView sectionLabel(MainActivity a, String text) {
+    static TextView sectionLabel(Activity a, String text) {
         return UiKit.sectionHeader(a, text);
     }
 
-    static EditText field(MainActivity a, String hint, String value) {
+    static EditText field(Activity a, String hint, String value) {
         EditText input = new EditText(a);
         input.setHint(hint);
         input.setText(value);
         input.setSingleLine(true);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         input.setTextColor(ThemePalette.ink(a));
-        input.setHintTextColor(ThemePalette.color(a, Color.parseColor("#484F58"), Color.parseColor("#8C959F")));
+        input.setHintTextColor(ThemePalette.color(a, Color.parseColor("#8C959F"), Color.parseColor("#484F58")));
+        input.setMinHeight(ThemePalette.dp(a, 48));
+        input.setMinimumHeight(ThemePalette.dp(a, 48));
         input.setBackground(ThemePalette.rounded(a, ThemePalette.raised(a), ThemePalette.outline(a), 8f));
         input.setPadding(ThemePalette.dp(a, 12), ThemePalette.dp(a, 11), ThemePalette.dp(a, 12), ThemePalette.dp(a, 11));
 
@@ -116,7 +120,7 @@ class UiKit {
         return input;
     }
 
-    static Button actionCompact(MainActivity a, String label, boolean primary, Runnable onClick) {
+    static Button actionCompact(Activity a, String label, boolean primary, Runnable onClick) {
         Button button = new Button(a);
         button.setText(label);
         button.setAllCaps(false);
@@ -134,14 +138,14 @@ class UiKit {
         return button;
     }
 
-    static Button action(MainActivity a, String label, int style, Runnable onClick) {
+    static Button action(Activity a, String label, int style, Runnable onClick) {
         Button button = new Button(a);
         button.setText(label);
         button.setAllCaps(false);
         button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         button.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
 
-        if (style == 1) { // Primary DeepSeek Blue
+        if (style == 1) { // Primary accent blue
             button.setTextColor(Color.WHITE);
             button.setBackground(ThemePalette.rounded(a, 
                     ThemePalette.accentPrimary(a),
@@ -173,7 +177,7 @@ class UiKit {
         return button;
     }
 
-    static void styleDialog(MainActivity a, AlertDialog dialog) {
+    static void styleDialog(Activity a, AlertDialog dialog) {
         if (dialog == null) return;
         dialog.setOnShowListener(d -> {
             Window window = dialog.getWindow();

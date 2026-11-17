@@ -320,9 +320,9 @@ export async function dispatchRequest(req, res, context) {
     }
   }
 
-  // Rutas de datos: /dsh-companion/sync y /dsh-companion/absorb-satellite
-  // (escritura) y /dsh-companion/chats y /dsh-companion/chat/:id (lectura) se
-  // despachan en routes-data.mjs, en el mismo orden que tenian aqui.
+  // Rutas de datos: /dsh-companion/sync y /dsh-companion/notes (escritura) y
+  // /dsh-companion/chats y /dsh-companion/chat/:id (lectura) se despachan en
+  // routes-data.mjs, en el mismo orden que tenian aqui.
   if (await handleDataRoutes(req, res, { url, pathname, remoteAddress })) return;
 
   if (pathname === "/dsh-companion/pc-events" && (req.method === "GET" || req.method === "HEAD")) {

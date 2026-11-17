@@ -8,6 +8,9 @@ It is deliberately strict: the assistant must run a real diagnostic, stop and ex
 missing (especially the private tunnel), and tell the user their exact phone URL. A silent
 "done" is a failure.
 
+Current stable version: **5.2.9** (`versionCode` 53); the notes features described below (area
+profiles, due date, local-only notes, encrypted `notes.json`) belong to this release.
+
 Copy everything inside the block into the assistant's chat. A Spanish version follows after it.
 
 ## Agent-installable skill (DeepSeek Harness)
@@ -28,7 +31,8 @@ Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/
 usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
 `mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
 
-El diagnóstico también deja un **recibo verificable**: `doctor.ps1 -Report` escribe
+La versión estable actual es la **5.2.9** (`versionCode` 53). El diagnóstico también deja un
+**recibo verificable**: `doctor.ps1 -Report` escribe
 `doctor-report.json` sin BOM con `apkSha256`, `apkVersion`, `apkVersionCode`, la huella del
 certificado de release (`certSha256Release`) y un `receipt` sha256 sobre el JSON compacto sin el
 propio recibo; antes de dar un informe por bueno, ejecuta
@@ -196,12 +200,15 @@ There is no iOS app. Two supported ways, and do not mix them up:
    *Share → Add to Home Screen*. The full DeepSeek Harness interface runs inside the PWA.
    The phone must be on the same private network (ZeroTier/Tailscale). Background
    notifications are **not** available on iOS: that is a platform limitation, say so.
-2. **Reading and satellite chat (PC off).** The offline reader and the satellite mode are a
-   static PWA that can be hosted on any static host you control: upload
-   `offline.html`, `offline.css`, `offline-reader.css`, `offline-satellite.css`, the three
-   `offline-*.js` files, `manifest.webmanifest` and `icon.svg`. The user opens it on the
-   iPhone, adds it to the home screen, and can read synchronized chats or chat using their own
-   API key. Live chat still requires the PC.
+2. **Reading and local notes (PC off).** The offline reader can show synchronized chats, but the
+   chats are served by the PC: without the PC it only shows what was already synced, so it is not a
+   standalone app and does not replace live chat. **Local notes** are the function that works with
+   the PC off: they are stored only on the phone (encrypted `notes.json`, no account, no API key and
+   no connection), have 7 area profiles with their own types and statuses, an optional due date and
+   a localOnly mode ("Solo en el teléfono") that never leaves the phone. They can be shared with the
+   Android share sheet, and sent to the PC (`synced_chats/notes/`) when the bridge is reachable;
+   resending a note updates it instead of duplicating it, and the PC panel shows the last 10 notes
+   received. Live chat still requires the PC.
 
 ### Public exposure: not supported
 
@@ -363,12 +370,15 @@ Dos caminos que no se deben mezclar:
    *Compartir → Añadir a pantalla de inicio*. La interfaz completa de Harness corre en la PWA.
    El teléfono debe estar en la misma red privada (ZeroTier/Tailscale). **En iOS no hay avisos en
    segundo plano**: dilo claro, es una limitación de la plataforma.
-2. **Lectura y satélite (PC apagada).** El lector offline y el modo satélite son una PWA estática
-   que se puede alojar en cualquier servidor estático propio: sube `offline.html`,
-   `offline.css`, `offline-reader.css`, `offline-satellite.css`, los tres `offline-*.js`,
-   `manifest.webmanifest` e `icon.svg`. Se abre en el iPhone, se añade a pantalla de inicio y
-   permite leer chats sincronizados o chatear con la clave de API del usuario. El chat en vivo
-   sigue necesitando la PC.
+2. **Lectura y notas locales (PC apagada).** El lector offline puede mostrar chats sincronizados,
+   pero los chats los sirve la PC: sin ella solo muestra lo último que se sincronizó, así que no es
+   una app independiente ni sustituye al chat en vivo. **Las notas locales** sí funcionan con la PC
+   apagada: se guardan solo en el teléfono (con `notes.json` cifrado, sin cuenta, sin clave de API y
+   sin conexión), tienen 7 perfiles por área con sus tipos y estados, fecha límite opcional y un
+   modo «Solo en el teléfono» que no sale nunca del teléfono. Se comparten con el selector de
+   Android y se pueden enviar a la PC (`synced_chats/notes/`) cuando el puente está accesible;
+   reenviar una nota la actualiza en vez de duplicarla, y el panel de la PC muestra las últimas 10
+   notas recibidas. El chat en vivo sigue necesitando la PC.
 
 ### Exposición pública: no soportada
 

@@ -4,11 +4,10 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.2.x (current, `versionCode` 51) | Yes — security fixes only |
-| 5.1.x | No (previous series) |
-| 4.5.x and earlier | No |
+| 5.2.9 (current, `versionCode` 53) | Yes — security fixes only |
+| 5.2.8 and earlier | No (previous builds) |
 
-5.2.0 is the frozen stable line: it receives security fixes only, never new features.
+5.2.9 is the current stable version of the 5.2 series.
 
 ## Verifying a build
 
@@ -50,8 +49,8 @@ We will not take legal action against researchers who act in good faith, test on
 
 In scope:
 
-- The bridge (`bridge.mjs`, `src/**`): authentication, authorisation, the panel, the proxy, the WebSocket tunnel, the sync endpoints, the notification watcher.
-- The Android client (`android_src/**`): WebView hardening, stored credentials, notification handling, cleartext policy.
+- The bridge (`bridge.mjs`, `src/**`): authentication, authorisation, the panel, the proxy, the WebSocket tunnel, the sync endpoints, the notification watcher, the phone-notes endpoint and the received-notes inbox.
+- The Android client (`android_src/**`): WebView hardening, stored credentials, notification handling, cleartext policy, the encrypted notes store.
 - The standby page and its assets (`offline*`).
 
 Out of scope:
@@ -66,6 +65,31 @@ Out of scope:
 
 Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device, closes the WebSocket tunnels and rotates the access key. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.
 
+## Local notes (privacy)
+
+Notes are the only content created on the phone itself, so their protection is local first.
+
+- **Encrypted at rest.** `notes.json` is written as `MAGIC + IV + ciphertext` using **AES-256-GCM**
+  with a key held in the **AndroidKeyStore**; the IV is random per write and the GCM tag rejects a
+  tampered file. A plaintext file from an earlier version is migrated to the encrypted format the
+  first time it is read, and a file that cannot be decrypted is kept aside as `notes.json.corrupt`
+  instead of being destroyed.
+- **FLAG_SECURE on the Notes screen.** Screenshots are blocked and the system does not draw note
+  thumbnails in the recent-apps switcher, so a borrowed or lost phone does not leak the notes.
+- **"Solo en el teléfono" (local only).** A note marked this way is never sent: it is excluded from
+  "Send all", it is not serialized in the request payload, and sharing it asks for confirmation.
+- **No Internet egress.** Notes need no account, no API key and no external service; the app does
+  not send note content anywhere except the explicit **Send to PC**, which goes to the bridge over
+  the private network using the existing device cookie.
+- **Idempotent send.** The payload carries the note `id`; the bridge keeps an `id` to file index
+  (`ids.json`) and updates the same `.md` file on a resend, so a retry never creates duplicates. The
+  front matter keeps `id`, `dueDate` and `updatedAt`; the retired `chatTarget` field is ignored even
+  if it arrives.
+- **Bounded and authenticated.** `POST /dsh-companion/notes` requires a paired device with the
+  `full` role or the access key (a `viewer` is read-only), caps the body at 64 KB, requires
+  `Content-Type: application/json` and sanitizes every metadata field. `GET /dsh-companion/notes`
+  returns metadata only (never note bodies) and is also available to a `viewer`.
+
 ## Accepted risks (Riesgos aceptados)
 
 These points from the external audit are deliberate decisions, not pending work. The full
@@ -74,7 +98,7 @@ per-point status is in [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
 | Point | Accepted risk | Why it is accepted | Mitigation in place |
 | --- | --- | --- | --- |
 | P39 | The home-screen widget receiver is `exported="true"`. | Android requires an exported `AppWidgetProvider` that receives `APPWIDGET_UPDATE`; the launcher is another process. It is inherent to AppWidget. | The receiver takes no external extras and no bridge data: it only reads local `SharedPreferences` and paints `RemoteViews`. No permissions of its own, no tokens, no network. |
-| P50 | Some tests assert the injected CSS/markup. | The dependency lives in test code (`verify_injection`, `verify_satellite_and_battery`), never in a production authorization or sanitization path. | If DeepSeek Harness changes its markup, the suite fails loudly instead of silently missing an injection regression. |
+| P50 | Some tests assert the injected CSS/markup. | The dependency lives in test code (`verify_injection`), never in a production authorization or sanitization path. | If DeepSeek Harness changes its markup, the suite fails loudly instead of silently missing an injection regression. |
 | P51 | CSP is applied only to the bridge's own pages and static assets, not to proxied DeepSeek Harness HTML. | Rewriting a third-party app's headers would break it; the proxied response is same-origin authenticated and keeps DSH's own headers. | Own pages get CSP, `X-Frame-Options: DENY` and `X-Content-Type-Options: nosniff`; the proxy does not strip the upstream security headers. |
 | P56 | There is no linter (ESLint or equivalent). | The project has zero npm dependencies on purpose; adding a linter would add a toolchain and a supply chain for no runtime benefit. | `tools/audit-repo.mjs` (syntax, encoding, links, tables, JSON, versions, secrets, 400-line limit) runs in CI; every module also passes `node --check`. |
 
@@ -83,10 +107,10 @@ registro ya no puede corromper el registro real del usuario. Los cuatro puntos a
 mantienen su mitigación; el detalle punto por punto y la evidencia están en
 [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
 
-## APK permissions (5.2.0 review)
+## APK permissions (5.2.9 review)
 
 Every permission declared in `android_src/AndroidManifest.xml` was checked against real code use in
-5.2.0. Nothing was removed that the client actually needs, and nothing is requested "just in case"
+5.2.9. Nothing was removed that the client actually needs, and nothing is requested "just in case"
 at install time.
 
 | Permission | Real use | Decision |

@@ -16,8 +16,8 @@ import java.security.SecureRandom;
  *
  * El objeto `AndroidCompanion` inyectado con addJavascriptInterface queda
  * visible en TODOS los frames del WebView (incluidos los iframes de terceros),
- * así que una página incrustada podía llamar a installUpdate,
- * confirmCriticalApproval o startSatelliteQuery. Este guardián ata el puente a
+ * así que una página incrustada podía llamar a installUpdate o
+ * confirmCriticalApproval. Este guardián ata el puente a
  * un nonce que solo vive en el frame principal:
  *
  *  - WebBridge genera un nonce por navegación principal y lo inyecta como

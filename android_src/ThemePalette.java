@@ -5,6 +5,7 @@
  */
 package com.tintaynodos.dshcompanion;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
@@ -39,11 +40,12 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Paleta de color y helpers visuales derivados del tema.
  */
 class ThemePalette {
-    static int themeMode(MainActivity a) {
-        return a.prefs != null ? a.prefs.getInt("theme_mode", 0) : 0;
+    static int themeMode(Activity a) {
+        if (a == null) return 0;
+        return a.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt("theme_mode", 0);
     }
 
-    static boolean isDark(MainActivity a) {
+    static boolean isDark(Activity a) {
         int m = ThemePalette.themeMode(a);
         if (m == 1) return true;
         if (m == 2) return false;
@@ -51,44 +53,44 @@ class ThemePalette {
                 == Configuration.UI_MODE_NIGHT_YES;
     }
 
-    static int dp(MainActivity a, float value) {
+    static int dp(Activity a, float value) {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, a.getResources().getDisplayMetrics());
     }
 
-    static int color(MainActivity a, int darkValue, int lightValue) {
+    static int color(Activity a, int darkValue, int lightValue) {
         return ThemePalette.isDark(a) ? darkValue : lightValue;
     }
 
-    static int surface(MainActivity a) {
+    static int surface(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#161B22"), Color.parseColor("#FFFFFF"));
     }
 
-    static int raised(MainActivity a) {
+    static int raised(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#21262D"), Color.parseColor("#F6F8FA"));
     }
 
-    static int outline(MainActivity a) {
+    static int outline(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#30363D"), Color.parseColor("#D0D7DE"));
     }
 
-    static int ink(MainActivity a) {
+    static int ink(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#E6EDF3"), Color.parseColor("#1F2328"));
     }
 
-    static int inkDim(MainActivity a) {
+    static int inkDim(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#8B949E"), Color.parseColor("#656D76"));
     }
 
-    /** Acento DeepSeek oficial: azul DeepSeek sobre oscuro, azul intenso sobre claro. */
-    static int accentInk(MainActivity a) {
+    /** Acento de la marca: azul claro sobre oscuro, azul intenso sobre claro. */
+    static int accentInk(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#58A6FF"), Color.parseColor("#0969DA"));
     }
 
-    static int accentPrimary(MainActivity a) {
+    static int accentPrimary(Activity a) {
         return ThemePalette.color(a, Color.parseColor("#1F6FEB"), Color.parseColor("#0969DA"));
     }
 
-    static GradientDrawable rounded(MainActivity a, int fill, int stroke, float radiusDp) {
+    static GradientDrawable rounded(Activity a, int fill, int stroke, float radiusDp) {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setShape(GradientDrawable.RECTANGLE);
         drawable.setColor(fill);
@@ -97,7 +99,7 @@ class ThemePalette {
         return drawable;
     }
 
-    static void applySystemBarsTheme(MainActivity a) {
+    static void applySystemBarsTheme(Activity a) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             Window window = a.getWindow();
             if (window == null) return;

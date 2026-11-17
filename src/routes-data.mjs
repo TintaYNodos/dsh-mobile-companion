@@ -6,17 +6,21 @@
 import { hasValidAccessKey, isCompanionRequestTrusted } from "./crypto.mjs";
 import { isViewer, logReadOnlyRejection, sendReadOnly, touchDevice } from "./devices.mjs";
 import { isJsonRequest, sendJson } from "./http.mjs";
+import { handleNotesRoutes } from "./routes-notes.mjs";
 import { resolveDevice } from "./routes-pairing.mjs";
-import { handleAbsorbSatellite, handleGetChat, handleListChats, handleSync } from "./sync.mjs";
+import { handleGetChat, handleListChats, handleSync } from "./sync.mjs";
 
 /**
- * Rutas de datos del puente: sincronizacion de conversaciones, absorcion de
- * notas satelite y API de solo lectura de conversaciones.
+ * Rutas de datos del puente: sincronizacion de conversaciones, notas del
+ * telefono y API de solo lectura de conversaciones.
  *
  * Se extraen de routes.mjs para que el despachador general no mezcle el control
  * de estado/dispositivos con la persistencia. Devuelve true si atendio la
  * peticion; si devuelve false, routes.mjs sigue con el resto del despacho, en
  * el mismo orden relativo que tenia el bloque original.
+ *
+ * Las notas tienen su propia logica en routes-notes.mjs (validacion de
+ * metadatos, front matter YAML y bandeja para la PC): aqui solo se despachan.
  */
 export async function handleDataRoutes(req, res, { url, pathname, remoteAddress }) {
   /**
@@ -66,30 +70,9 @@ export async function handleDataRoutes(req, res, { url, pathname, remoteAddress 
     return true;
   }
 
-  if (pathname === "/dsh-companion/absorb-satellite") {
-    if (req.method !== "POST") {
-      sendJson(res, 405, { error: "Metodo no permitido" }, { Allow: "POST" });
-      return true;
-    }
-    if (!isJsonRequest(req)) {
-      sendJson(res, 415, { error: "Se requiere Content-Type application/json" });
-      req.resume();
-      return true;
-    }
-    const device = resolveDevice(req, res, remoteAddress);
-    if (device && isViewer(device)) {
-      req.resume();
-      logReadOnlyRejection(device, req.method, pathname);
-      sendReadOnly(res);
-      return true;
-    }
-    if (!device && !hasValidAccessKey(req) && !isCompanionRequestTrusted(req)) {
-      sendJson(res, 401, { error: "Token o credenciales ausentes o invalidos" });
-      return true;
-    }
-    await handleAbsorbSatellite(req, res, remoteAddress);
-    return true;
-  }
+  // Notas del telefono: POST escribe y GET lista (sin cuerpos). Autenticacion,
+  // 415, idempotencia y lectura de la bandeja viven en routes-notes.mjs.
+  if (await handleNotesRoutes(req, res, { pathname, remoteAddress })) return true;
 
   if (pathname === "/dsh-companion/chats") {
     if (req.method !== "GET" && req.method !== "HEAD") {

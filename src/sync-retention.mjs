@@ -11,20 +11,37 @@
 import fs from "node:fs";
 import path from "node:path";
 import { config } from "./config.mjs";
-import { assertInside, readDirSafe, rebuildIndex } from "./sync-index.mjs";
+import { assertInside, readDirSafe, rebuildIndex, writeAtomic } from "./sync-index.mjs";
 
 /* ------------------------------------------------------------------------- *
  * P9: retencion de synced_chats/.
  *
- * Los chats sincronizados y las notas satelite crecian sin limite. Ahora se
+ * Los chats sincronizados y las notas del telefono crecian sin limite. Ahora se
  * podan los mas antiguos (por fecha de modificacion del par .json/.md) cuando
  * se supera cualquiera de los topes configurables, y se reconstruye
  * index.jsonl si falta. Topes: DSH_SYNC_MAX_FILES (200) y
  * DSH_SYNC_MAX_TOTAL_MB (200).
+ *
+ * La bandeja de notas `notes/inbox.jsonl` guarda metadatos en claro para la PC,
+ * asi que tambien se acota: se conservan como maximo las ultimas 500 lineas y
+ * se descartan las no correlacionables (JSON roto o sin `file` valido) y las que
+ * apuntan a un .md que ya no existe (huerfanas de la poda o de un borrado
+ * manual). La poda completa corre en cada sync de chats; ademas, tras escribir
+ * una nota se aplica un modo rapido que solo mira el tope (routes-notes.mjs),
+ * para que usar solo notas tampoco haga crecer la bandeja sin limite.
+ * `notes/ids.json` no se poda nunca.
  * ------------------------------------------------------------------------- */
 
 const DEFAULT_SYNC_MAX_FILES = 200;
 const DEFAULT_SYNC_MAX_TOTAL_MB = 200;
+/** Indice id -> archivo de notes/ (mismo nombre que IDS_FILE_NAME en notes-store.mjs). */
+const NOTES_IDS_FILE = "ids.json";
+/** Subcarpeta de synced_chats/ con las notas del telefono. */
+const NOTES_DIR_NAME = "notes";
+/** Bandeja de metadatos de las notas (mismo nombre que INBOX_FILE_NAME en notes-store.mjs). */
+const NOTES_INBOX_FILE = "inbox.jsonl";
+/** Tope de lineas de la bandeja que se conservan (las mas recientes). */
+const INBOX_MAX_LINES = 500;
 
 /** Lee un tope entero positivo de una variable de entorno, con valor por defecto. */
 const envPositiveInt = (name, fallback) => {
@@ -34,13 +51,17 @@ const envPositiveInt = (name, fallback) => {
 
 /**
  * Agrupa `<id>.json` + `<id>.md` de una carpeta en unidades podables, para no
- * dejar un .json sin su .md al aplicar la retencion.
+ * dejar un .json sin su .md al aplicar la retencion. `skipFiles` protege
+ * archivos que no forman parte del par podable (en notes/ se salta ids.json,
+ * el indice id -> archivo de la idempotencia de notas: si se podara, reenviar
+ * una nota desde el telefono crearia un duplicado).
  */
-const collectChatUnits = async (directory) => {
+const collectChatUnits = async (directory, skipFiles = null) => {
   const units = new Map();
   for (const entry of await readDirSafe(directory)) {
     if (!entry.isFile()) continue;
     if (entry.name === "index.jsonl" || entry.name.includes(".tmp")) continue;
+    if (skipFiles && skipFiles.has(entry.name)) continue;
     const match = /^(.+?)\.(json|md)$/.exec(entry.name);
     if (!match) continue;
     const id = match[1];
@@ -60,17 +81,77 @@ const collectChatUnits = async (directory) => {
 };
 
 /**
+ * Nombre de nota aceptado por la bandeja (mismo criterio que notes-store.mjs):
+ * un .md suelto dentro de notes/, sin rutas ni saltos.
+ */
+const isNoteFileName = (name) =>
+  typeof name === "string" &&
+  name.length > 3 &&
+  name.endsWith(".md") &&
+  !name.includes("/") &&
+  !name.includes("\\") &&
+  !name.includes("..") &&
+  !/[\u0000-\u001f\u007f]/.test(name);
+
+/**
+ * Poda la bandeja de notas. Se queda con las lineas correlacionables (JSON con
+ * un `file` que sigue existiendo) y como maximo las ultimas INBOX_MAX_LINES:
+ * asi los metadatos en claro no se guardan para siempre y la poda de un .md no
+ * deja su linea huerfana. Nunca toca `ids.json`. Devuelve cuantas lineas quito.
+ *
+ * `quick` es el camino que se ejecuta tras cada nota: si la bandeja no supera
+ * el tope termina sin recorrer el disco (la limpieza de huerfanas queda para la
+ * poda completa de `pruneSyncedChats`). Con mas de 500 lineas hace la poda
+ * completa igualmente, para no dejar crecer la bandeja si no hay syncs.
+ */
+const pruneNotesInbox = async (directory, { quick = false } = {}) => {
+  let raw;
+  try {
+    raw = await fs.promises.readFile(assertInside(directory, NOTES_INBOX_FILE), "utf8");
+  } catch {
+    return 0; // sin bandeja (o sin notes/): no hay nada que podar
+  }
+  const lines = raw.split("\n").filter((line) => line.trim() !== "");
+  if (quick && lines.length <= INBOX_MAX_LINES) return 0;
+  const alive = [];
+  for (const line of lines) {
+    let record;
+    try {
+      record = JSON.parse(line);
+    } catch {
+      continue; // linea corrupta: no es correlacionable ni se puede validar
+    }
+    if (record === null || typeof record !== "object" || Array.isArray(record)) continue;
+    if (!isNoteFileName(record.file)) continue;
+    let exists = false;
+    try {
+      exists = (await fs.promises.stat(assertInside(directory, record.file))).isFile();
+    } catch {
+      exists = false;
+    }
+    if (exists) alive.push(line);
+  }
+  const kept = alive.slice(-INBOX_MAX_LINES);
+  const contents = kept.length === 0 ? "" : `${kept.join("\n")}\n`;
+  if (contents !== raw) await writeAtomic(assertInside(directory, NOTES_INBOX_FILE), contents);
+  return lines.length - kept.length;
+};
+
+/**
  * P9: poda los chats y notas mas antiguos si se superan los topes. Devuelve
- * cuantas unidades elimino. Incluye satellite_notes/ para que el tope de MB
- * cubra toda la carpeta, no solo la conversacion.
+ * cuantas unidades elimino. Incluye synced_chats/notes/ para que los topes de
+ * archivos y de MB cubran tambien las notas escritas desde el telefono. Al
+ * final poda siempre la bandeja de notas (independiente de los topes): es la
+ * unica copia de metadatos en claro y no debe crecer sin limite.
  */
 export const pruneSyncedChats = async () => {
   const maxFiles = envPositiveInt("DSH_SYNC_MAX_FILES", DEFAULT_SYNC_MAX_FILES);
   const maxTotalBytes = envPositiveInt("DSH_SYNC_MAX_TOTAL_MB", DEFAULT_SYNC_MAX_TOTAL_MB) * 1024 * 1024;
 
+  const notesDir = path.join(config.syncDir, NOTES_DIR_NAME);
   const units = [
     ...(await collectChatUnits(config.syncDir)),
-    ...(await collectChatUnits(path.join(config.syncDir, "satellite_notes"))),
+    ...(await collectChatUnits(notesDir, new Set([NOTES_IDS_FILE]))),
   ];
   units.sort((a, b) => a.mtimeMs - b.mtimeMs || a.id.localeCompare(b.id));
 
@@ -98,6 +179,7 @@ export const pruneSyncedChats = async () => {
   }
 
   if (removed > 0) await rebuildIndex();
+  await pruneNotesInbox(notesDir);
   return removed;
 };
 
@@ -107,5 +189,17 @@ export const pruneSyncedChatsSafe = async () => {
     await pruneSyncedChats();
   } catch (error) {
     console.error(`[sync] No se pudo aplicar la retencion de synced_chats: ${error.message}`);
+  }
+};
+
+/**
+ * Se llama tras escribir una nota (routes-notes.mjs): mantiene acotada la
+ * bandeja aunque no haya syncs de chats, sin tumbar la escritura ya hecha.
+ */
+export const capNotesInboxSafe = async () => {
+  try {
+    await pruneNotesInbox(path.join(config.syncDir, NOTES_DIR_NAME), { quick: true });
+  } catch (error) {
+    console.error(`[notes] No se pudo acotar ${NOTES_INBOX_FILE}: ${error.message}`);
   }
 };

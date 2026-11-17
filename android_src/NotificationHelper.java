@@ -112,7 +112,7 @@ public final class NotificationHelper {
         );
 
         String notifTitle = "DSH: Respuesta lista";
-        if (title != null && !title.trim().isEmpty() && !title.equalsIgnoreCase("DeepSeek Harness")) {
+        if (title != null && !title.trim().isEmpty() && !title.equalsIgnoreCase(context.getString(R.string.app_name))) {
             notifTitle = "Respuesta lista · " + title;
         }
 
@@ -194,7 +194,7 @@ public final class NotificationHelper {
 
         String target = (bunkerLabel != null && !bunkerLabel.trim().isEmpty()) ? bunkerLabel : "la computadora";
         String title = "Conexión perdida con " + target;
-        String body = "Sin conexión con DeepSeek Harness desde hace más de " + disconnectedMinutes + " minutos. Verifica que la PC y la red VPN sigan encendidas.";
+        String body = "Sin conexión con DSH desde hace más de " + disconnectedMinutes + " minutos. Verifica que la PC y la red VPN sigan encendidas.";
 
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

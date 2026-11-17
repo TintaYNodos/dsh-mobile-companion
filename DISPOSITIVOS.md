@@ -137,7 +137,7 @@ Content-Type: application/json
 Y queda registrada en `bridge.log` sin secretos. Se rechazan:
 
 - `POST /dsh-companion/sync` (escribe conversaciones en el disco del host).
-- `POST /dsh-companion/absorb-satellite` (escribe notas satélite).
+- `POST /dsh-companion/notes` (escribe las notas locales del teléfono en `synced_chats/notes/`).
 - `POST /dsh-companion/notification-action` y `POST /dsh-companion/action`
   (aprobar/rechazar dispositivos).
 - `POST /dsh-companion/kill-switch`.

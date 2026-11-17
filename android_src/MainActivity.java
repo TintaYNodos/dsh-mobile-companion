@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
- * Cliente movil de DeepSeek Harness.
+ * Cliente movil de DSH Companion.
  *
  * La interfaz es la propia aplicacion web servida por el puente; esta clase solo
  * aporta el contenedor nativo: endurecimiento del WebView, reconexion automatica
@@ -55,7 +55,7 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * El resto de responsabilidades vive en clases hermanas del mismo paquete:
  * WebViewSetup/CompanionWebViewClient/CompanionChromeClient, ConnectionController,
  * Discovery, PillUi, BannerUi, HubSheet, SettingsScreen, PcDialogs, PcRegistryStore,
- * UpdateInstaller, BiometricGate, WebBridge, SatelliteUi, KillSwitchUi y demas.
+ * UpdateInstaller, BiometricGate, WebBridge, NotesActivity, KillSwitchUi y demas.
  */
 public class MainActivity extends Activity {
 
@@ -152,9 +152,6 @@ public class MainActivity extends Activity {
     }
     public void downloadAndInstallApk() { UpdateInstaller.downloadAndInstallApk(this); }
     public void sendWakeOnLan(String macAddress) { WakeOnLan.sendWakeOnLan(this, macAddress); }
-    public void dispatchSatelliteChunk(String chunk) { SatelliteUi.dispatchSatelliteChunk(this, chunk); }
-    public void dispatchSatelliteComplete(String fullText) { SatelliteUi.dispatchSatelliteComplete(this, fullText); }
-    public void dispatchSatelliteError(String error) { SatelliteUi.dispatchSatelliteError(this, error); }
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -165,6 +162,13 @@ public class MainActivity extends Activity {
         // apliquen solas al actualizar (el receptor que las usaba ya no existe).
         if (prefs.contains("pending_action_decision") || prefs.contains("pending_action_id")) {
             prefs.edit().remove("pending_action_decision").remove("pending_action_id").apply();
+        }
+        // 5.2.8: el antiguo modo de consulta en la nube se retiró del cliente. Su
+        // almacén legacy "dsh_secure_vault" solo guardaba la clave de ese modo;
+        // se borra en la primera apertura para no dejar el valor cifrado.
+        SharedPreferences legacyVault = getSharedPreferences("dsh_secure_vault", MODE_PRIVATE);
+        if (!legacyVault.getAll().isEmpty()) {
+            legacyVault.edit().clear().apply();
         }
         int themeRes = ThemePalette.isDark(this) ? R.style.Theme_Companion : R.style.Theme_Companion_Light;
         setTheme(themeRes);

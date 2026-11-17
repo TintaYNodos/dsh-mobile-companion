@@ -3,6 +3,102 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.2.9 — `versionCode` 53
+
+Actualización de producto de la serie 5.2: **Notas** pasa a ser la función central del teléfono.
+Se retira el campo de chat de destino (no entregaba nunca al chat) y entran **siete perfiles
+declarativos**, la fecha límite, la privacidad local y una bandeja de notas recibidas en el panel.
+
+### Añadido
+
+- **7 perfiles declarativos de nota**: General, Escritor, Programador, Docente, Periodista,
+  Jurídico y Diseño. Cada perfil aporta sus tipos, sus estados y la etiqueta de los campos propios
+  (Materia/Grupo o alumno; Caso o tema/Fuente; Expediente/Cliente; Cliente/Proyecto;
+  Obra/Personaje; Proyecto/Módulo o archivo; Proyecto/Detalle).
+- **Fecha límite (`dueDate`)**: selector de fecha, orden por vencimiento y filtros «Con fecha» y
+  «Prioridad».
+- **Bandeja «Notas recibidas» en el panel de la PC**: las últimas 10 notas, en solo lectura.
+- **`GET /dsh-companion/notes`**: metadatos de las notas recibidas (sin cuerpos) para la bandeja.
+- **Marca «Solo en el teléfono»**: la nota no se envía nunca, queda fuera de «Enviar todas» y
+  compartirla pide confirmación.
+- **Cifrado en reposo de `notes.json`** con AES-256-GCM y una clave del AndroidKeyStore.
+- **FLAG_SECURE en Notas**: sin capturas de pantalla y sin miniaturas en el selector de recientes.
+
+### Cambiado
+
+- **Se retira el chat de destino**: desaparece de la interfaz, del payload y del puente. El puente
+  ignora el campo `chatTarget` si llega, y el nombre del archivo ya no lleva prefijo de chat.
+- **Nota de solo título**: se puede enviar una nota sin cuerpo.
+- **Idempotencia por `id`**: reenviar una nota actualiza el mismo archivo en la PC en vez de
+  duplicarlo.
+- **Front matter**: incluye `id`, `dueDate` y `updatedAt`; sin `chatTarget`.
+- **Búsqueda sin acentos ni mayúsculas** (`garcia` encuentra `García`) y filtros por perfil, tipo,
+  estado, proyecto y prioridad.
+
+### Corregido
+
+- Enviar una nota ya no deja dos archivos ni dos líneas en la bandeja de la PC.
+- La nota que no se puede enviar se queda en el teléfono con un aviso que distingue el motivo (sin
+  PC, sesión rechazada, nota rechazada, red).
+- «Enviar todas» excluye las notas marcadas «Solo en el teléfono».
+
+### Privacidad
+
+- `notes.json` cifrado en reposo (AES-256-GCM, AndroidKeyStore); los archivos en texto plano de
+  versiones anteriores se migran al leerlos.
+- **FLAG_SECURE** en la pantalla de Notas.
+- **«Solo en el teléfono»**: sin envío, fuera de «Enviar todas» y compartir pide confirmación.
+- Las notas no hacen peticiones a Internet ni guardan cuentas ni claves de API.
+
+### Accesibilidad
+
+- Editor desplazable con el teclado abierto.
+- Objetivos táctiles de 48 dp o más e insignias con contraste AA.
+- Los chips anuncian la selección a TalkBack y el autoguardado usa una región viva.
+- Tarjetas con descripción accesible y título de 2 líneas.
+
+### Notas
+
+- Se instala **encima de la 5.2.8** (`versionCode` 52) sin desinstalar; la firma no cambia desde la
+  5.1.7.
+- **La serie 5.2 continúa**: esta versión cambia producto, no solo seguridad.
+- Los adjuntos y los recordatorios del sistema operativo quedan para después.
+
+## 5.2.8 — `versionCode` 52
+
+Actualización de producto de la serie 5.2: **se retira el modo satélite** (el chat en la nube que
+solo funcionaba con la PC encendida) y entran las **notas locales**, que funcionan con la PC
+apagada, sin Internet y sin clave de API.
+
+### Eliminado
+
+- **Modo satélite completo**: la pestaña de la página offline, su cliente Android
+  (`CloudSatelliteClient`, `SatelliteUi`), sus estilos y su JS de la página offline y el panel de
+  ajustes que configuraba la clave.
+- **La clave de API de DeepSeek en el teléfono**: el almacén cifrado que la guardaba y el único
+  tráfico del dispositivo a `api.deepseek.com`.
+- **La ruta `POST /dsh-companion/absorb-satellite`** y el almacén `satellite_notes/` del puente.
+- La pestaña de satélite en la página offline: queda con **Estado** y **Lector**.
+
+### Añadido
+
+- **Notas locales**: se guardan solo en el teléfono, se crean, editan, borran y comparten con el
+  selector de Android; funcionan con la PC apagada, sin Internet y sin clave de API.
+- **Envío a la PC**: con el puente accesible, *Enviar a la PC* escribe la nota en
+  `synced_chats/notes/` de la computadora. Con la PC apagada la nota permanece en el teléfono.
+
+### Seguridad
+
+- Fuera el **único tráfico del teléfono a `api.deepseek.com`** y fuera el **almacén de esa clave**:
+  el dispositivo ya no guarda credenciales de terceros.
+- El **lector offline de chats** sigue necesitando la PC: los chats los sirve el puente.
+
+### Notas
+
+- Se instala **encima de la 5.2.0** (`versionCode` 51) sin desinstalar; la clave de API que hubiera
+  guardada se borra al actualizar.
+- La **serie 5.2 continúa**: esta versión cambia producto, no solo seguridad.
+
 ## 5.2.1 — parche de seguridad (solo puente; APK 5.2.0 / versionCode 51)
 
 ### Seguridad

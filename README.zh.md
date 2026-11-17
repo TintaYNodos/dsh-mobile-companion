@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.1-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-235%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-222%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-387%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.2.1**（桥接；APK **5.2.0**，`versionCode` 51）。
+当前版本：**5.2.9**（桥接与 APK，`versionCode` 53）。
 
 ---
 
@@ -56,10 +56,8 @@ companion/
 ├── offline.html               待机屏幕外壳
 ├── offline.css                基础布局、主题与标签页
 ├── offline-reader.css         编辑式阅读器与会话详情
-├── offline-satellite.css      卫星区块
 ├── offline-core.js            共享状态、连接状态、导航
 ├── offline-reader.js          离线阅读器、列表、详情、阅读模式
-├── offline-satellite.js       卫星交接（发送、分块、完成）
 ├── src/
 │   ├── config.mjs             集中配置与上限
 │   ├── log.mjs                带时间戳的日志记录器
@@ -103,9 +101,9 @@ companion/
 │   ├── PcEventsService.java   用于电脑通知的前台服务
 │   ├── NotificationHelper.java, NotificationChannels.java, NotificationsPc.java
 │   ├── KeyStoreVault.java     使用 Android Keystore 加密存储的密钥
-│   └── …                      发现、遥测、卫星、WOL、小组件
+│   └── …                      发现、遥测、本地笔记、WOL、小组件
 ├── test/
-│   ├── verify_*.mjs           十四个验证套件（235 项检查）
+│   ├── verify_*.mjs           十七个验证套件（387 项检查）
 │   ├── _harness.mjs           共享客户端
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              已持久化的会话（.md 与 .json）
@@ -150,10 +148,8 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 两种等效方式：
 
-- **原生应用：** 从 *Releases* 区域安装 `DSH-Companion.apk`。多电脑选择器、自动重连、前台通知服务、生物识别锁。约 222 KB，零第三方依赖：纯净、可复现的 Java，一个资源图标和主题。
+- **原生应用：** 从 *Releases* 区域安装 `DSH-Companion.apk`。多电脑选择器、自动重连、前台通知服务、生物识别锁。约 262 KB，零第三方依赖：纯净、可复现的 Java，一个资源图标和主题。
 - **无需安装任何东西：** 在浏览器中打开 `http://<VPN_IP>:57420`，选择“添加到主屏幕”。
-
-`/m` 会永久重定向到 `/`：旧的卫星模式已退役，改用真实界面。
 
 ---
 
@@ -208,6 +204,8 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 - `GET /offline` — Harness 启动期间的待机页面，以及离线编辑式阅读器。
 - `GET /dsh-companion/status` — `{ service, version, status, dshOnline, targetPort, apkVersion, apkVersionCode, requestAttempts, time }`。匿名调用者只会得到这一最小结构；`apkSha256`、设备列表、待处理列表与遥测需要授权。
 - `POST /dsh-companion/sync` — 将会话以 Markdown 和 JSON 保存到 `synced_chats/`。
+- `POST /dsh-companion/notes` — 把手机发送的笔记以 Markdown 保存到 `synced_chats/notes/`；带 `id` 时重发会更新同一文件（幂等）。
+- `GET /dsh-companion/notes` — 已接收笔记的元数据（不含正文），供面板收件箱使用。
 - `GET /dsh-companion/chats` — 已同步会话的索引。
 - `GET /dsh-companion/chat/:id` — 会话内容（JSON，或带 `?format=md` 时返回 Markdown）。
 - `GET /dsh-companion/pc-events` — Server-Sent Events 流，在电脑上某一轮结束时发出 `response-finished`。
@@ -228,7 +226,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 - **Enter 行为。** 默认情况下 Enter 插入换行；“Enter 发送”会反转该行为。它通过 `execCommand` 针对 Lexical 实现，这是输入框唯一接受的写入方式。
 - **PC 通知。** 启用前台服务后，电脑上某一轮结束时，手机就会收到通知，**即使应用已关闭**。桥接服务监视会话日志，并在 `turn/end` 记录上触发：无论模型或工具暂停多久，每一轮都只发一条通知。
 - **前台通知渠道、关键渠道和审批渠道。** 关键通知（终止开关结果、访问被撤销）始终显示，绕过“仅在隐藏时”的过滤。
-- **生物识别门禁**、支持扫码和手动输入的多电脑选择器、Wake-on-LAN、遥测胶囊、卫星交接、系统小组件。
+- **生物识别门禁**、支持扫码和手动输入的多电脑选择器、Wake-on-LAN、遥测胶囊、本地笔记（按领域划分的 7 种配置、期限、仅限手机笔记）、系统小组件。
 
 ---
 
@@ -263,9 +261,9 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.2.0**、`versionCode`  51、`minSdk` 26、`targetSdk` 35。
-- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 222 KB。
-- **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、DeepSeek）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
+- `DSH-Companion.apk` — 版本 **5.2.9**、`versionCode` 53、`minSdk` 26、`targetSdk` 35。
+- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 262 KB。
+- **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、用于检查更新）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
 - 麦克风访问仅限堡垒节点的精确来源（协议、主机和端口）。
 - 导航限制在堡垒节点来源内；外部链接交给系统选择器处理。
@@ -303,13 +301,67 @@ apksigner verify --print-certs DSH-Companion.apk
 npm test
 ```
 
-十四个套件、**235 项检查**（其中 201 项在 CI 运行），覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、卫星交接、设备注册表 TTL、面板流程以及终止开关。
+
+十七个套件、**387 项检查**（其中 313 项在 CI 运行），覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、本地笔记、设备注册表 TTL、面板流程以及终止开关。
 
 套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
 ---
 
-> **卫星模式（可选）：** 离线页面可以使用你在手机上配置的 API 密钥把对话发送到 `api.deepseek.com`。这是唯一离开你私有网络的功能；它是可选的、需要该密钥，并且自 5.1.0 起只能由堡垒机的主框架触发。
+## 本地笔记
+
+笔记**只保存在手机上**，在电脑关机、没有网络时也能使用。不需要账户、API 密钥或连接：可在
+应用中创建、编辑和删除，并通过 Android 分享菜单分享。当桥接可访问时，**发送到电脑**会把
+笔记保存到电脑上的 `synced_chats/notes/`；如果电脑已关机，笔记仍留在手机上，可稍后再发送。
+
+### 按领域划分的配置
+
+每条笔记选择一个配置：配置决定它的类型和状态，以及两个专有字段（项目、人物/模块）的标签。
+
+| 配置 | 专有字段 | 类型 | 状态 |
+| --- | --- | --- | --- |
+| **通用** | 项目 · 详情 | 笔记 | — |
+| **作家** | 作品 · 人物 | 人物、场景、情节、对话、校对、调研、灵感 | 灵感、草稿、审阅、已完成 |
+| **程序员** | 项目 · 模块或文件 | 缺陷、改进、重构、任务、决策、灵感 | 未解决、已修复、已验证 |
+| **教师** | 科目 · 班级或学生 | 课程、活动、考试、评分标准、观察、素材 | 草稿、就绪、已应用、已评分、已归档 |
+| **记者** | 案件或主题 · 信息源 | 线索、访谈、文章、调研、校对、灵感 | 未解决、进行中、审阅、已发布、已归档 |
+| **法务** | 案卷 · 客户 | 文书、证据、期限、庭审、合同、调研、笔记 | 未解决、进行中、审阅、已提交、已完成 |
+| **设计** | 客户 · 项目 | 委托、概念、线框图、效果图、素材、反馈、笔记 | 灵感、草稿、审阅、已批准、已交付 |
+
+除类型和状态外，每条笔记还带有**标签**、**优先级**（低、中、高）以及可选的**期限**（用日期
+选择器设置）。列表可以**按到期时间排序**（有日期的在前，由近到远），**“有日期”**和
+**“优先级”**筛选器可缩小视图。搜索**不区分重音和大小写**：`garcia` 能找到 `García`。
+
+### 隐私
+
+- `notes.json` 以 **AES-256-GCM** 和 **AndroidKeyStore** 密钥**静态加密**存储；旧版本的明文
+  文件会在首次读取时迁移为加密存储。
+- 笔记界面使用 **FLAG_SECURE**：无法截屏，最近任务中也不会出现笔记缩略图。
+- 笔记可以标记为 **“Solo en el teléfono”**（仅限手机）：永不发送，不包含在“全部发送”中，
+  分享时会要求确认。
+- 笔记从不与互联网通信：没有账户、没有 API 密钥、没有对外部服务的请求。只有你点按
+  “发送到 PC”时，笔记才会通过私有网络离开手机。
+
+### 发送到电脑与收件箱
+
+**发送到 PC** 会把笔记写入 `synced_chats/notes/`，其 front matter 包含 `id`、`dueDate` 和
+`updatedAt`，以及配置、类型、项目、人物/模块、标签、状态和优先级。发送按 **`id` 幂等**：
+重发同一笔记会更新电脑上的同一文件，而不是生成副本。允许**只有标题的笔记**（正文可为空），
+发送永不会删除手机上的任何内容。笔记不绑定任何会话：发送只是把文件留在电脑上。
+
+PC 面板有一个 **“Notas recibidas”（已接收笔记）** 收件箱，显示**最近 10 条笔记**，
+**只读**（标题、类型、项目和日期）。不含正文的完整元数据列表可通过
+`GET /dsh-companion/notes` 获取。
+
+### 无障碍
+
+- 编辑器在键盘打开时**可滚动**，正文输入框不会被遮挡。
+- 触控目标 **≥48 dp**，徽章满足 **AA** 对比度。
+- 选项芯片会向 **TalkBack** 宣布所选选项，**自动保存**使用实时区域。
+- 每张卡片都有**无障碍描述**，标题在截断前显示 **2 行**。
+
+**聊天离线阅读器**仍然需要电脑：同步的聊天由桥接提供。旧的云端聊天模式只能在电脑开机时
+工作，因此已在 5.2.8 移除；本地笔记无需依赖电脑即可承担这一用途。
 
 ## 坦诚的局限
 
@@ -329,7 +381,7 @@ npm test
 
 ## 稳定性
 
-**5.2.0 是 5 系列的稳定版。** 这是冻结基线：只接受安全修复，不再添加新功能。`stable/5` 分支保存此版本树。5.1.x 为上一版本线。
+**5.2.9 是 5.2 系列的当前稳定版。** `stable/5` 分支保存此版本树；5.1.x 为上一版本线。
 
 ## 截图
 

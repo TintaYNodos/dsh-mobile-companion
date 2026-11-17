@@ -6,7 +6,7 @@ máquina limpia y auditoría estática del APK. Cada bloque se pega tal cual; in
 reglas y los entregables, así que no hace falta explicar nada más.
 
 Repositorio público: <https://github.com/TintaYNodos/dsh-mobile-companion> · Versión estable:
-**5.2.0** (versionCode 51) · Licencia: Business Source License 1.1 (ver [LICENSE](LICENSE)).
+**5.2.9** (versionCode 53) · Licencia: Business Source License 1.1 (ver [LICENSE](LICENSE)).
 
 Antes de pegar:
 
@@ -16,7 +16,7 @@ Antes de pegar:
 - Las reglas de los tres prompts incluyen lo mismo: **nada de secretos**, nada de datos reales de
   terceros, nada de exponer el puente a Internet y ningún cambio destructivo. El auditor no necesita
   la clave de acceso ni el token del panel para auditar el código.
-- Los prompts se escribieron para el árbol de la **5.2.0**; si el repo ya tiene una serie posterior,
+- Los prompts se escribieron para el árbol de la **5.2.9**; si el repo ya tiene una serie posterior,
   indícalo en el chat y pide que anote el commit auditado.
 
 ## Prompt 1 — Auditoría de seguridad y adversarial del puente y del APK
@@ -25,13 +25,13 @@ Antes de pegar:
 Eres un auditor de seguridad externo. Audita el proyecto DSH Mobile Companion, un puente local en
 Node.js (cero dependencias de npm) más un cliente Android WebView y páginas offline. Repositorio
 público: https://github.com/TintaYNodos/dsh-mobile-companion (rama main; la versión estable es la
-5.2.0, versionCode 51).
+5.2.9, versionCode 53).
 
 CONTEXTO QUE DEBES VERIFICAR EN EL CÓDIGO, NO SUPONER
 - El puente (bridge.mjs y src/**) se enlaza SOLO a la IP privada del operador (ZeroTier, Tailscale,
   etc.) en el puerto 57420. El teléfono entra por esa red privada: http://<IP-PRIVADA>:57420. El
   puente NUNCA se expone a Internet: no hay port forwarding, DNS público ni túnel público detrás.
-  En 5.2.0 el panel de aprobación escucha únicamente en 127.0.0.1:57421.
+  En 5.2.9 el panel de aprobación escucha únicamente en 127.0.0.1:57421.
 - El backend real es DeepSeek Harness en 127.0.0.1 (puerto autodetectado); el puente actúa de proxy
   HTTP/WebSocket autenticado hacia él.
 - Autenticación: clave de acceso compartida por HTTP Basic + cookie de dispositivo obtenida mediante
@@ -64,7 +64,23 @@ QUÉ REVISAR COMO MÍNIMO
   cabeceras de proxy; upgrades WebSocket; contrabando de peticiones (Content-Length +
   Transfer-Encoding); límites de cuerpo y de frecuencia; inyección en logs; confinamiento de rutas en
   synced_chats/; saneamiento de contenido; rutas estáticas y simulador; proxy hacia Harness; rutas de
-  notificaciones y aprobaciones; kill switch; sync y absorb-satellite.
+  notificaciones y aprobaciones; kill switch; sync; notas locales.
+- **Notas locales (5.2.9):** nota de solo título (cuerpo vacío) escrita como Markdown válido; front
+  matter con `id`, `dueDate` y `updatedAt`, sin `chatTarget`; reenvío con el mismo `id` actualiza el
+  MISMO archivo (idempotencia por `ids.json`) y no duplica la línea de `inbox.jsonl`; `GET
+  /dsh-companion/notes` devuelve solo metadatos (nunca cuerpos), ordena por recepción y respeta los
+  roles (un `viewer` lee pero no escribe; sin credencial, 403); límite de 64 KB y `Content-Type`
+  JSON; los 7 perfiles por área (General, Escritor, Programador, Docente, Periodista, Jurídico,
+  Diseño) con sus tipos y estados; validación de etiquetas y metadatos; el puente ignora
+  `chatTarget` si llega (campo retirado); `notes.json` cifrado en reposo con AES-256-GCM y clave del
+  AndroidKeyStore, con migración del texto plano y respaldo del archivo dañado; FLAG_SECURE en la
+  pantalla de Notas (sin capturas ni miniaturas); la marca «Solo en el teléfono» implica que la nota
+  no se envía nunca, no se serializa en el payload y queda fuera de «Enviar todas»; compartir una
+  nota `localOnly` pide confirmación.
+- **Retirada del modo anterior:** comprueba que la ruta `POST /dsh-companion/absorb-satellite` y el
+  almacén `satellite_notes/` ya no existen, que no queda cliente ni pestaña del modo retirado, y que
+  el teléfono **no guarda ninguna clave de API de DeepSeek**: no hay almacén, ni ajuste, ni tráfico a
+  `api.deepseek.com`.
 - Resistencia adversarial: bypass de la guarda de red por IP/CIDR, confusión de identidad
   loopback/proxy, robo de cookie, carrera entre revocación y petición en curso, DoS por rutas caras,
   filtrado de información en respuestas anónimas, comportamiento fail-open en errores.
@@ -96,7 +112,7 @@ ENTREGABLES
 Eres un evaluador de onboarding. Tu objetivo es comprobar si una persona puede instalar y verificar
 DSH Mobile Companion en una máquina limpia siguiendo SOLO la documentación pública, y medir la
 fricción real. Repositorio público: https://github.com/TintaYNodos/dsh-mobile-companion (rama main;
-versión estable 5.2.0, versionCode 51).
+versión estable 5.2.9, versionCode 53).
 
 CONTEXTO
 - Producto: puente local en Node.js (cero dependencias) + cliente Android WebView + páginas offline.
@@ -151,7 +167,7 @@ ENTREGABLES
 
 ```text
 Eres un auditor estático de aplicaciones Android. Audita el APK publicado de DSH Mobile Companion
-(versión estable 5.2.0, versionCode 51), un cliente WebView ligero que se conecta a un puente local
+(versión estable 5.2.9, versionCode 53), un cliente WebView ligero que se conecta a un puente local
 dentro de una red privada. Repositorio público con el código fuente:
 https://github.com/TintaYNodos/dsh-mobile-companion (rama main).
 
@@ -166,7 +182,7 @@ ARTEFACTO
   Si no coincide, es un hallazgo crítico: detente y repórtalo sin instalar el APK.
 
 BASELINE ESPERADO (verifícalo contra el APK y contra android_src/AndroidManifest.xml del repo)
-- Paquete: com.tintaynodos.dshcompanion; versionName 5.2.0; versionCode 51; minSdk 26; targetSdk 35.
+- Paquete: com.tintaynodos.dshcompanion; versionName 5.2.9; versionCode 53; minSdk 26; targetSdk 35.
 - allowBackup="false". Sin bibliotecas de terceros: Java puro, sin AndroidX ni Kotlin; no debe
   empaquetar .so nativos ni SDKs de anuncios/analítica.
 - Permisos declarados en el manifiesto del repo: INTERNET, ACCESS_NETWORK_STATE, RECORD_AUDIO,
@@ -178,8 +194,16 @@ BASELINE ESPERADO (verifícalo contra el APK y contra android_src/AndroidManifes
   AppWidgetProvider, riesgo aceptado y documentado); FileProvider exportado=false con
   grantUriPermissions.
 - Red: networkSecurityConfig presente y tráfico en claro limitado a la red privada/loopback; no debe
-  haber destinos públicos más allá de los documentados por la app (actualizaciones desde el puente y
-  servicios de DeepSeek); sin contenido mixto ni archivos locales en el WebView.
+  haber destinos públicos más allá de las actualizaciones del APK (desde el puente o GitHub); sin
+  contenido mixto ni archivos locales en el WebView.
+- **Retirada del modo anterior:** el APK no debe contener clases, recursos ni preferencias del modo
+  retirado ni ninguna clave de API de terceros. La búsqueda de `absorb-satellite` y de
+  `api.deepseek.com` en el APK y en `android_src/` debe salir vacía, y no debe quedar ningún almacén
+  de claves que no sea el de las claves de acceso a los equipos.
+- **Notas locales:** `notes.json` dentro del directorio privado de la app debe estar cifrado en
+  reposo (AES-256-GCM con clave del AndroidKeyStore) y no debe leerse como JSON plano; la pantalla
+  de Notas debe aplicar FLAG_SECURE; no debe haber tráfico de notas a Internet ni almacén de claves
+  de API.
 
 REGLAS (obligatorias)
 - Solo análisis estático y local del APK y del código. No instales el APK en un dispositivo ajeno ni
@@ -199,6 +223,9 @@ QUÉ REVISAR
    depuración remota, contenido mixto, navegación externa).
 7. Evidencia de la política de almacenamiento de credenciales (Keystore) y de la actualización del
    APK.
+8. Notas locales: cifrado en reposo de `notes.json`, migración desde texto plano, FLAG_SECURE en la
+   actividad de Notas, ausencia de salidas a Internet y ausencia del campo retirado `chatTarget` en
+   el payload de envío.
 
 ENTREGABLES
 1. Tabla de componentes: nombre, exported, intent-filters, propósito declarado, riesgo.

@@ -1,5 +1,9 @@
 # Pruebas del puente y del cliente
 
+Documento de la versión bajo prueba: **5.2.9** (`versionCode` 53). El contrato de notas que
+describen estas suites (nota de solo título, idempotencia por `id`, bandeja `inbox.jsonl` y
+`GET /dsh-companion/notes`) es el de esta release.
+
 Hay dos formas de ejecutar las pruebas, con propósitos distintos:
 
 1. **Suite completa, manual**, contra **una instancia real del puente en marcha**
@@ -102,7 +106,8 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
 | `verify_access_key.mjs` | Clave de acceso, origen cruzado y pantalla de espera. | No (basta el doble) |
 | `verify_registry_safety.mjs` | Registro de dispositivos ilegible/ausente. | No |
 | `verify_bridge.mjs` | Proxy, sync, chats, cabeceras y frontera de origen. | No (basta el doble) |
-| `verify_satellite_and_battery.mjs` | CSS, batería y persistencia de notas satélite. | No |
+| [verify_notes.mjs](verify_notes.mjs) | Ruta de notas del teléfono: autorización, límites de cuerpo, nota de solo título, escritura Markdown con front matter (`id`, `dueDate`, `updatedAt`) en `synced_chats/notes/`, idempotencia por `id` con `ids.json`, bandeja `inbox.jsonl`, `GET /dsh-companion/notes`, traversal, unicidad y retención. | No (arranca su propio puente aislado) |
+| [verify_battery_and_landscape.mjs](verify_battery_and_landscape.mjs) | CSS de paisaje, batería de `system-stats` y navegación de `offline.html`. | No |
 | `verify_subagente_a.mjs` | QR, temas, barra de teclas y rutas retiradas. | No |
 | `verify_panel.mjs` | Aprobación, cookie de dispositivo y revocación. | No (basta el doble) |
 

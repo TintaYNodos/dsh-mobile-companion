@@ -198,12 +198,12 @@ try {
   });
   check("viewer rechazado en /sync", viewerSync.status === 403 && viewerSync.body.includes("dispositivo en solo lectura"), `status=${viewerSync.status}`);
 
-  const viewerAbsorb = await request(bridge.bridgePort, "/dsh-companion/absorb-satellite", {
+  const viewerNotes = await request(bridge.bridgePort, "/dsh-companion/notes", {
     method: "POST",
     headers: { cookie: cookieOf(viewer), "content-type": "application/json" },
-    body: '{"satelliteId":"demo","messages":[]}',
+    body: '{"title":"demo","body":"no debe escribirse"}',
   });
-  check("viewer rechazado en absorb-satellite", viewerAbsorb.status === 403 && viewerAbsorb.body.includes("dispositivo en solo lectura"), `status=${viewerAbsorb.status}`);
+  check("viewer rechazado en notes", viewerNotes.status === 403 && viewerNotes.body.includes("dispositivo en solo lectura"), `status=${viewerNotes.status}`);
 
   const viewerKill = await request(bridge.bridgePort, "/dsh-companion/kill-switch", {
     method: "POST",

@@ -115,7 +115,7 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6 `
+  --expect-apk-sha256 06e0af8f9727a76d6588deaa983b11bcb1688e4e90eac38af4ccd22e4a1bb83d `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 
@@ -137,8 +137,8 @@ ese caso se comportan como un agente con shell y aplican las advertencias de la 
 | Campo | Contenido |
 | --- | --- |
 | `apkSha256` | SHA-256 del APK que el puente sirve de verdad, calculado en vivo desde `/dsh-companion/status` |
-| `apkVersion` | Versión del APK anunciada por el puente (`5.2.0` en la release actual) |
-| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`51` en la release actual) |
+| `apkVersion` | Versión del APK anunciada por el puente (`5.2.9` en la release actual) |
+| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`53` en la release actual) |
 | `certSha256Release` | Huella documental del certificado del keystore de release (la de README y SECURITY.md) |
 | `receipt` | `algorithm` (`sha256`), `canonical` (`json-compact-sin-receipt`) y `sha256` del informe |
 

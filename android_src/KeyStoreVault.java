@@ -6,7 +6,6 @@
 package com.tintaynodos.dshcompanion;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
@@ -20,13 +19,14 @@ import javax.crypto.spec.GCMParameterSpec;
 
 /**
  * Almacén criptográfico seguro respaldado por hardware (AndroidKeyStore).
- * Emplea cifrado simétrico AES-256 en modo GCM sin relleno para proteger
- * la clave de API de DeepSeek utilizada en el modo satélite de contingencia.
+ * Emplea cifrado simétrico AES-256 en modo GCM sin relleno para proteger las
+ * credenciales que se guardan en SharedPreferences, como la clave de acceso de
+ * cada equipo emparejado en `pc_registry_json`.
  */
 public final class KeyStoreVault {
 
     private static final String KEYSTORE_PROVIDER = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "dsh_satellite_vault_key";
+    private static final String KEY_ALIAS = "dsh_companion_vault_key";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH = 128; // bits
 
@@ -37,110 +37,50 @@ public final class KeyStoreVault {
      */
     public static final String ENCRYPTED_PREFIX = "vault:v1:";
 
-    private static final String PREF_NAME = "dsh_secure_vault";
-    private static final String PREF_ENCRYPTED_KEY = "satellite_deepseek_key";
-    private static final String PREF_IV = "satellite_deepseek_iv";
-
     private KeyStoreVault() {}
 
     private static SecretKey getOrCreateSecretKey() throws Exception {
         KeyStore keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
         keyStore.load(null);
 
-        if (!keyStore.containsAlias(KEY_ALIAS)) {
-            KeyGenerator keyGen = KeyGenerator.getInstance(
-                    KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
-            KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
-                    KEY_ALIAS,
-                    KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setKeySize(256)
-                    .setRandomizedEncryptionRequired(true)
-                    .build();
-            keyGen.init(spec);
-            return keyGen.generateKey();
+        if (keyStore.containsAlias(KEY_ALIAS)) {
+            KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry) keyStore.getEntry(KEY_ALIAS, null);
+            return entry.getSecretKey();
         }
 
-        KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry) keyStore.getEntry(KEY_ALIAS, null);
-        return entry.getSecretKey();
+        // Compatibilidad: versiones anteriores guardaron la clave del almacén con
+        // otro alias. Si ya existe una clave simétrica de la app se reutiliza, para
+        // no invalidar las credenciales que ya están cifradas en el registro de PCs.
+        SecretKey existing = KeyStoreVault.findExistingSecretKey(keyStore);
+        if (existing != null) return existing;
+
+        KeyGenerator keyGen = KeyGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
+        KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setRandomizedEncryptionRequired(true)
+                .build();
+        keyGen.init(spec);
+        return keyGen.generateKey();
     }
 
-    /**
-     * Cifra y almacena la clave API de DeepSeek mediante AES-256-GCM.
-     */
-    public static synchronized void saveDeepSeekApiKey(Context context, String apiKey) throws Exception {
-        if (context == null) return;
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            clearDeepSeekApiKey(context);
-            return;
-        }
-
-        SecretKey secretKey = getOrCreateSecretKey();
-        Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-
-        byte[] iv = cipher.getIV();
-        byte[] encrypted = cipher.doFinal(apiKey.trim().getBytes(StandardCharsets.UTF_8));
-
-        String encryptedBase64 = Base64.encodeToString(encrypted, Base64.NO_WRAP);
-        String ivBase64 = Base64.encodeToString(iv, Base64.NO_WRAP);
-
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        prefs.edit()
-                .putString(PREF_ENCRYPTED_KEY, encryptedBase64)
-                .putString(PREF_IV, ivBase64)
-                .apply();
-    }
-
-    /**
-     * Recupera y descifra la clave API de DeepSeek desde AndroidKeyStore.
-     * Retorna null si no existe o ante fallos de integridad.
-     */
-    public static synchronized String getDeepSeekApiKey(Context context) {
-        if (context == null) return null;
+    /** Primera clave simétrica del almacén de la app (esta app crea una sola). */
+    private static SecretKey findExistingSecretKey(KeyStore keyStore) {
         try {
-            SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-            String encryptedBase64 = prefs.getString(PREF_ENCRYPTED_KEY, null);
-            String ivBase64 = prefs.getString(PREF_IV, null);
-
-            if (encryptedBase64 == null || ivBase64 == null) {
-                return null;
+            java.util.Enumeration<String> aliases = keyStore.aliases();
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                java.security.Key key = keyStore.getKey(alias, null);
+                if (key instanceof SecretKey) return (SecretKey) key;
             }
-
-            byte[] encrypted = Base64.decode(encryptedBase64, Base64.NO_WRAP);
-            byte[] iv = Base64.decode(ivBase64, Base64.NO_WRAP);
-
-            SecretKey secretKey = getOrCreateSecretKey();
-            Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
-
-            byte[] decrypted = cipher.doFinal(encrypted);
-            return new String(decrypted, StandardCharsets.UTF_8);
         } catch (Exception ignored) {
-            return null;
+            // Sin clave reutilizable: se generará una nueva.
         }
-    }
-
-    /**
-     * Consulta si existe una clave de DeepSeek registrada y válida en el almacén.
-     */
-    public static synchronized boolean hasDeepSeekApiKey(Context context) {
-        String key = getDeepSeekApiKey(context);
-        return key != null && !key.trim().isEmpty();
-    }
-
-    /**
-     * Elimina la clave cifrada y su vector de inicialización del dispositivo.
-     */
-    public static synchronized void clearDeepSeekApiKey(Context context) {
-        if (context == null) return;
-        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        prefs.edit()
-                .remove(PREF_ENCRYPTED_KEY)
-                .remove(PREF_IV)
-                .apply();
+        return null;
     }
 
     // ------------------------------------------------------------------

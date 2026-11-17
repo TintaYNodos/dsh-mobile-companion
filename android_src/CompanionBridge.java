@@ -21,7 +21,6 @@ import android.widget.Toast;
  * - Finalización de generación de respuestas.
  * - Finalización de trabajos o tareas en segundo plano.
  * - Latidos periódicos de conexión viva para el monitor de desconexión.
- * - Consultas satelitales directas a DeepSeek vía streaming SSE cifrado con KeyStore.
  *
  * P1 (5.1.9): TODOS los métodos llevan el nonce de `BridgeGuard` como primer
  * argumento, incluidos los getters de solo lectura (defensa en profundidad). Un
@@ -32,7 +31,6 @@ public class CompanionBridge {
 
     private final Context context;
     private final Handler mainHandler;
-    private CloudSatelliteClient activeSatelliteClient;
 
     public CompanionBridge(Context context) {
         this.context = context.getApplicationContext();
@@ -314,85 +312,4 @@ public class CompanionBridge {
         return true;
     }
 
-    /**
-     * P1: la firma cambió a `startSatelliteQuery(String nonce, String payload)`;
-     * el cliente inyectado pasa el token de la página.
-     */
-    @JavascriptInterface
-    public boolean startSatelliteQuery(String nonce, String payload) {
-        final MainActivity instance = MainActivity.getInstance();
-        if (!BridgeGuard.authorize(instance, nonce)) {
-            BridgeGuard.logRejected("startSatelliteQuery");
-            return false;
-        }
-        cancelSatelliteQueryInternal();
-
-        String apiKey = KeyStoreVault.getDeepSeekApiKey(context);
-        if (apiKey == null || apiKey.trim().isEmpty()) {
-            mainHandler.post(() -> {
-                MainActivity current = MainActivity.getInstance();
-                if (current != null) {
-                    current.dispatchSatelliteError("Clave API de DeepSeek no configurada en el almacén seguro (Ajustes -> Modo Satélite)");
-                }
-            });
-            return true;
-        }
-
-        activeSatelliteClient = new CloudSatelliteClient();
-        activeSatelliteClient.executeQuery(apiKey, payload, new CloudSatelliteClient.SatelliteListener() {
-            @Override
-            public void onChunk(String text) {
-                mainHandler.post(() -> {
-                    MainActivity current = MainActivity.getInstance();
-                    if (current != null) {
-                        current.dispatchSatelliteChunk(text);
-                    }
-                });
-            }
-
-            @Override
-            public void onComplete(String fullText) {
-                mainHandler.post(() -> {
-                    MainActivity current = MainActivity.getInstance();
-                    if (current != null) {
-                        current.dispatchSatelliteComplete(fullText);
-                    }
-                });
-            }
-
-            @Override
-            public void onError(String error) {
-                mainHandler.post(() -> {
-                    MainActivity current = MainActivity.getInstance();
-                    if (current != null) {
-                        current.dispatchSatelliteError(error);
-                    }
-                });
-            }
-        });
-        return true;
-    }
-
-    /** P1: cancelar la consulta satelital cambia estado; exige el nonce. */
-    @JavascriptInterface
-    public boolean cancelSatelliteQuery(String nonce) {
-        if (!authorized("cancelSatelliteQuery", nonce)) return false;
-        cancelSatelliteQueryInternal();
-        return true;
-    }
-
-    /** Cancelacion interna: la usa startSatelliteQuery ya autorizado. */
-    private void cancelSatelliteQueryInternal() {
-        if (activeSatelliteClient != null) {
-            activeSatelliteClient.cancel();
-            activeSatelliteClient = null;
-        }
-    }
-
-    /** P1: consultar si hay clave de API se limita al frame autorizado. */
-    @JavascriptInterface
-    public boolean hasSatelliteKey(String nonce) {
-        if (!authorized("hasSatelliteKey", nonce)) return false;
-        return KeyStoreVault.hasDeepSeekApiKey(context);
-    }
 }

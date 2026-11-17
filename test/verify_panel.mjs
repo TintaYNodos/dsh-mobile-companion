@@ -2,7 +2,9 @@ import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BRIDGE = { host: process.env.DSH_TEST_HOST || "127.0.0.1", port: Number(process.env.DSH_TEST_PORT || 57420) };
 const PANEL = { host: "127.0.0.1", port: Number(process.env.DSH_PANEL_PORT || 57421) };
 
@@ -92,6 +94,73 @@ const cookie = panelCookie ? panelCookie.split(";")[0] : "";
 // 4. Con cookie se ve el panel.
 const panel = await call(PANEL, "/pair", { cookie });
 check("panel visible con cookie", panel.status === 200 && panel.body.includes("Dispositivos autorizados"), `status=${panel.status}`);
+
+// 4b. "Notas recibidas": la seccion del panel consume GET /dsh-companion/notes
+//     por loopback. Se crean notas con valores canonicos del APK (tipo/estado),
+//     proyecto con "&", HTML en el titulo y vencimiento; se comprueba que el
+//     panel las muestra traducidas, escapadas UNA sola vez y con fecha local;
+//     luego se borran los .md.
+const accessKey = String(process.env.DSH_ACCESS_KEY || "").trim();
+const keyAuth = accessKey ? { authorization: `Basic ${Buffer.from(`dsh:${accessKey}`, "utf8").toString("base64")}` } : {};
+const postJson = (pathname, payload) =>
+  new Promise((resolve) => {
+    const request = http.request(
+      { hostname: BRIDGE.host, port: BRIDGE.port, path: pathname, method: "POST",
+        headers: { ...keyAuth, "content-type": "application/json" }, agent: false, timeout: 8000 },
+      (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => resolve({ status: response.statusCode || 0, body: Buffer.concat(chunks).toString("utf8") }));
+      }
+    );
+    request.on("timeout", () => { request.destroy(); resolve({ status: 0, body: "timeout" }); });
+    request.on("error", (error) => resolve({ status: 0, body: error.code }));
+    request.write(JSON.stringify(payload));
+    request.end();
+  });
+const noteTitle = "Nota <b>del panel</b> QA";
+// Valores canonicos como los envia el APK (no slugs inventados): tipo y estado
+// deben salir traducidos al espanol en el panel. El proyecto lleva "&" para
+// comprobar que se escapa una sola vez.
+const noteRes = await postJson("/dsh-companion/notes", {
+  title: noteTitle, body: "cuerpo de la nota", project: "I+D & Socios",
+  type: "material", status: "in_progress", dueDate: "2026-12-31",
+});
+const canonicalRes = [];
+for (const payload of [
+  { title: "Fuente QA", body: "cuerpo", project: "Panel QA", type: "source", status: "debunked" },
+  { title: "Documento QA", body: "cuerpo", project: "Panel QA", type: "document", status: "verified" },
+]) {
+  canonicalRes.push(await postJson("/dsh-companion/notes", payload));
+}
+const noteFiles = [noteRes, ...canonicalRes].map((res) => {
+  try { return JSON.parse(res.body).file || ""; } catch { return ""; }
+});
+const withNotes = await call(PANEL, "/pair", { cookie });
+const notesSection = (() => {
+  const start = withNotes.body.indexOf("Notas recibidas");
+  const end = withNotes.body.indexOf("<footer>", start);
+  return start >= 0 && end > start ? withNotes.body.slice(start, end) : "";
+})();
+check("el panel muestra la seccion Notas recibidas",
+  noteRes.status === 200 && withNotes.body.includes("Notas recibidas"), `status=${noteRes.status}`);
+check("el panel lista la nota con el titulo escapado",
+  withNotes.body.includes("Nota &lt;b&gt;del panel&lt;/b&gt; QA") && !withNotes.body.includes("<b>del panel"));
+check("el panel escapa el proyecto UNA sola vez (I+D & Socios)",
+  notesSection.includes("I+D &amp; Socios") && !notesSection.includes("&amp;amp;"));
+check("el panel traduce los tipos canonicos del APK al espanol",
+  notesSection.includes("Material") && notesSection.includes("Fuente") && notesSection.includes("Documento") &&
+  !/\b(source|document|material)\b/.test(notesSection));
+check("el panel traduce los estados canonicos del APK al espanol",
+  notesSection.includes("En curso") && notesSection.includes("Desmentido") && notesSection.includes("Verificado") &&
+  !/\b(in_progress|debunked|verified)\b/.test(notesSection));
+check("el panel muestra la fecha local dd/mm/aaaa hh:mm (no ISO UTC)",
+  /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/.test(notesSection) &&
+  !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(notesSection));
+check("el panel muestra el vencimiento humanizado", notesSection.includes("Vence 31/12/2026"));
+for (const file of noteFiles) {
+  try { if (file) fs.unlinkSync(path.join(REPO_ROOT, "synced_chats", "notes", file)); } catch { /* nota de la prueba */ }
+}
 
 // 5. Un telefono pide acceso por la VPN. Se guarda su cookie de canje para que
 //    el emparejamiento quede atado a ESTA solicitud y no a otra de la misma IP.

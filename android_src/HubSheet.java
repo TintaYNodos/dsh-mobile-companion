@@ -179,6 +179,21 @@ class HubSheet {
         connActions.addView(btnConfig);
         sheet.addView(connActions);
 
+        sheet.addView(UiKit.sectionHeader(a, "LOCAL"));
+
+        TextView notesHint = new TextView(a);
+        notesHint.setText("Notas guardadas en el teléfono. Funcionan sin la PC y sin conexión; puedes enviarlas a la computadora cuando vuelva.");
+        notesHint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        notesHint.setTextColor(ThemePalette.inkDim(a));
+        notesHint.setPadding(0, 0, 0, ThemePalette.dp(a, 8));
+        sheet.addView(notesHint);
+
+        Button btnNotes = UiKit.actionCompact(a, "Notas", false, () -> {
+            HubSheet.dismissHub(a);
+            a.startActivity(new Intent(a, NotesActivity.class));
+        });
+        sheet.addView(btnNotes);
+
         sheet.addView(UiKit.sectionHeader(a, "SISTEMA"));
         View telem = SystemCards.buildTelemetryCard(a);
         if (telem != null) sheet.addView(telem);

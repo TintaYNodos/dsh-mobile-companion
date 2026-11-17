@@ -20,7 +20,9 @@
  * podria colar la marca: el puente la rechaza con 400 (defensa en profundidad).
  */
 import { stripControlChars } from "./http.mjs";
+import { log } from "./log.mjs";
 import { neutralizeMarkdown, slugify } from "./sync-format.mjs";
+import { hasMojibakePattern, repairMojibake } from "./text-encoding.mjs";
 
 /** Topes de longitud de los metadatos; excederlos responde 400. */
 const LIMITS = { title: 200, body: 20_000, project: 120, subject: 120, type: 40, status: 40 };
@@ -214,16 +216,63 @@ const rejectLocalOnly = (payload) => {
 };
 
 /**
+ * Campos textuales que se intentan reparar antes de validar: un cliente o el
+ * portapapeles puede enviar UTF-8 ya leido como Latin-1 (ver text-encoding.mjs).
+ */
+const REPAIR_FIELDS = ["title", "body", "project", "subject"];
+
+/**
+ * Repara la codificacion de un valor de la nota. Si el mojibake es inequivoco
+ * se usa el texto reparado; si el patron aparece y no se puede reparar, responde
+ * 400 sin guardar nada (fail-closed); un texto ambiguo se deja intacto.
+ */
+const repairField = (value) => {
+  if (typeof value !== "string") return { value, repaired: false };
+  const result = repairMojibake(value);
+  if (result.repaired) return { value: result.text, repaired: true };
+  if (result.unambiguous && hasMojibakePattern(value)) throw badRequest("texto con codificación inválida");
+  return { value, repaired: false };
+};
+
+/**
+ * Aplica `repairField` a `title`, `body`, `project`, `subject` y a las
+ * etiquetas. Deja UNA linea en bridge.log sin contenido de la nota cuando hubo
+ * reparacion, para poder diagnosticar un cliente que manda texto corrupto.
+ */
+const repairPayloadText = (payload) => {
+  let repaired = false;
+  const fixed = { ...payload };
+  for (const field of REPAIR_FIELDS) {
+    if (!(field in payload)) continue;
+    const result = repairField(payload[field]);
+    fixed[field] = result.value;
+    repaired = repaired || result.repaired;
+  }
+  if (Array.isArray(payload.tags)) {
+    fixed.tags = payload.tags.map((tag) => {
+      const result = repairField(tag);
+      repaired = repaired || result.repaired;
+      return result.value;
+    });
+  }
+  if (repaired) log("notes", "nota con texto reparado de codificación");
+  return fixed;
+};
+
+/**
  * Valida el JSON y devuelve los metadatos normalizados. `title` es obligatorio
  * y no vacio; `body` puede faltar o ser "" (nota de solo titulo). Los campos
  * desconocidos se ignoran; `chatTarget` se ignora siempre (campo retirado).
  * `localOnly` con valor afirmativo responde 400 (privacidad del telefono).
  */
-export const validateNotePayload = (payload) => {
-  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+export const validateNotePayload = (input) => {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw badRequest("Se esperaba un objeto JSON");
   }
-  rejectLocalOnly(payload);
+  rejectLocalOnly(input);
+  // Blindaje de codificacion: reparar (o rechazar) ANTES de validar y escribir.
+  const payload = repairPayloadText(input);
+
   if (typeof payload.title !== "string" || stripControlChars(payload.title).trim() === "") {
     throw badRequest("Se requiere un titulo no vacio");
   }

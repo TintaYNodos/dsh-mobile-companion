@@ -18,6 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { REPO_ROOT } from "./ci/start-bridge.mjs";
+import { repairMojibake } from "../src/text-encoding.mjs";
 
 /**
  * H-17: rutas al arbol de sincronizacion AISLADO. Se inicializan desde
@@ -366,5 +367,30 @@ export async function runNotesIndexChecks(check, client, bridge) {
     `exit=${restart.status} bytes=${afterRestart.length} err=${String(restart.stderr || "").trim().slice(0, 100)}`);
 }
 
+/**
+ * Codificacion (mojibake): un cliente o el portapapeles puede mandar UTF-8 ya leido como Latin-1.
+ * Literales escapados (`\u00C3`): audit-repo.mjs marca el mojibake en crudo. Vive aqui por el tope de 400 lineas.
+ */
+const [MOJI_TITLE, MOJI_BODY, CLEAN_TITLE, CLEAN_BODY, DOUBLE_MOJI] = ["r\u00C3\u00A1pido", "\u00C2\u00BFse\u00C3\u00B1or?", "r\u00E1pido", "\u00BFse\u00F1or?", "\u00C3\u0192\u00C2\u00A1"];
 
+export async function runEncodingChecks(check, client, bridge) {
+  const title = repairMojibake(MOJI_TITLE); const body = repairMojibake(MOJI_BODY);
+  check("codificacion: mojibake de title/body se repara (repaired)", title.text === CLEAN_TITLE && title.repaired && title.unambiguous && body.text === CLEAN_BODY && body.repaired, `title=${title.text} body=${body.text}`);
+  const clean = repairMojibake(CLEAN_TITLE); const twice = repairMojibake(title.text);
+  check("codificacion: texto correcto intacto y sin doble reparacion", clean.text === CLEAN_TITLE && !clean.repaired && clean.unambiguous && twice.text === CLEAN_TITLE && !twice.repaired);
+  const ambiguous = repairMojibake(DOUBLE_MOJI);
+  check("codificacion: texto ambiguo (doble codificado) no se toca", ambiguous.text === DOUBLE_MOJI && !ambiguous.repaired && !ambiguous.unambiguous);
+  const filesBefore = fs.readdirSync(NOTES_DIR).length; const bad = await client.postNote({ title: `${MOJI_TITLE}\u00A9`, body: "cuerpo" });
+  check("codificacion: patron irreparable responde 400 sin escribir archivo", bad.status === 400 && String(bad.body).includes("texto con codificación inválida") && fs.readdirSync(NOTES_DIR).length === filesBefore, `status=${bad.status}`);
+  const fixed = await client.postNote({ title: MOJI_TITLE, body: MOJI_BODY, project: MOJI_TITLE, subject: MOJI_BODY, tags: [MOJI_TITLE] });
+  const file = client.remember(fixed.json?.file); const { front, markdown } = client.splitNote(client.noteText(file)); await sleep(50);
+  check("codificacion: POST reparado guarda front matter, cuerpo, bandeja y log correctos",
+    fixed.status === 200 && front.includes('title: "rápido"') && front.includes('project: "rápido"') &&
+    front.includes('subject: "¿señor?"') && front.includes('tags: ["rápido"]') && markdown.includes("¿señor?") &&
+    client.inboxRecordFor(file)?.title === CLEAN_TITLE && bridge.output().includes("texto reparado de codificación"), `status=${fixed.status} file=${file}`);
+  const intact = await client.postNote({ title: CLEAN_TITLE, body: CLEAN_BODY }); const intactFile = client.remember(intact.json?.file);
+  check("codificacion: POST con texto correcto se guarda igual", intact.status === 200 && client.noteText(intactFile).includes('title: "rápido"') && client.noteText(intactFile).includes("¿señor?"));
+  const amb = await client.postNote({ title: DOUBLE_MOJI, body: "cuerpo" }); const ambFile = client.remember(amb.json?.file);
+  check("codificacion: POST ambiguo se acepta intacto (200)", amb.status === 200 && client.noteText(ambFile).includes(DOUBLE_MOJI), `status=${amb.status}`);
+}
 

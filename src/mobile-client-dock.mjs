@@ -152,7 +152,16 @@ export const MOBILE_CLIENT_DOCK = `  // Barra de comandos rapidos + teclas de co
       if (rect.width + 1 < editorRect.width) break;
       best = rect;
     }
-    return best;
+    // Union con el propio editor: el ancestro elegido puede ser MAS BAJO que el
+    // area de texto y el bloque acababa dibujandose sobre la ultima linea que
+    // el usuario estaba escribiendo. Con la union, "debajo"/"encima" nunca
+    // pisan ni la tarjeta ni el campo.
+    return {
+      top: Math.min(best.top, editorRect.top),
+      bottom: Math.max(best.bottom, editorRect.bottom),
+      left: Math.min(best.left, editorRect.left),
+      right: Math.max(best.right, editorRect.right),
+    };
   }
 
 `;

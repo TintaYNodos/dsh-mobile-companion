@@ -139,6 +139,15 @@ export const MOBILE_CLIENT_EDITOR = `  /**
 
   document.addEventListener('focusin', function(event) {
     noteComposerTarget(event.target);
+    // Con el teclado abierto, el campo debe seguir viendose: si el navegador
+    // dejo el cursor bajo el borde, se acerca lo justo sin saltar la pagina.
+    var el = event.target;
+    if (!el || !isComposerTarget(el)) return;
+    setTimeout(function() {
+      try {
+        if (el.isConnected !== false) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      } catch (e) {}
+    }, 280);
   }, true);
 
   function composerTargetFor(event) {

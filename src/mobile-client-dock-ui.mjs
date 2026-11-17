@@ -20,7 +20,11 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
     if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
 
     var anyRow = dockPrefs.quick || dockPrefs.keys;
-    var visible = anyRow && isKeyboardOpen();
+    // En apaisado con teclado el alto util se queda en ~150-300 px: el bloque
+    // tapaba el compositor y no se veia lo que se escribia. Ahi se oculta y el
+    // espacio entero es para el editor; en vertical y en pantallas altas sigue.
+    var shortLandscape = window.innerWidth > window.innerHeight && viewportHeight() <= 520;
+    var visible = anyRow && isKeyboardOpen() && !shortLandscape;
     var current = dock.getAttribute('data-visible') === '1';
     if (visible !== current) {
       dock.setAttribute('data-visible', visible ? '1' : '0');
@@ -64,6 +68,16 @@ export const MOBILE_CLIENT_DOCK_UI = `  function updateComposerDockVisibility() 
       dock.style.borderBottom = '1px solid rgba(128,128,128,0.35)';
     }
     dock.style.bottom = 'auto';
+
+    // Red de seguridad: si por cualquier geometria el bloque pisara el area de
+    // texto, se oculta antes que taparlo. Nunca se escribe a ciegas.
+    var topPx = parseFloat(dock.style.top) || 0;
+    if (topPx < rect.bottom + 2 && topPx + dockHeight > rect.top - 2) {
+      dock.setAttribute('data-visible', '0');
+      dock.setAttribute('aria-hidden', 'true');
+      dock.style.display = 'none';
+      return;
+    }
 
     // Los tokens de color de DSH viven en su contenedor con tema, no en body:
     // colgado del body no puede resolverlos. Se copian los colores reales del

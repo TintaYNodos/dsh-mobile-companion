@@ -73,6 +73,8 @@ final class NotificationsApproval {
                 .setStyle(new Notification.BigTextStyle().bigText(fullText))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
+                // H-7: alineado con el canal de aprobaciones (VISIBILITY_SECRET):
+                // el canal y el aviso no pueden contradecirse.
                 .setVisibility(Notification.VISIBILITY_SECRET)
                 .setColor(Color.parseColor("#0EA5E9"));
 

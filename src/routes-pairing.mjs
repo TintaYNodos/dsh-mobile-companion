@@ -16,6 +16,7 @@ import {
   isViewer,
   logReadOnlyRejection,
   onDeviceApproved,
+  readClaimToken,
   readCookie,
   rejectRequest,
   requestAccess,
@@ -40,6 +41,14 @@ const waitingClients = new Set();
  */
 const isLocalRequest = (remoteAddress, proxyHeaders) =>
   !proxyHeaders && normalizeAddress(remoteAddress).startsWith("127.");
+
+// H-08: clave de una peticion concreta (token de canje o IP + user-agent), nunca
+// la IP sola: un rechazo no debe bloquear a otros equipos detras del mismo NAT.
+const deniedKey = (req, remoteAddress) => ({
+  address: remoteAddress,
+  claimToken: readClaimToken(req) || "",
+  agent: String(req.headers?.["user-agent"] || "").slice(0, 120),
+});
 
 /**
  * H6: /pair-state sondea cada 700 ms y `requestAccess` guarda el registro con
@@ -117,7 +126,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     const approved = Boolean(device);
 
     if (!approved) {
-      if (isDenied(remoteAddress)) {
+      if (isDenied(remoteAddress, deniedKey(req, remoteAddress))) {
         sendJson(res, 200, { approved: false, rejected: true, pending: false });
         return true;
       }
@@ -168,7 +177,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
       sendJson(res, 429, { ok: false, error: "Espera un momento" });
       return true;
     }
-    const hasRequest = !isDenied(remoteAddress) && !findPairedDevice(req);
+    const hasRequest = !isDenied(remoteAddress, deniedKey(req, remoteAddress)) && !findPairedDevice(req);
     sendJson(res, 200, { ok: hasRequest ? openPanelWindow({ force: true }) : false });
     return true;
   }
@@ -182,7 +191,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // permite reintentar (con el mismo rate limit) porque solo borra su rechazo
     // y vuelve a la cola: el panel sigue decidiendo y no autoriza nada. Sin
     // estar rechazado, la ruta sigue exigiendo loopback o credencial.
-    const denied = isDenied(remoteAddress);
+    const denied = isDenied(remoteAddress, deniedKey(req, remoteAddress));
     if (!paired && !hasValidAccessKey(req) && !denied && !isLocalRequest(remoteAddress, proxyHeaders)) {
       sendJson(res, 403, { ok: false, error: "Acceso no autorizado" });
       return true;
@@ -191,7 +200,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
       sendJson(res, 429, { ok: false });
       return true;
     }
-    clearDenied(remoteAddress);
+    clearDenied(remoteAddress, deniedKey(req, remoteAddress));
     const { created } = requestAccess(remoteAddress, req.headers["user-agent"]);
     if (created && !proxyHeaders) openPanelWindow({ force: true });
     sendJson(res, 200, { ok: true });
@@ -222,17 +231,33 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // Ademas del tunel, se cierran las sesiones del panel: si no, la pestana
     // abierta sigue aprobando dispositivos despues del kill switch.
     const panelSessionsClosed = invalidatePanelSessions();
-    // Ademas de revocar dispositivos se rota la clave maestra: si no, "cortar
-    // accesos" dejaba viva la credencial que abre todo.
-    let rotated = false;
+    // Ademas de revocar dispositivos se rota la clave maestra. H-01: rotar
+    // devuelve un resultado explicito; con DSH_ACCESS_KEY no se puede rotar.
+    let rotation = { rotated: false, reason: "error" };
     try {
-      rotateAccessKey();
-      rotated = true;
+      rotation = rotateAccessKey();
     } catch (error) {
       warn("pair", `No se pudo rotar la clave: ${error.message}`);
+      rotation = { rotated: false, reason: "error" };
     }
-    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotated}, sesiones de panel cerradas: ${panelSessionsClosed}`);
-    sendJson(res, 200, { ok: true, revoked: revokedCount, message: "Todos los dispositivos han sido revocados" });
+    if (!rotation.rotated) {
+      warn(
+        "pair",
+        rotation.reason === "env"
+          ? "La clave de acceso viene de DSH_ACCESS_KEY (entorno): el kill switch no puede rotarla; cambiala y reinicia el puente."
+          : rotation.reason === "disabled"
+            ? "La clave de acceso esta desactivada (DSH_ACCESS_DISABLE=1): no hay clave que rotar."
+            : "La rotacion de la clave de acceso fallo."
+      );
+    }
+    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotation.rotated}${rotation.reason ? ` (${rotation.reason})` : ""}, sesiones de panel cerradas: ${panelSessionsClosed}`);
+    sendJson(res, 200, {
+      ok: true,
+      revoked: revokedCount,
+      rotated: rotation.rotated,
+      rotationReason: rotation.reason,
+      message: "Todos los dispositivos han sido revocados",
+    });
     return true;
   }
 
@@ -279,13 +304,13 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     const { action, id, requestId } = body;
     const targetId = id || requestId;
     if (action === "approve_device") {
-      const ok = approveRequest(targetId);
-      sendJson(res, 200, { ok: Boolean(ok) });
+      const result = approveRequest(targetId);
+      sendJson(res, 200, { ok: result.ok, reason: result.reason || null });
       return true;
     }
     if (action === "reject_device") {
-      const ok = rejectRequest(targetId);
-      sendJson(res, 200, { ok: Boolean(ok) });
+      const result = rejectRequest(targetId);
+      sendJson(res, 200, { ok: result.ok, reason: result.reason || null });
       return true;
     }
     if (action === "allow" || action === "reject" || action === "approve") {

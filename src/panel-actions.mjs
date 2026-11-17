@@ -49,10 +49,19 @@ export async function runPanelAction(pathname, form) {
   const id = form.get("id") || "";
 
   switch (pathname) {
-    case "/pair/approve":
-      return approveRequest(id) ? "approve" : "expired";
-    case "/pair/reject":
-      return rejectRequest(id) ? "reject" : "expired";
+    // H-10: "no existe" (expired) y "no se pudo guardar" (failed) son estados
+    // distintos. Antes approveRequest/rejectRequest devolvian null/false en ambos
+    // y el panel decia "expired" tambien cuando el disco habia fallado.
+    case "/pair/approve": {
+      const result = approveRequest(id);
+      if (result.ok) return "approve";
+      return result.reason === "failed" ? "failed" : "expired";
+    }
+    case "/pair/reject": {
+      const result = rejectRequest(id);
+      if (result.ok) return "reject";
+      return result.reason === "failed" ? "failed" : "expired";
+    }
     case "/pair/revoke-device":
       return removeDevice(id) ? "revoke" : "missing";
     case "/pair/rename":

@@ -5,34 +5,8 @@
  */
 package com.tintaynodos.dshcompanion;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.Build;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
-import android.widget.TextView;
-import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
-
 import android.net.ConnectivityManager;
-
-import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
  * Liberacion ordenada de recursos al destruir la Activity.
@@ -58,13 +32,6 @@ class Cleanup {
             a.fileCallback.onReceiveValue(null);
             a.fileCallback = null;
         }
-        if (a.addressDialog != null && a.addressDialog.isShowing()) {
-            try {
-                a.addressDialog.dismiss();
-            } catch (Throwable ignored) {}
-        }
-        a.addressDialog = null;
-
         if (a.sheetDialog != null && a.sheetDialog.isShowing()) {
             try {
                 a.sheetDialog.dismiss();

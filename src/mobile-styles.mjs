@@ -109,12 +109,84 @@ body[data-ds-dark-theme] {
 }
 
 /* Modo Apaisado / Horizontal en Smartphones con Altura Reducida.
-   No se fuerza geometría: DSH ya convierte sus paneles en drawer y cualquier
-   override de position/inset los deja inalcanzables. Solo se contiene el
-   overscroll, que en 360dp de alto arrastra la página completa. */
+   El compositor, el sidebar y el panel derecho se dimensionan para vertical y
+   en 360dp de alto dejan el textarea tapado (HOJA_ERRORES_CAPTURAS.md:65-110).
+   Aquí se contiene el overscroll y se aplica el Plan 2 de esa hoja SOLO bajo
+   esta media query: portrait no se toca. */
 @media (orientation: landscape) and (max-height: 520px) {
   :where([class*="_groups"], [class*="_paneBody"]) {
     overscroll-behavior: contain;
+  }
+
+  /* ==================================================================
+     H-14 · Bloque delimitado: adaptación de landscape en teléfono.
+     Implementa el Plan 2 de HOJA_ERRORES_CAPTURAS.md (líneas 161-214):
+     sidebar como drawer, panel derecho modal, compositor compacto y menú
+     trigger con max-height corto.
+
+     Del propuesto se omiten a propósito los selectores genéricos 'aside' y
+     'aside:last-of-type': son demasiado amplios y podrían fijar como modal un
+     panel de DSH que no es el de herramientas (el propio encabezado de esta
+     hoja advierte de no redefinir geometría por comodines de clase). Se usan
+     solo ganchos de clase/atributo específicos.
+
+     NO VERIFICABLE sin dispositivo: hay que probarlo en un teléfono real en
+     horizontal con el teclado abierto (capturas 02-07 de la hoja). Si DSH
+     cambia sus nombres de clase, estos overrides dejan de aplicar y no rompen
+     nada.
+     ================================================================== */
+
+  /* Sidebar izquierdo: drawer emergente, nunca columna fija que estrangule
+     el chat (capturas 04 y 05). */
+  [class*="_sidebar_"], [data-sidebar] {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    left: -100% !important;
+    width: min(320px, 80vw) !important;
+    z-index: 10050 !important;
+    transition: left 0.25s ease-in-out !important;
+  }
+  [class*="_sidebar_"][data-expanded="true"],
+  [data-sidebar][data-expanded="true"] {
+    left: 0 !important;
+  }
+
+  /* Panel derecho de herramientas: modal superpuesto en vez de tercera
+     columna cortada por el borde (captura 06). */
+  [class*="_right_panel_"], [class*="_tool_panel_"] {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: min(340px, 85vw) !important;
+    z-index: 10040 !important;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  /* Compositor compacto: menos relleno y textarea de 36-48px para que quepa
+     por encima del teclado (capturas 03 y 07). */
+  form:has(textarea), [class*="composer"] {
+    padding: 4px 8px !important;
+    min-height: unset !important;
+  }
+  form:has(textarea) textarea, [class*="composer"] textarea {
+    min-height: 36px !important;
+    max-height: 48px !important;
+    font-size: 14px !important;
+  }
+  /* Miniaturas de adjuntos en fila mínima para no comerse el alto útil. */
+  [class*="thumbnail"], [class*="attachment_preview"], [class*="preview_card"] {
+    max-height: 36px !important;
+    max-width: 36px !important;
+  }
+
+  /* Menú trigger / slash: no debe invadir cabecera y pestañas (captura 02);
+     con scroll interno si hay más opciones de las que caben. */
+  [data-trigger-menu], [class*="pc3rQa_menu"] {
+    max-height: 120px !important;
+    overflow-y: auto !important;
+    bottom: calc(100% + 2px) !important;
   }
 }
 

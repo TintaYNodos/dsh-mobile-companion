@@ -17,12 +17,14 @@ import { normalize, prune, readCookie } from "./device-claim.mjs";
 import { probeDshPort, resolveTargetPort } from "./network.mjs";
 import { sendJson } from "./http.mjs";
 
-// El canje por token/cookie vive en device-claim.mjs; se reexporta aqui para
-// conservar la API publica que usan routes-pairing.mjs y bridge.mjs.
+// El canje y los rechazos por solicitud viven en device-claim.mjs.
 export {
   claimApprovedDevice,
+  clearDenied,
   deviceCookieHeader,
   deviceCookieMaxAge,
+  isDenied,
+  readClaimToken,
   readCookie,
   requestAccess,
   runWithRequestContext,
@@ -151,16 +153,9 @@ export function touchDevice(device) {
   return needsRefresh;
 }
 
-// D4: poda los rechazos caducados antes de contestar (uno de hace 31 min no vale).
-export const isDenied = (address) =>
-  prune(loadRegistry(), Date.now()).denied.some((row) => row.address === normalize(address));
-export function clearDenied(address) {
-  const current = loadRegistry();
-  const before = current.denied.length;
-  const target = normalize(address);
-  current.denied = current.denied.filter((row) => row.address !== target);
-  if (current.denied.length !== before) saveRegistry();
-}
+// D4: el rechazo y su TTL los poda device-claim.mjs (prune). H-08: la consulta y
+// el borrado son por solicitud concreta (claimToken, o IP + user-agent sin
+// token), nunca por la IP sola: otros equipos tras el mismo NAT conservan acceso.
 
 export const pendingRequests = () => {
   const current = prune(loadRegistry(), Date.now());
@@ -197,10 +192,11 @@ export function notifyApprovalListeners() {
   }
 }
 
+/** H-10: {ok, reason} distingue `missing` (no existe) de `failed` (no se pudo guardar). */
 export function approveRequest(id) {
   const current = prune(loadRegistry(), Date.now());
   const index = current.pending.findIndex((entry) => entry.id === id);
-  if (index === -1) return null;
+  if (index === -1) return { ok: false, reason: "missing", device: null };
 
   const [entry] = current.pending.splice(index, 1);
   current.denied = current.denied.filter((row) => row.address !== entry.address);
@@ -230,24 +226,26 @@ export function approveRequest(id) {
 
   log("pair", `Acceso aprobado para ${entry.address}`);
   const persisted = saveRegistry();
-  recordEvent("approve", entry.address);
+  if (persisted) recordEvent("approve", entry.address);
   notifyApprovalListeners();
-  return persisted ? device : null;
+  return persisted ? { ok: true, reason: null, device } : { ok: false, reason: "failed", device: null };
 }
 
+/** H-10: igual que approveRequest. */
 export function rejectRequest(id) {
   const now = Date.now();
   const current = prune(loadRegistry(), now);
   const index = current.pending.findIndex((entry) => entry.id === id);
-  if (index === -1) return false;
+  if (index === -1) return { ok: false, reason: "missing" };
 
   const [entry] = current.pending.splice(index, 1);
-  current.denied.push({ address: entry.address, at: new Date(now).toISOString() });
+  // H-08: rechazo por solicitud (token + agente), no por IP entera.
+  current.denied.push({ address: entry.address, agent: entry.agent || "", claimToken: entry.claimToken || "", at: new Date(now).toISOString() });
   const persisted = saveRegistry();
 
   log("pair", `Acceso rechazado para ${entry.address}`);
   if (persisted) recordEvent("reject", entry.address);
-  return persisted;
+  return persisted ? { ok: true, reason: null } : { ok: false, reason: "failed" };
 }
 
 export function renameDevice(id, name) {

@@ -6,7 +6,6 @@
 package com.tintaynodos.dshcompanion;
 
 import android.app.Notification;
-import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -38,7 +37,6 @@ public final class NotificationHelper {
     public static final int NOTIFICATION_ID_CRITICAL = 7003;
     public static final int NOTIFICATION_ID_PC_WATCHDOG = 7004;
 
-    private static final long[] VIBRATE_APPROVAL = new long[]{0, 250, 150, 250};
     private static final long[] VIBRATE_DISCONNECT = new long[]{0, 400, 200, 400};
 
     private NotificationHelper() {
@@ -90,6 +88,10 @@ public final class NotificationHelper {
                 .setStyle(new Notification.BigTextStyle().bigText("Código en pantalla: " + code + "\n" + summary + "\n\nApruébalo desde el panel de la computadora."))
                 .setContentIntent(openPending)
                 .setAutoCancel(true)
+                // H-7: criterio único de visibilidad en pantalla bloqueada. Las
+                // aprobaciones y el emparejamiento muestran datos sensibles
+                // (código, herramienta, IP), así que son SECRET tanto aquí como
+                // en el canal (NotificationChannels.create).
                 .setVisibility(Notification.VISIBILITY_SECRET)
                 .setColor(Color.parseColor("#0EA5E9"));
 
@@ -182,6 +184,10 @@ public final class NotificationHelper {
      * Notifica si la conexion con la computadora se perdio por mas de 10 minutos.
      */
     public static void notifyDisconnection(Context context, long disconnectedMinutes, String bunkerLabel) {
+        // H-6: este era el único aviso que se saltaba el interruptor maestro y
+        // la regla de "solo fuera de la app"; ahora es consistente con
+        // notifyGenerationComplete y notifyPcEventsStalled.
+        if (!MainActivity.shouldShowNotification(context)) return;
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 

@@ -5,30 +5,9 @@
  */
 package com.tintaynodos.dshcompanion;
 
-import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.Build;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
-import android.widget.TextView;
 import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
 
 import android.webkit.WebResourceError;
 import android.webkit.WebViewClient;
@@ -111,8 +90,12 @@ class UrlTools {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, uri);
             intent.addCategory(Intent.CATEGORY_BROWSABLE);
+            // Share-sheet: oculta la píldora mientras el selector del sistema
+            // está encima; MainActivity.onResume la restaura al volver.
+            PillUi.hideForSystemSheet();
             a.startActivity(Intent.createChooser(intent, "Abrir enlace"));
         } catch (ActivityNotFoundException missing) {
+            PillUi.restoreAfterSystemSheet();
             Toast.makeText(a, "No hay ninguna aplicación para abrir este enlace", Toast.LENGTH_SHORT).show();
         }
     }

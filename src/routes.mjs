@@ -112,6 +112,25 @@ const PAIRING_PERSIST_INTERVAL_MS = 60 * 1000;
 const agentKey = (userAgent) => String(userAgent || "").slice(0, 120);
 const pollKey = (address, userAgent) => `${address}|${agentKey(userAgent)}`;
 
+/**
+ * H-02: conjuntos de Host/Origin aceptados para un enlace concreto.
+ *
+ * Antes bridge.mjs los armaba a mano al arrancar y `watchBinding` los
+ * reconstruia SOLO con la IP nueva, olvidando los alias de loopback: tras un
+ * cambio de IP, 127.0.0.1/localhost/[::1] recibian 403. Esta funcion es la
+ * unica fuente de verdad y los reañade siempre. Util para la prueba unitaria.
+ */
+export const LOOPBACK_ALIASES = Object.freeze(["127.0.0.1", "localhost", "[::1]"]);
+export const buildAllowedSets = (host, port) => {
+  const allowedHosts = new Set([`${host}:${port}`]);
+  const allowedOrigins = new Set([`http://${host}:${port}`]);
+  for (const alias of LOOPBACK_ALIASES) {
+    allowedHosts.add(`${alias}:${port}`);
+    allowedOrigins.add(`http://${alias}:${port}`);
+  }
+  return { allowedHosts, allowedOrigins };
+};
+
 const markPairingPanelOpened = (remoteAddress) => {
   pairingPanelOpened.set(normalizeAddress(remoteAddress || "desconocida"), Date.now());
 };
@@ -201,7 +220,16 @@ export async function dispatchRequest(req, res, context) {
   // 5.2.0: salud real (puente + Harness) para el healthcheck de Docker y para el
   // panel. Sin credenciales: la peticion solo puede llegar desde la red privada
   // o loopback (guarda anterior) y la respuesta no contiene secretos.
+  // M3: /healthz se atendia ANTES del filtro de Host/Origin, asi que un Host
+  // ajeno (DNS rebinding) o un Origin:null/cross-site podian sondearlo. Se le
+  // aplica la misma frontera que al resto de rutas; el healthcheck de Docker y
+  // el doctor de la PC usan Host legitimo (127.0.0.1:<puerto>) y no envian
+  // Origin, asi que siguen pasando.
   if (pathname === "/healthz") {
+    if (!isSameOriginRequest(req, allowedOrigins, allowedHosts)) {
+      sendText(res, 403, "Origen no autorizado");
+      return;
+    }
     await handleHealthz(req, res, { bindHost, remoteAddress });
     return;
   }

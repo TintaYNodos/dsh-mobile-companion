@@ -342,24 +342,4 @@ final class NotesFilterUi {
         }
         return false;
     }
-
-    /** Proyectos distintos de una lista de notas, ordenados sin distinguir mayúsculas. */
-    static List<String> projectsOf(List<NotesStore.Note> notes) {
-        List<String> projects = new ArrayList<>();
-        if (notes == null) return projects;
-        for (NotesStore.Note note : notes) {
-            String project = note.project == null ? "" : note.project.trim();
-            if (project.isEmpty()) continue;
-            boolean seen = false;
-            for (String existing : projects) {
-                if (existing.equalsIgnoreCase(project)) {
-                    seen = true;
-                    break;
-                }
-            }
-            if (!seen) projects.add(project);
-        }
-        projects.sort(String.CASE_INSENSITIVE_ORDER);
-        return projects;
-    }
 }

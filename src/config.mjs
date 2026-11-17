@@ -15,12 +15,29 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-const positiveInt = (value, fallback) => {
-  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+/**
+ * M5: una variable entera invalida (DSH_TARGET_PORT="abc", un cero, un
+ * negativo) se corregia en silencio y nadie sabia que el valor configurado no
+ * se estaba usando. Ahora se emite un aviso con el valor rechazado y el default
+ * aplicado, sin impedir el arranque (solo DSH_ACCESS_DISABLE es bloqueante).
+ */
+const envWarnings = [];
+const positiveInt = (value, fallback, name) => {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  envWarnings.push(`${name}="${raw}" no es un entero positivo; se usa el valor por defecto ${fallback}`);
+  return fallback;
 };
 
 const text = (value) => String(value ?? "").trim();
+
+/** Overrides de rutas (H-17): por defecto, las del repositorio. */
+const pathOverride = (value, fallback) => {
+  const raw = text(value);
+  return raw ? path.resolve(ROOT, raw) : fallback;
+};
 
 /**
  * P48: DSH_ACCESS_DISABLE solo significa algo con "1" (desactivar) o con
@@ -40,18 +57,22 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.2.9",
-  apkVersion: "5.2.9",
-  apkVersionCode: 53,
-  previousApkVersion: "5.2.8",
-  previousApkVersionCode: 52,
+  version: "5.2.10",
+  apkVersion: "5.2.10",
+  apkVersionCode: 54,
+  previousApkVersion: "5.2.9",
+  previousApkVersionCode: 53,
 
   targetHost: "127.0.0.1",
-  targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710),
+  targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710, "DSH_TARGET_PORT"),
   targetCandidates: [52710, 52711, 52712, 59189],
 
-  listenPort: positiveInt(process.env.DSH_LISTEN_PORT, 57420),
-  panelPort: positiveInt(process.env.DSH_PANEL_PORT, positiveInt(process.env.DSH_LISTEN_PORT, 57420) + 1),
+  listenPort: positiveInt(process.env.DSH_LISTEN_PORT, 57420, "DSH_LISTEN_PORT"),
+  panelPort: positiveInt(
+    process.env.DSH_PANEL_PORT,
+    positiveInt(process.env.DSH_LISTEN_PORT, 57420, "DSH_LISTEN_PORT") + 1,
+    "DSH_PANEL_PORT"
+  ),
   bindHost: text(process.env.DSH_BIND_HOST),
   // IP privada explicita cuando el adaptador tiene un nombre que no reconocemos.
   vpnIp: text(process.env.DSH_VPN_IP),
@@ -64,7 +85,10 @@ export const config = Object.freeze({
   // una capa de identidad delante (Cloudflare Access).
   allowProxyAccess: text(process.env.DSH_ALLOW_PROXY_ACCESS) === "1",
 
-  syncDir: path.join(ROOT, "synced_chats"),
+  // H-17: directorio de sincronizacion y archivo de log configurables para que
+  // la suite (y cualquier despliegue) no escriba en el arbol del repositorio.
+  syncDir: pathOverride(process.env.DSH_SYNC_DIR, path.join(ROOT, "synced_chats")),
+  logFile: pathOverride(process.env.DSH_LOG_FILE, path.join(ROOT, "bridge.log")),
   maxSyncBytes: 4 * 1024 * 1024,
   maxSyncMessages: 1000,
   maxMessageChars: 200_000,
@@ -87,10 +111,15 @@ export const config = Object.freeze({
   accessKeyDisabled: accessDisableRaw === "1",
 
   // Sesion de dispositivo: 30 dias, renovada deslizantemente con el uso.
-  deviceTtlDays: positiveInt(process.env.DSH_DEVICE_TTL_DAYS, 30),
-  deviceRefreshMs: positiveInt(process.env.DSH_DEVICE_REFRESH_HOURS, 24) * 60 * 60 * 1000,
-  pendingTtlMs: positiveInt(process.env.DSH_PENDING_TTL_MIN, 15) * 60 * 1000,
-  listenHostLabel: `${text(process.env.DSH_BIND_HOST) || "127.0.0.1"}:${positiveInt(process.env.DSH_LISTEN_PORT, 57420)}`,
+  deviceTtlDays: positiveInt(process.env.DSH_DEVICE_TTL_DAYS, 30, "DSH_DEVICE_TTL_DAYS"),
+  deviceRefreshMs:
+    positiveInt(process.env.DSH_DEVICE_REFRESH_HOURS, 24, "DSH_DEVICE_REFRESH_HOURS") * 60 * 60 * 1000,
+  pendingTtlMs: positiveInt(process.env.DSH_PENDING_TTL_MIN, 15, "DSH_PENDING_TTL_MIN") * 60 * 1000,
+  listenHostLabel: `${text(process.env.DSH_BIND_HOST) || "127.0.0.1"}:${positiveInt(
+    process.env.DSH_LISTEN_PORT,
+    57420,
+    "DSH_LISTEN_PORT"
+  )}`,
   allowCidrs: text(process.env.DSH_ALLOW_CIDR)
     .split(",")
     .map((entry) => entry.trim())
@@ -106,4 +135,10 @@ export const config = Object.freeze({
 
   dshHome: text(process.env.DSH_HOME) || path.join(process.env.USERPROFILE || os.homedir(), ".dsh"),
 });
+
+// M5: los avisos se emiten al importar (antes de server.listen() en bridge.mjs),
+// sin caracteres de control del entorno y sin detener el arranque.
+for (const message of [...new Set(envWarnings)]) {
+  console.warn(`[config] aviso: ${message.replace(/[\u0000-\u001f\u007f]/g, "")}`);
+}
 

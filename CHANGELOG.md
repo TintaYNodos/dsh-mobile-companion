@@ -3,6 +3,56 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.2.10 — `versionCode` 54
+
+Corrección de la línea 5.2 tras la auditoría técnica de la 5.2.9. **Sin funciones nuevas**: cierra
+fallos de integridad de datos, de acceso y de operación, y alinea la documentación con el código.
+
+### Corregido — datos de las notas
+
+- **Escritura atómica de la nota**: el `.md` se escribe en temporal y se renombra; un corte de
+  corriente o un `SIGKILL` ya no deja un archivo de 0 bytes.
+- **Índice antes que contenido**: `ids.json` se reserva antes de escribir la nota, así que reenviar
+  el mismo `id` tras un corte actualiza en vez de duplicar.
+- **Poda de la bandeja serializada**: `inbox.jsonl` no se reescribe desde dos peticiones a la vez
+  (fin de los `EPERM` y de los `.tmp` huérfanos en Windows).
+- **`GET /dsh-companion/notes`** recorre las 500 líneas que retiene la poda (antes solo 200).
+
+### Corregido — acceso y privacidad
+
+- **Kill switch honesto**: si la clave viene de `DSH_ACCESS_KEY`, la rotación ya no finge: responde
+  `rotated: false` con el motivo. Con clave en archivo, rota de verdad.
+- **`hasValidAccessKey`** ya no acepta cualquier `Authorization` cuando no hay clave configurada.
+- **Rechazo por solicitud, no por IP**: un rechazo deja de bloquear a todos los equipos tras el NAT.
+- **`/healthz`** pasa por la misma frontera de `Host`/`Origin` que el resto de rutas.
+- **QR**: si la URL no cabe, se muestra en texto en vez de generar un QR truncado e idéntico para
+  textos distintos.
+
+### Corregido — cliente Android
+
+- **Un solo envío de nota en vuelo**: doble toque en «Enviar» ya no crea dos notas en la PC.
+- **Comparador de versiones**: `5.2.9-rc1` deja de considerarse más nuevo que `5.2.9`.
+- **`<queries>` en el manifest**: el lector de QR vuelve a resolverse en Android 11+.
+- **«Limpiar caché» conserva la cookie de emparejamiento**: deja de mandar el teléfono a
+  «Acceso pendiente» y de exigir re-aprobación.
+- **Notas**: conserva filtros, orden y búsqueda al rotar; modo apaisado con drawer y compositor
+  compacto.
+- **Avisos**: el interruptor maestro cubre también la desconexión, la visibilidad es coherente y el
+  permiso de batería se re-sincroniza al volver del diálogo del sistema.
+
+### Corregido — operación
+
+- **Cierre ordenado en Windows**: `stop.bat` crea la bandera `companion.stop`, el puente la vigila y
+  sale con código 0; solo se fuerza si no cierra en 5 s.
+- **Variables de entorno inválidas**: se avisa con el valor rechazado y el default aplicado.
+- **Aislamiento de la suite**: `DSH_SYNC_DIR`, `DSH_LOG_FILE` y `DSH_STOP_FLAG` mantienen las
+  pruebas fuera del `synced_chats/` y del `bridge.log` del repositorio.
+
+### Compatibilidad
+
+Se instala **encima de la 5.2.9** sin desinstalar (mismo certificado desde 5.1.7). El APK de 5.2.10
+es `versionCode` 54; el puente y el APK deben actualizarse juntos.
+
 ## 5.2.9 — `versionCode` 53
 
 Actualización de producto de la serie 5.2: **Notas** pasa a ser la función central del teléfono.

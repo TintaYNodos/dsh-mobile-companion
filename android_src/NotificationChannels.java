@@ -19,6 +19,16 @@ import android.os.Build;
  * no cambian con cada aviso, mientras que el helper crece con cada tipo de
  * mensaje. Los nombres de canal viven en NotificationHelper para que todos los
  * emisores compartan la misma constante.
+ *
+ * H-7: criterio único de visibilidad en pantalla bloqueada, para que el canal y
+ * cada aviso no se contradigan:
+ *  - SECRET para los avisos informativos que muestran datos sensibles (petición
+ *    de aprobación, emparejamiento de dispositivo: código, herramienta, IP).
+ *  - PUBLIC para el estado de conexión, las respuestas/tareas y los avisos
+ *    críticos, que no exponen datos de la conversación.
+ * Los avisos de aprobación usan además setVisibility(SECRET) explícito en
+ * NotificationHelper/NotificationsApproval: una notificación prevalece sobre su
+ * canal, así que ambos deben coincidir.
  */
 public final class NotificationChannels {
 
@@ -43,7 +53,9 @@ public final class NotificationChannels {
         approvals.setVibrationPattern(VIBRATE_APPROVAL);
         approvals.enableLights(true);
         approvals.setLightColor(Color.parseColor("#0EA5E9"));
-        approvals.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
+        // H-7: mismo criterio que el aviso (VISIBILITY_SECRET): la petición de
+        // aprobación no debe mostrar código ni herramienta en pantalla bloqueada.
+        approvals.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
         nm.createNotificationChannel(approvals);
 
         NotificationChannel tasks = new NotificationChannel(

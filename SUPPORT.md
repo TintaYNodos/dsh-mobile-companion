@@ -1,16 +1,16 @@
 # Política de soporte
 
-**Versión estable actual: 5.2.9** (puente y APK, versionCode 53). La línea estable recibe
-correcciones de seguridad y versiones de mantenimiento de la serie 5.2. **5.2.8 queda como la
-versión anterior** y ya no recibe cambios: si sigues en ella, actualiza a 5.2.9.
+**Versión estable actual: 5.2.10** (puente y APK, versionCode 54). La línea estable recibe
+correcciones de seguridad y versiones de mantenimiento de la serie 5.2. **5.2.9 queda como la
+versión anterior** y ya no recibe cambios: si sigues en ella, actualiza a 5.2.10.
 
 ## Estado de las versiones
 
 | Versión | Estado | Qué recibe |
 | --- | --- | --- |
-| 5.2.9 (estable, versionCode 53) | **Soportada** | Correcciones de seguridad de la serie 5.2 |
-| 5.2.8 y anteriores de la serie 5.2 | Sin soporte | Nada; actualiza a la 5.2.9 |
-| 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.2.9 |
+| 5.2.10 (estable, versionCode 54) | **Soportada** | Correcciones de seguridad de la serie 5.2 |
+| 5.2.9 y anteriores de la serie 5.2 | Sin soporte | Nada; actualiza a la 5.2.10 |
+| 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.2.10 |
 
 La versión se comprueba en la app (Ajustes) o en `/dsh-companion/status` (`version` y
 `apkVersionCode`). La huella del certificado de release y cómo verificar un APK están en

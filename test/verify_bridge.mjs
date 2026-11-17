@@ -1,4 +1,12 @@
-import http from "node:http";import { HOST, PORT, authHeader } from "./_harness.mjs";
+import http from "node:http";
+import net from "node:net";
+import fs from "node:fs";
+import { spawnSync } from "node:child_process";
+import { HOST, PORT, authHeader } from "./_harness.mjs";
+import { buildAllowedSets } from "../src/routes.mjs";
+import { isSameOriginRequest } from "../src/http.mjs";
+import { QR_MAX_BYTES, generateQrSvg } from "../src/qr.mjs";
+import { REPO_ROOT, startBridge } from "./ci/start-bridge.mjs";
 
 
 
@@ -159,6 +167,137 @@ if (statusJson.dshOnline !== true || !cssMatch) {
 // 16. cabeceras de seguridad
 check("nosniff presente", String(mobile.headers["x-content-type-options"] || "").includes("nosniff"));
 check("sin x-forwarded expuesto", mobile.headers["x-forwarded-for"] === undefined);
+
+// 17. H-02: al reconstruir los conjuntos de Host/Origin tras un cambio de IP no
+// se deben perder los alias de loopback (watchBinding los olvidaba: 403 tras
+// cambiar la IP del tunel).
+const rebuilt = buildAllowedSets("192.0.2.50", PORT);
+check("H-02: tras cambiar la IP siguen permitidos 127.0.0.1/localhost/[::1]",
+  ["127.0.0.1", "localhost", "[::1]"].every((alias) =>
+    rebuilt.allowedHosts.has(`${alias}:${PORT}`) && rebuilt.allowedOrigins.has(`http://${alias}:${PORT}`)) &&
+    rebuilt.allowedHosts.has(`192.0.2.50:${PORT}`),
+  [...rebuilt.allowedHosts].join(","));
+check("H-02: isSameOriginRequest acepta el loopback con los conjuntos reconstruidos",
+  isSameOriginRequest({ headers: { host: `127.0.0.1:${PORT}` } }, rebuilt.allowedOrigins, rebuilt.allowedHosts));
+
+// 18. M3: /healthz pasa por la frontera de Host/Origin que antes se saltaba.
+const foreignHost = await request("/healthz", { withAuth: false, headers: { host: `evil.example:${PORT}` } });
+check("M3: /healthz con Host ajeno responde 403", foreignHost.status === 403, `status=${foreignHost.status}`);
+const nullOrigin = await request("/healthz", { withAuth: false, headers: { origin: "null" } });
+check("M3: /healthz con Origin:null responde 403", nullOrigin.status === 403, `status=${nullOrigin.status}`);
+const crossOrigin = await request("/healthz", { withAuth: false, headers: { origin: "https://evil.example" } });
+check("M3: /healthz cross-site responde 403", crossOrigin.status === 403, `status=${crossOrigin.status}`);
+const ownHealth = await request("/healthz", { withAuth: false });
+check("M3: /healthz con Host legitimo responde 200 (doctor/Docker siguen igual)",
+  ownHealth.status === 200, `status=${ownHealth.status}`);
+
+// 19. H-07: un GET/HEAD con content-length y sin cuerpo no debe reenviarse al
+// backend: lo dejaba esperando bytes y envenenaba su keep-alive (+6 s).
+const auth = authHeader();
+const bodyless = await new Promise((resolve) => {
+  const socket = net.connect(PORT, HOST);
+  let data = "";
+  let settled = false;
+  const timer = setTimeout(() => done(0), 5000);
+  const done = (status) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(timer);
+    try { socket.destroy(); } catch {}
+    resolve({ status, bytes: data.length });
+  };
+  socket.on("connect", () => {
+    socket.write(
+      `GET / HTTP/1.1\r\nHost: ${HOST}:${PORT}\r\nAuthorization: ${auth.authorization}\r\n` +
+        "Content-Length: 5\r\nAccept: text/html\r\nConnection: close\r\n\r\n"
+    );
+  });
+  socket.on("data", (chunk) => {
+    data += chunk.toString("utf8");
+    const match = /^HTTP\/1\.[01] (\d+)/.exec(data);
+    if (match && data.includes("\r\n\r\n")) done(Number(match[1]));
+  });
+  socket.on("error", () => done(0));
+});
+check("H-07: GET con content-length y sin cuerpo responde sin colgar el backend",
+  bodyless.status === 200, `status=${bodyless.status} bytes=${bodyless.bytes}`);
+
+// 20. H-05/H-06: el QR falla de forma explicita si el texto no cabe; dos textos
+// largos distintos no pueden producir el mismo codigo.
+const fits = generateQrSvg("http://192.0.2.50:57420");
+const tooLongA = `http://192.0.2.50:57420/${"a".repeat(QR_MAX_BYTES)}`;
+const tooLongB = `http://192.0.2.50:57420/${"b".repeat(QR_MAX_BYTES)}`;
+check("H-05/H-06: un texto que cabe genera SVG", typeof fits === "string" && fits.startsWith("<svg"));
+check("H-05/H-06: dos textos >134 B no producen el mismo QR (fallo explicito)",
+  Buffer.byteLength(tooLongA) > 134 && Buffer.byteLength(tooLongB) > 134 &&
+    generateQrSvg(tooLongA) === null && generateQrSvg(tooLongB) === null,
+  `A=${Buffer.byteLength(tooLongA)} B=${Buffer.byteLength(tooLongB)}`);
+check("H-05/H-06: dos textos distintos que caben generan QR distintos",
+  generateQrSvg("http://192.0.2.50:57420/uno") !== generateQrSvg("http://192.0.2.50:57420/dos"));
+// H-06 llamadores: si el QR no cabe, el panel muestra la URL en texto y NUNCA
+// un SVG de QR invalido.
+const { approvalPage } = await import("../src/pairing.mjs");
+const longUrl = `http://${"a".repeat(160)}.example:57420`;
+const longPage = approvalPage({ bunkerUrl: longUrl });
+check("H-06: el panel muestra la URL en texto cuando el QR no cabe",
+  longPage.includes(longUrl) && longPage.includes("demasiado larga para un codigo QR") &&
+    !longPage.includes('aria-label="Codigo QR'), `urlLarga=${longUrl.length}B`);
+
+// 21. M5/H-14: una entera de entorno invalida avisa (valor rechazado + default).
+const envProbe = spawnSync(
+  process.execPath,
+  ["--input-type=module", "-e", "const { config } = await import('./src/config.mjs'); console.log('port=' + config.targetPort);"],
+  { cwd: REPO_ROOT, env: { ...process.env, DSH_TARGET_PORT: "abc" }, encoding: "utf8", timeout: 20_000, windowsHide: true }
+);
+check("M5: DSH_TARGET_PORT invalida avisa con el valor y el default aplicado",
+  envProbe.status === 0 && String(envProbe.stdout).includes("port=52710") &&
+    String(envProbe.stderr).includes('DSH_TARGET_PORT="abc"'),
+  `exit=${envProbe.status} err=${String(envProbe.stderr).trim().slice(0, 120)}`);
+
+// 21b. H-09: con la clave desactivada (clave vacia), cualquier Authorization
+// marcaba "autenticado por clave". Debe ser false aunque la puerta de
+// DSH_ACCESS_DISABLE siga abierta por su camino explicito.
+const disableProbe = spawnSync(
+  process.execPath,
+  ["--input-type=module", "-e",
+    "const { resolveAccessKey, hasValidAccessKey, accessKeyEnabled } = await import('./src/crypto.mjs');" +
+      "const authorization = 'Basic ' + Buffer.from('dsh:lo-que-sea').toString('base64');" +
+      "console.log(JSON.stringify({ keyLen: resolveAccessKey().length, enabled: accessKeyEnabled(), ok: hasValidAccessKey({ headers: { authorization } }) }));"],
+  {
+    cwd: REPO_ROOT,
+    env: { ...process.env, DSH_ACCESS_DISABLE: "1", DSH_ACCESS_KEY: "", DSH_BIND_HOST: "127.0.0.1" },
+    encoding: "utf8",
+    timeout: 20_000,
+    windowsHide: true,
+  }
+);
+let disableState = {};
+try { disableState = JSON.parse(String(disableProbe.stdout).trim().split(/\r?\n/).pop()); } catch {}
+check("H-09: con clave vacia hasValidAccessKey=false (no marca autenticado) y la puerta sigue abierta",
+  disableProbe.status === 0 && disableState.keyLen === 0 && disableState.enabled === false && disableState.ok === false,
+  `exit=${disableProbe.status} ${JSON.stringify(disableState)}`);
+
+// 22. M1/H-06: cierre ordenado por la bandera companion.stop (Windows no
+// ejecuta los handlers de SIGTERM). Se prueba en un puente aislado propio.
+const own = await startBridge();
+try {
+  fs.writeFileSync(own.stopFlag, "");
+  const stopCode = await own.waitForExit(6000);
+  const closed = await new Promise((resolve) => {
+    const probe = http.request(
+      { hostname: "127.0.0.1", port: own.bridgePort, path: "/dsh-companion/status", timeout: 1500, agent: false },
+      (res) => { res.resume(); resolve(false); }
+    );
+    probe.on("timeout", () => { probe.destroy(); resolve(true); });
+    probe.on("error", () => resolve(true));
+    probe.end();
+  });
+  check("M1: companion.stop cierra el puente con exit 0 y suelta el puerto",
+    stopCode === 0 && closed && own.output().includes("bandera companion.stop"),
+    `exit=${stopCode} puertoCerrado=${closed}`);
+} finally {
+  await own.stop();
+}
 
 const failed = results.filter((r) => !r.ok);
 const suffix = skipped.length ? ` (${skipped.length} omitida${skipped.length === 1 ? "" : "s"})` : "";

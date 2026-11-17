@@ -11,12 +11,15 @@
  * Arranca un puente aislado (test/ci/start-bridge.mjs: HOME y DSH_HOME
  * temporales, puertos libres de loopback, backend DSH mínimo de pruebas), corre
  * las suites que no necesitan un DeepSeek Harness real, resume PASS/FAIL/SKIP y
- * devuelve código 1 si algo falla. Al terminar cierra el puente y restaura los
- * archivos que la suite escribe en synced_chats/.
+ * devuelve código 1 si algo falla. Al terminar cierra el puente y COMPRUEBA
+ * (H-17) que el synced_chats/ y el bridge.log del repositorio no cambiaron: la
+ * suite escribe en DSH_SYNC_DIR/DSH_LOG_FILE temporales, nunca en los del
+ * usuario.
  *
  * Las suites que exigen el backend real o son destructivas se declaran omitidas
  * con su motivo: no se finge que corren.
  */
+import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -26,7 +29,8 @@ import { REPO_ROOT, pingPanel, startBridge } from "./start-bridge.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = path.resolve(here, "..");
-const SYNC_DIR = path.join(REPO_ROOT, "synced_chats");
+const REPO_SYNC_DIR = path.join(REPO_ROOT, "synced_chats");
+const REPO_BRIDGE_LOG = path.join(REPO_ROOT, "bridge.log");
 
 /** Orden equivalente al de test/run-all.mjs para estas suites. */
 const SUITES = [
@@ -82,50 +86,34 @@ const listFiles = (dir, prefix = "") => {
   return files;
 };
 
-/** La suite escribe chats de prueba en synced_chats/: se fotografía y restaura. */
-const snapshotSyncDir = () => {
-  const snapshot = { files: new Set(listFiles(SYNC_DIR)), index: null, indexMtime: null };
-  const indexPath = path.join(SYNC_DIR, "index.jsonl");
+/**
+ * H-17: huella de solo lectura del synced_chats/ y del bridge.log DEL
+ * REPOSITORIO (los del usuario). No se escribe ni se restaura nada: si la
+ * huella cambia al correr la suite, es un fallo (la suite toco los del usuario).
+ */
+const hashFile = (file) => {
   try {
-    snapshot.index = fs.readFileSync(indexPath);
-    snapshot.indexMtime = fs.statSync(indexPath).mtime;
+    return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
   } catch {
-    snapshot.index = null;
-    snapshot.indexMtime = null;
+    return "ausente";
   }
-  return snapshot;
 };
 
-const restoreSyncDir = (snapshot) => {
-  for (const relative of listFiles(SYNC_DIR)) {
-    if (snapshot.files.has(relative)) continue;
-    try {
-      fs.rmSync(path.join(SYNC_DIR, ...relative.split("/")), { force: true });
-    } catch {
-      // Un archivo que ya no existe no es un problema.
-    }
-  }
-  const indexPath = path.join(SYNC_DIR, "index.jsonl");
+const fingerprintRepo = () => {
+  const files = listFiles(REPO_SYNC_DIR).sort();
+  const manifest = files.map((relative) => `${relative}:${hashFile(path.join(REPO_SYNC_DIR, ...relative.split("/")))}`);
+  let logSignal = "ausente";
   try {
-    if (snapshot.index) {
-      // Sin cambios en los bytes no se reescribe: el archivo del usuario
-      // conserva su mtime.
-      let current = null;
-      try {
-        current = fs.readFileSync(indexPath);
-      } catch {
-        current = null;
-      }
-      if (!current || !current.equals(snapshot.index)) {
-        fs.writeFileSync(indexPath, snapshot.index);
-        if (snapshot.indexMtime) fs.utimesSync(indexPath, new Date(), snapshot.indexMtime);
-      }
-    } else if (!snapshot.files.has("index.jsonl")) {
-      fs.rmSync(indexPath, { force: true });
-    }
+    const stat = fs.statSync(REPO_BRIDGE_LOG);
+    logSignal = `${stat.size}:${stat.mtimeMs}:${hashFile(REPO_BRIDGE_LOG)}`;
   } catch {
-    // Restaurar es cortesía: si falla, CI igual termina con el resultado real.
+    logSignal = "ausente";
   }
+  return {
+    sync: crypto.createHash("sha256").update(manifest.join("\n")).digest("hex"),
+    files: files.length,
+    log: logSignal,
+  };
 };
 
 /**
@@ -200,6 +188,7 @@ const runSuite = (file, env) =>
 
 const main = async () => {
   console.log(`[ci] Node ${process.version} · ${process.platform}`);
+  const repoBefore = fingerprintRepo();
   const bridge = await startBridge();
   console.log(`[ci] Puente aislado en http://127.0.0.1:${bridge.bridgePort} (panel ${bridge.panelPort}, backend de pruebas ${bridge.stubPort})`);
   console.log(`[ci] DSH_HOME temporal: ${bridge.dshHome}`);
@@ -212,7 +201,6 @@ const main = async () => {
   };
 
   const pinger = startPanelPing(bridge.panelPort);
-  const snapshot = snapshotSyncDir();
   const totals = { pass: 0, fail: 0, skip: 0 };
   const suites = { pass: 0, fail: 0 };
   const failed = [];
@@ -240,8 +228,16 @@ const main = async () => {
     await bridge.stop();
     const exitCode = bridge.exitCode();
     console.log(`[ci] Puente cerrado tras SIGTERM${exitCode === null ? "" : ` (exit=${exitCode})`}`);
-    restoreSyncDir(snapshot);
   }
+
+  // H-17: el synced_chats/ y el bridge.log del repositorio no deben cambiar.
+  const repoAfter = fingerprintRepo();
+  const isolationOk = repoBefore.sync === repoAfter.sync && repoBefore.log === repoAfter.log;
+  console.log(
+    `${isolationOk ? "PASS" : "FAIL"}  H-17 aislamiento: synced_chats/ (${repoAfter.files} archivos) y bridge.log del repo sin cambios`,
+    `sync=${repoAfter.sync.slice(0, 12)} log=${isolationOk ? "igual" : "CAMBIADO"}`
+  );
+  if (!isolationOk) process.exitCode = 1;
 
   console.log("\n[ci] === Resumen ===");
   console.log(`[ci] Suites: ${suites.pass} PASS, ${suites.fail} FAIL, ${SKIPPED.length} SKIP`);

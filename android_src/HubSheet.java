@@ -6,35 +6,23 @@
 package com.tintaynodos.dshcompanion;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.ArrayList;
 import java.util.List;
 
 import android.graphics.drawable.ColorDrawable;
 import android.view.Window;
 import android.view.WindowManager;
-
-import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
  * Panel inferior: estado, equipos, sistema y mantenimiento.
@@ -275,7 +263,7 @@ class HubSheet {
         });
         Button btnClear = UiKit.actionCompact(a, "Limpiar caché", false, () -> {
             HubSheet.dismissHub(a);
-            HubSheet.clearCacheAndReload(a);
+            HubSheet.confirmClearCacheAndReload(a);
         });
 
         LinearLayout.LayoutParams r1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -300,16 +288,12 @@ class HubSheet {
         }
     }
 
-    static void clearCacheAndReload(MainActivity a) {
-        try {
-            android.webkit.WebViewDatabase.getInstance(a).clearHttpAuthUsernamePassword();
-            android.webkit.CookieManager.getInstance().removeAllCookies(null);
-            android.webkit.WebStorage.getInstance().deleteAllData();
-        } catch (Throwable ignored) {
-        }
-        a.webView.clearCache(true);
-        a.webView.clearHistory();
-        a.webView.reload();
-        Toast.makeText(a, "Caché limpiada", Toast.LENGTH_SHORT).show();
+    /**
+     * H-04: «Limpiar caché» ya no borra la cookie de emparejamiento. Se pide
+     * confirmación y la limpieza real (con la cookie preservada) vive en
+     * {@link CacheMaintenance}.
+     */
+    static void confirmClearCacheAndReload(MainActivity a) {
+        CacheMaintenance.confirm(a);
     }
 }

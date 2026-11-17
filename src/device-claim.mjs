@@ -19,13 +19,31 @@ const COOKIE = "dsh-companion-device";
 const CLAIM_COOKIE = "dsh-companion-claim";
 const CLAIM_COOKIE_PATH = "/dsh-companion";
 const MAX_PENDING = 16;
-const DENIED_TTL_MS = 30 * 60 * 1000;
+export const DENIED_TTL_MS = 30 * 60 * 1000;
 
 export const normalize = (addr) => String(addr || "").replace(/^::ffff:/, "");
 
 export const isLoopback = (addr) => {
   const value = normalize(addr);
   return value.startsWith("127.") || value === "::1";
+};
+
+/**
+ * H-08: un rechazo es de UNA solicitud, no de la IP entera. Antes se guardaba
+ * solo la direccion y `requestAccess` bloqueaba a cualquier equipo detras del
+ * mismo NAT: rechazar un telefono dejaba a todos los demas sin poder pedir
+ * acceso. El rechazo se guarda por `claimToken` (la cookie de canje de la
+ * solicitud concreta); para peticiones sin token (la pagina de rechazo se sirve
+ * en "/" y la cookie esta acotada a /dsh-companion) se empareja IP + user-agent,
+ * que distingue equipos detras de la misma IP sin bloquear la IP entera.
+ * Los registros antiguos sin token/agent ya no bloquean a un telefono con UA.
+ */
+export const deniedMatchesRequest = (row, { address, claimToken = "", agent = "" } = {}) => {
+  if (!row || typeof row !== "object") return false;
+  if (claimToken) return row.claimToken === claimToken;
+  if (row.claimToken) return false;
+  if (normalize(row.address) !== normalize(address)) return false;
+  return String(row.agent || "") === String(agent || "");
 };
 
 /**
@@ -51,6 +69,9 @@ const cookieValue = (req, name) => {
 };
 
 export const readCookie = (req) => cookieValue(req, COOKIE);
+
+/** Token de canje presentado por la peticion (o null). Lo usan rutas y rechazos. */
+export const readClaimToken = (req) => readClaimCookie(req);
 
 const readClaimCookie = (req) => {
   const value = cookieValue(req, CLAIM_COOKIE);
@@ -105,6 +126,32 @@ export const prune = (current, now) => {
   return current;
 };
 
+/**
+ * H-08: consulta de rechazo por solicitud concreta. Poda antes de contestar (un
+ * rechazo de hace 31 min ya no vale, D4) y compara con deniedMatchesRequest.
+ */
+export const isDenied = (address, request = {}) => {
+  const match = {
+    address: normalize(address),
+    claimToken: request.claimToken || "",
+    agent: request.agent || "",
+  };
+  return prune(loadRegistry(), Date.now()).denied.some((row) => deniedMatchesRequest(row, match));
+};
+
+/** Borra el rechazo de ESTA solicitud (token) o, sin token, IP + user-agent. */
+export function clearDenied(address, request = {}) {
+  const current = loadRegistry();
+  const before = current.denied.length;
+  const match = {
+    address: normalize(address),
+    claimToken: request.claimToken || "",
+    agent: request.agent || "",
+  };
+  current.denied = current.denied.filter((row) => !deniedMatchesRequest(row, match));
+  if (current.denied.length !== before) saveRegistry();
+}
+
 export function requestAccess(remoteAddress, userAgent) {
   const now = Date.now();
   const current = prune(loadRegistry(), now);
@@ -114,7 +161,10 @@ export function requestAccess(remoteAddress, userAgent) {
   const res = context?.res || null;
   const presented = readClaimCookie(req);
 
-  if (current.denied.some((row) => row.address === address)) {
+  // H-08: solo se rechaza la solicitud concreta (por token de canje); sin token,
+  // el mismo equipo por IP + user-agent. Nunca la IP entera.
+  const agent = String(userAgent || "").slice(0, 120);
+  if (current.denied.some((row) => deniedMatchesRequest(row, { address, claimToken: presented || "", agent }))) {
     return { entry: null, created: false, denied: true };
   }
 

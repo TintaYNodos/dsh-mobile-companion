@@ -34,6 +34,7 @@ import { stripControlChars } from "./http.mjs";
 import { sanitizeLogMessage } from "./log.mjs";
 import { NOTE_ID_RE, noteBaseName, renderNote } from "./notes-format.mjs";
 import { assertInside, writeAtomic } from "./sync-index.mjs";
+import { INBOX_MAX_LINES, ORPHAN_MIN_AGE_MS, capNotesInboxSafe, cleanupNotesTempFiles, sanitizeNotesStore } from "./sync-retention.mjs";
 
 /** POST /dsh-companion/notes: cuerpo maximo permitido, en bytes. */
 export const NOTES_MAX_BYTES = 64 * 1024;
@@ -45,8 +46,6 @@ export const INBOX_FILE_NAME = "inbox.jsonl";
 export const IDS_FILE_NAME = "ids.json";
 /** Tope duro de cada linea de la bandeja, en bytes. */
 const INBOX_LINE_MAX_BYTES = 2 * 1024;
-/** Cuantas lineas finales de la bandeja se listan en GET /dsh-companion/notes. */
-const INBOX_READ_LINES = 200;
 const TAGS_MAX = 10;
 
 export const notesDirectory = () => path.join(config.syncDir, NOTES_DIR_NAME);
@@ -198,28 +197,58 @@ const syncInbox = async (note, file, now) => {
   }
 };
 
-/** Reserva un nombre unico con `wx` y escribe la nota; devuelve el nombre. */
-const createNoteFile = async (directory, note, now) => {
+/** Marca de reserva atomica: el .md solo aparece completo (rename), nunca a 0 bytes. */
+const RESERVE_SUFFIX = ".reserve";
+
+/**
+ * H-18: reserva un nombre unico con `wx` sobre un sidecar `.reserve` en vez de
+ * crear el .md definitivo. El .md se escribe despues con temporal + rename, de
+ * modo que un SIGKILL deja a lo sumo un temporal/reserva (que el saneado borra),
+ * nunca un .md de 0 bytes. La reserva `wx` conserva la exclusion entre notas y
+ * sigue saltando nombres ocupados (-2, -3, ...).
+ */
+const reserveNoteName = async (directory, note, now) => {
   const base = noteBaseName(note, now);
-  const contents = renderNote(note, now);
   for (let attempt = 1; attempt <= 100; attempt += 1) {
     const candidate = attempt === 1 ? `${base}.md` : `${base}-${attempt}.md`;
-    let handle;
+    // Un .md ya presente ocupa el nombre (la reserva wx sobre el sidecar solo
+    // detecta otra reserva en vuelo, no un archivo ya escrito).
+    if (fs.existsSync(assertInside(directory, candidate))) continue;
+    const reservation = assertInside(directory, `${candidate}${RESERVE_SUFFIX}`);
     try {
-      handle = await fs.promises.open(assertInside(directory, candidate), "wx", 0o600);
+      const handle = await fs.promises.open(reservation, "wx", 0o600);
+      await handle.close();
+      return { file: candidate, reservation };
     } catch (error) {
       if (error.code === "EEXIST") continue;
       throw error;
     }
-    try {
-      await handle.writeFile(contents, "utf8");
-    } finally {
-      await handle.close();
-    }
-    return candidate;
   }
   throw Object.assign(new Error("No se pudo reservar un nombre unico para la nota"), { statusCode: 500 });
 };
+
+const releaseReservation = async (reservation) => {
+  try {
+    await fs.promises.rm(reservation, { force: true });
+  } catch {
+    // El saneado de arranque la borra si no se pudo aqui.
+  }
+};
+
+/** Contenido del .md con escritura atomica sobre el nombre ya reservado. */
+const commitNoteFile = (directory, file, contents) => writeAtomic(assertInside(directory, file), contents);
+
+const logIndexFailure = (error) =>
+  console.error(sanitizeLogMessage(`[notes] No se pudo actualizar ${IDS_FILE_NAME}: ${error.message}`));
+
+// H-19: saneado al arrancar. Borra temporales/reservas de un corte y los .md de
+// 0 bytes de una reserva incompleta. Las entradas del indice cuyo archivo ya no
+// existe se descartan al guardar; reenviar el mismo id recrea el archivo.
+try {
+  sanitizeNotesStore();
+} catch {
+  // Un saneado incompleto no impide arrancar: se reintenta en cada guardado.
+}
 
 /** Escritura de una nota ya validada, sin serializar. Devuelve {file, updated}. */
 const saveNoteUnlocked = async (note) => {
@@ -230,28 +259,51 @@ const saveNoteUnlocked = async (note) => {
   const index = note.id ? loadIndex() : null;
   if (index) pruneIndex(index);
 
+  const createdAt = note.createdAt || now.toISOString();
+
   // Idempotencia: si el id ya apunta a un archivo que existe, se reemplaza el
   // contenido de ESE archivo (mismo nombre, sin duplicado).
   const existing = note.id ? index[note.id] : "";
   if (existing) {
     const filePath = assertInside(directory, existing);
-    const createdAt = note.createdAt || readExistingCreatedAt(filePath) || now.toISOString();
-    const updatedNote = { ...note, createdAt };
+    const updatedNote = { ...note, createdAt: note.createdAt || readExistingCreatedAt(filePath) || createdAt };
     await writeAtomic(filePath, renderNote(updatedNote, now));
     await syncInbox(updatedNote, existing, now);
     return { file: existing, updated: true };
   }
 
-  const createdAt = note.createdAt || now.toISOString();
   const fresh = { ...note, createdAt };
-  const file = await createNoteFile(directory, fresh, now);
-  if (note.id) {
-    index[note.id] = file;
-    try {
-      await persistIndex(index);
-    } catch (error) {
-      console.error(sanitizeLogMessage(`[notes] No se pudo actualizar ${IDS_FILE_NAME}: ${error.message}`));
+  const contents = renderNote(fresh, now);
+  const { file, reservation } = await reserveNoteName(directory, fresh, now);
+  let indexed = false;
+  try {
+    // H-19: el nombre se reserva en ids.json ANTES de escribir el contenido. Si
+    // el proceso muere entre ambos pasos, el indice apunta a un archivo que no
+    // existe y el saneado descarta esa entrada: NUNCA queda un archivo sin
+    // indice (que es lo que hacia que reenviar el mismo id duplicara la nota).
+    if (note.id) {
+      index[note.id] = file;
+      indexed = true;
+      try {
+        await persistIndex(index);
+      } catch (error) {
+        logIndexFailure(error);
+        throw Object.assign(new Error("No se pudo reservar el id de la nota"), { statusCode: 500 });
+      }
     }
+    await commitNoteFile(directory, file, contents);
+  } catch (error) {
+    if (indexed) {
+      delete index[note.id];
+      try {
+        await persistIndex(index);
+      } catch {
+        // Si tampoco se puede reescribir, el saneado lo descartara al faltar el .md.
+      }
+    }
+    throw error;
+  } finally {
+    await releaseReservation(reservation);
   }
   await syncInbox(fresh, file, now);
   return { file, updated: false };
@@ -271,8 +323,22 @@ const serialize = (task) => {
   return run;
 };
 
-/** Guarda una nota (crear o actualizar por id); devuelve {file, updated}. */
-export const saveNote = (note) => serialize(() => saveNoteUnlocked(note));
+/**
+ * Guarda una nota (crear o actualizar por id); devuelve {file, updated}.
+ *
+ * H-20: la poda rapida de la bandeja corre DENTRO de la misma cola. Antes
+ * `capNotesInboxSafe()` se ejecutaba fuera de `serialize` y dos POST
+ * concurrentes reescribian `inbox.jsonl` a la vez: EPERM en Windows y `.tmp`
+ * huerfanos. Los temporales de un proceso muerto se limpian al arrancar y en
+ * cada guardado.
+ */
+export const saveNote = (note) =>
+  serialize(async () => {
+    cleanupNotesTempFiles({ maxAgeMs: ORPHAN_MIN_AGE_MS });
+    const result = await saveNoteUnlocked(note);
+    await capNotesInboxSafe();
+    return result;
+  });
 
 /** Convierte el valor textual de una fecha en milisegundos (0 si no se puede). */
 const stampMs = (value) => {
@@ -281,17 +347,17 @@ const stampMs = (value) => {
 };
 
 /**
- * Lista las notas recibidas para GET /dsh-companion/notes: lee las ultimas 200
- * lineas de la bandeja, tolera lineas corruptas, deduplica por archivo (gana la
- * linea mas reciente) y ordena por `receivedAt` descendente. Nunca expone el
- * cuerpo. Incluye el `id` estable del telefono ("" si la nota no lo trae) para
+ * Lista las notas recibidas para GET /dsh-companion/notes: lee las ultimas
+ * `INBOX_MAX_LINES` (500, el mismo tope que retiene la poda; H-13) lineas de la
+ * bandeja, tolera lineas corruptas, deduplica por archivo (gana la linea mas
+ * reciente) y ordena por `receivedAt` descendente. Nunca expone el cuerpo. Incluye el `id` estable del telefono ("" si la nota no lo trae) para
  * que la PC pueda correlacionar y deduplicar sin depender solo del nombre de
  * archivo, igual que hacen el front matter y la propia bandeja.
  */
 export const listInboxNotes = () => {
   const raw = readInboxRaw();
   if (raw === null) return [];
-  const lines = raw.split("\n").filter((entry) => entry.trim() !== "").slice(-INBOX_READ_LINES);
+  const lines = raw.split("\n").filter((entry) => entry.trim() !== "").slice(-INBOX_MAX_LINES);
   const byFile = new Map();
   for (const line of lines) {
     let record;

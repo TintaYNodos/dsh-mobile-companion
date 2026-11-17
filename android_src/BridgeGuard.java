@@ -75,10 +75,6 @@ class BridgeGuard {
         return pageNonce;
     }
 
-    static boolean isArmed() {
-        return armed;
-    }
-
     /**
      * Arma el puente para la página actual. Es idempotente y un intento
      * fallido no desarma una página que ya estaba armada.

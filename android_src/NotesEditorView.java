@@ -255,6 +255,7 @@ final class NotesEditorView {
 
         LinearLayout row = NotesUi.row(activity);
         parts.sendButton = action(activity, "Enviar", true, "Enviar a la PC", actions::onSend);
+        NotesSendGuard.watch(parts.sendButton);
         row.addView(parts.sendButton);
         parts.shareButton = action(activity, "Compartir", false, "Compartir nota",
                 actions::onShare);

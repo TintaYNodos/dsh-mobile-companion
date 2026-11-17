@@ -5,34 +5,7 @@
  */
 package com.tintaynodos.dshcompanion;
 
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.Build;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
-import android.widget.TextView;
-import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
-
 import android.view.KeyEvent;
-
-import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
 /**
  * Atajos de teclado fisico (Ctrl+Enter, Ctrl+R, Escape).
@@ -64,10 +37,6 @@ class KeyRouter {
             if (keyCode == KeyEvent.KEYCODE_ESCAPE) {
                 if (a.sheetDialog != null && a.sheetDialog.isShowing()) {
                     HubSheet.dismissHub(a);
-                    return true;
-                }
-                if (a.addressDialog != null && a.addressDialog.isShowing()) {
-                    a.addressDialog.dismiss();
                     return true;
                 }
                 WebBridge.dispatchEscapeToWeb(a);

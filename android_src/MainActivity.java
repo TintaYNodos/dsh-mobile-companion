@@ -92,7 +92,6 @@ public class MainActivity extends Activity {
     Button bannerWolButton;
     AlertDialog sheetDialog;
     AlertDialog settingsDialog;
-    AlertDialog addressDialog;
     String activeUrl = "";
     int state = STATE_RETRYING;
     int attempts = 0;
@@ -320,6 +319,11 @@ public class MainActivity extends Activity {
         super.onResume();
         // P34: reaplica FLAG_SECURE por si el usuario lo cambió en Ajustes.
         ScreenSecurity.apply(this);
+        // H-10: el interruptor de batería se quedaba encendido aunque el sistema
+        // denegara la exención; se re-sincroniza al volver del diálogo.
+        SettingsNotifications.resyncBatterySwitch(this);
+        // Share-sheet: la píldora se ocultó al lanzar el selector del sistema.
+        PillUi.restoreAfterSystemSheet();
         ConnectionController.onResume(this);
     }
 

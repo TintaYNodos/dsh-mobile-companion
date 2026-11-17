@@ -5,30 +5,9 @@
  */
 package com.tintaynodos.dshcompanion;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Build;
-import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
-import android.widget.TextView;
-import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
 import android.Manifest;
 import android.app.NotificationManager;
 import android.webkit.CookieManager;
@@ -37,6 +16,7 @@ import java.net.URL;
 import android.util.Base64;
 import java.nio.charset.StandardCharsets;
 import android.content.pm.PackageManager;
+import android.widget.Toast;
 
 import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
@@ -61,6 +41,10 @@ class NotificationGate {
     /**
      * ¿Debe mostrarse una notificacion ahora mismo? Fuera de la app si; dentro
      * solo con el telefono bloqueado, y nunca con el interruptor maestro apagado.
+     *
+     * Usa {@link MainActivity#isAppVisible()}, que ademas exige que la Activity
+     * siga viva: el flag estatico suelto podia quedar en true tras destruirla y
+     * silenciar los avisos para siempre.
      */
     static boolean shouldShowNotification(Context context) {
         if (context == null) return true;
@@ -70,9 +54,9 @@ class NotificationGate {
 
             android.app.KeyguardManager km = (android.app.KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
             boolean isLocked = (km != null && km.isKeyguardLocked());
-            return isLocked || !MainActivity.sIsAppVisible;
+            return isLocked || !MainActivity.isAppVisible();
         } catch (Throwable ignored) {
-            return !MainActivity.sIsAppVisible;
+            return !MainActivity.isAppVisible();
         }
     }
 

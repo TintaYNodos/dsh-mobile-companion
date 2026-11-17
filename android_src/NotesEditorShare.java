@@ -65,6 +65,9 @@ final class NotesEditorShare {
         send.setType("text/plain");
         send.putExtra(Intent.EXTRA_SUBJECT, subject);
         send.putExtra(Intent.EXTRA_TEXT, text);
+        // Share-sheet: la píldora no debe quedar visible detrás del selector del
+        // sistema; se restaura en onResume de MainActivity al volver.
+        PillUi.hideForSystemSheet();
         activity.startActivity(Intent.createChooser(send, "Compartir nota"));
     }
 }

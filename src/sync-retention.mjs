@@ -40,8 +40,77 @@ const NOTES_IDS_FILE = "ids.json";
 const NOTES_DIR_NAME = "notes";
 /** Bandeja de metadatos de las notas (mismo nombre que INBOX_FILE_NAME en notes-store.mjs). */
 const NOTES_INBOX_FILE = "inbox.jsonl";
-/** Tope de lineas de la bandeja que se conservan (las mas recientes). */
-const INBOX_MAX_LINES = 500;
+/**
+ * Tope de lineas de la bandeja que se conservan (las mas recientes). Tambien es
+ * el tope que lee GET /dsh-companion/notes (H-13): antes leia 200 mientras la
+ * bandeja retenia 500, asi que las 300 mas antiguas eran invisibles.
+ */
+export const INBOX_MAX_LINES = 500;
+/** Marca de reserva atomica de nombre de nota (misma que notes-store.mjs). */
+const RESERVE_SUFFIX = ".reserve";
+/**
+ * Antiguedad a partir de la cual un `.tmp`/`.reserve` se considera huerfano de
+ * un proceso muerto. Por debajo de eso puede ser una escritura en curso de otra
+ * ruta (sync de chats) y no se toca.
+ */
+export const ORPHAN_MIN_AGE_MS = 60_000;
+
+/**
+ * H-20: limpia temporales de escritura atomica (`.tmp`) y reservas de nombre
+ * (`.reserve`) que dejo un corte a mitad de escritura. `maxAgeMs = 0` los borra
+ * todos (saneado de arranque, sin escritores vivos); con edad minima se puede
+ * llamar en cada poda sin pisar una escritura en curso.
+ */
+export const cleanupNotesTempFiles = ({ maxAgeMs = 0, now = Date.now() } = {}) => {
+  const directory = path.join(config.syncDir, NOTES_DIR_NAME);
+  let entries;
+  try {
+    entries = fs.readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return 0; // sin notes/: nada que limpiar
+  }
+  let removed = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (!entry.name.includes(".tmp") && !entry.name.endsWith(RESERVE_SUFFIX)) continue;
+    const fullPath = path.join(directory, entry.name);
+    try {
+      if (maxAgeMs > 0 && now - fs.statSync(fullPath).mtimeMs < maxAgeMs) continue;
+      fs.rmSync(fullPath, { force: true });
+      removed += 1;
+    } catch {
+      // Otro proceso ya lo borro: el estado deseado es el mismo.
+    }
+  }
+  return removed;
+};
+
+/**
+ * H-18/H-19: saneado de arranque del almacen de notas. Borra los temporales y
+ * reservas de un corte y los `.md` de 0 bytes (reserva incompleta de una version
+ * anterior). Nunca borra una nota completa: el .md se escribe con temp+rename,
+ * asi que solo puede existir a 0 bytes si quedo a medias.
+ */
+export const sanitizeNotesStore = () => {
+  const removed = cleanupNotesTempFiles();
+  const directory = path.join(config.syncDir, NOTES_DIR_NAME);
+  let entries;
+  try {
+    entries = fs.readdirSync(directory, { withFileTypes: true });
+  } catch {
+    return removed;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !isNoteFileName(entry.name)) continue;
+    try {
+      const fullPath = path.join(directory, entry.name);
+      if (fs.statSync(fullPath).size === 0) fs.rmSync(fullPath, { force: true });
+    } catch {
+      // Ya no existe: nada que sanear.
+    }
+  }
+  return removed;
+};
 
 /** Lee un tope entero positivo de una variable de entorno, con valor por defecto. */
 const envPositiveInt = (name, fallback) => {
@@ -105,6 +174,9 @@ const isNoteFileName = (name) =>
  * completa igualmente, para no dejar crecer la bandeja si no hay syncs.
  */
 const pruneNotesInbox = async (directory, { quick = false } = {}) => {
+  // H-20: en cada poda se limpian los temporales huerfanos (con edad minima para
+  // no pisar una escritura en curso de la cola de notas).
+  cleanupNotesTempFiles({ maxAgeMs: ORPHAN_MIN_AGE_MS });
   let raw;
   try {
     raw = await fs.promises.readFile(assertInside(directory, NOTES_INBOX_FILE), "utf8");

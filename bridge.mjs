@@ -5,6 +5,7 @@
  */
 
 import http from "node:http";
+import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -17,7 +18,7 @@ import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPa
 import { isSameOriginRequest, sendText } from "./src/http.mjs";
 import { startContractWatch } from "./src/dsh-contract.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
-import { dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
+import { buildAllowedSets, dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
 
 /**
  * P25: bridge.log lo escribe la redireccion de run-hidden.vbs y crecia sin
@@ -33,7 +34,9 @@ import { dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
  * semanas llenaba el disco.
  */
 const bridgeDir = path.dirname(fileURLToPath(import.meta.url));
-const rotation = rotateBridgeLog(path.join(bridgeDir, "bridge.log"));
+// H-17: el log se puede redirigir (tests y despliegues) con DSH_LOG_FILE; por
+// defecto sigue siendo bridge.log junto a este archivo.
+const rotation = rotateBridgeLog(config.logFile);
 if (rotation.rotated && rotation.mode === "rename") {
   // Sin redireccion el aviso va a la consola: no hay archivo nuevo que recibirlo.
   console.log(`[bridge] bridge.log rotado a bridge.log.1 (${rotation.bytes} bytes)`);
@@ -72,13 +75,9 @@ try {
 const accessKeyOn = accessKey.length > 0;
 
 let bindPrefix = binding.prefix ?? 24;
-let allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
-let allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
-
-for (const alias of ["127.0.0.1", "localhost", "[::1]"]) {
-  allowedOrigins.add(`http://${alias}:${config.listenPort}`);
-  allowedHosts.add(`${alias}:${config.listenPort}`);
-}
+// H-02: mismos conjuntos en el arranque y en cada cambio de IP (ver
+// buildAllowedSets en routes.mjs: reañade siempre los alias de loopback).
+let { allowedOrigins, allowedHosts } = buildAllowedSets(bindHost, config.listenPort);
 
 const REALM = 'Basic realm="DSH Companion", charset="UTF-8"';
 
@@ -233,8 +232,9 @@ const watchBinding = () => {
     binding = next;
     bindHost = next.address;
     bindPrefix = next.prefix ?? 24;
-    allowedOrigins = new Set([`http://${bindHost}:${config.listenPort}`]);
-    allowedHosts = new Set([`${bindHost}:${config.listenPort}`]);
+    // H-02: al reenlazar se reconstruyen los conjuntos CON los alias de
+    // loopback; antes se perdian y 127.0.0.1/localhost/[::1] recibian 403.
+    ({ allowedOrigins, allowedHosts } = buildAllowedSets(bindHost, config.listenPort));
     refreshRouteContext();
     log("bridge", `La IP privada cambio: ${previous} -> ${bindHost} (${next.iface}); reenlazando`);
     server.close(() => {
@@ -295,12 +295,43 @@ const ensureLoopbackServer = () => {
   });
 };
 ensureLoopbackServer();
+/**
+ * M1/H-06: en Windows `child.kill("SIGTERM")` del supervisor no ejecuta el
+ * handler (Windows no tiene senales POSIX). `stop.bat` escribe la bandera
+ * `companion.stop` junto al puente; aqui se vigila y, al aparecer, se cierran
+ * los servidores y se sale con codigo 0 (cierre ordenado). SIGINT/SIGTERM se
+ * conservan para Linux/macOS. `DSH_STOP_FLAG` permite apuntar la bandera a otro
+ * archivo (tests aislados) sin tocar la instalacion real.
+ */
+const stopFlagPath = process.env.DSH_STOP_FLAG
+  ? path.resolve(process.env.DSH_STOP_FLAG)
+  : path.join(bridgeDir, "companion.stop");
+let shuttingDown = false;
 const shutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   log("bridge", `Cerrando por ${signal}`);
   server.close(() => process.exit(0));
   if (loopbackServer) loopbackServer.close();
   setTimeout(() => process.exit(0), 3000).unref();
 };
+
+const stopFlagStartedAt = Date.now();
+const stopTimer = setInterval(() => {
+  if (shuttingDown) return;
+  let flag;
+  try {
+    flag = fs.statSync(stopFlagPath);
+  } catch {
+    return;
+  }
+  // Una bandera de un arranque anterior (stop interrumpido) no debe apagar el
+  // puente recien arrancado: solo se obedece la que se creo DESPUES de empezar.
+  if (flag.mtimeMs < stopFlagStartedAt) return;
+  clearInterval(stopTimer);
+  shutdown("bandera companion.stop");
+}, 250);
+stopTimer.unref();
 
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));

@@ -147,7 +147,7 @@ final class NotesUi {
         }
 
         if (note.localOnly) {
-            TextView local = smallText(activity, NotesStore.LOCAL_ONLY_LABEL, 11.5f,
+            TextView local = smallText(activity, NotesStore.localOnlyLabel(), 11.5f,
                     ThemePalette.accentInk(activity));
             local.setTypeface(Typeface.DEFAULT_BOLD);
             local.setPadding(0, dp(activity, 3), 0, 0);
@@ -175,6 +175,8 @@ final class NotesUi {
         } else {
             send.setContentDescription("Enviar a la PC: " + titleText);
         }
+        // H-03: mientras dura un envío el botón se deshabilita desde NotesSync.
+        NotesSendGuard.watch(send);
         send.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         footer.addView(send);
         card.addView(footer);
@@ -263,7 +265,7 @@ final class NotesUi {
         StringBuilder out = new StringBuilder(formatDate(note.updatedAt));
         out.append("  ·  ").append(NotesCatalog.priorityLabel(note.priority));
         if (note.localOnly) {
-            out.append("  ·  ").append(NotesStore.LOCAL_ONLY_LABEL);
+            out.append("  ·  ").append(NotesStore.localOnlyLabel());
         } else if (note.synced) {
             out.append("  ·  Enviada");
         } else {

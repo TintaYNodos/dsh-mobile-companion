@@ -5,30 +5,16 @@
  */
 package com.tintaynodos.dshcompanion;
 
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
-import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
 
 import android.content.res.Configuration;
 import android.view.MotionEvent;
@@ -203,6 +189,33 @@ class PillUi {
             a.pill.animate().cancel();
             a.pill.animate().alpha(0.94f).setDuration(200).start();
         }
+    }
+
+    /** true si la píldora se ocultó para un modal del sistema (hoja de compartir). */
+    private static boolean hiddenForSystemSheet = false;
+
+    /**
+     * Share-sheet (HOJA_ERRORES_CAPTURAS.md:56-59): la píldora quedaba visible
+     * detrás del selector de compartir. Se oculta al lanzarlo y se restaura al
+     * volver a la actividad, con las mismas condiciones que el teclado o el
+     * paisaje. Si no hay píldora (p. ej. desde Notas), no hace nada.
+     */
+    static void hideForSystemSheet() {
+        MainActivity a = MainActivity.getInstance();
+        if (a == null || a.pill == null) return;
+        a.pill.animate().cancel();
+        a.pill.setVisibility(View.GONE);
+        hiddenForSystemSheet = true;
+    }
+
+    /** Restaura la píldora tras volver del selector del sistema. */
+    static void restoreAfterSystemSheet() {
+        if (!hiddenForSystemSheet) return;
+        hiddenForSystemSheet = false;
+        MainActivity a = MainActivity.getInstance();
+        if (a == null || a.pill == null) return;
+        a.pill.setVisibility(PillUi.isLandscape(a) || a.isImeVisible
+                ? View.GONE : View.VISIBLE);
     }
 
 

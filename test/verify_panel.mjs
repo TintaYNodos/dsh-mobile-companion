@@ -3,8 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { startBridge } from "./ci/start-bridge.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// H-17: las notas de la prueba viven en el synced_chats temporal del puente.
+const SYNC_DIR = path.resolve(process.env.DSH_SYNC_DIR || path.join(REPO_ROOT, "synced_chats"));
+// H-10: registro del DSH_HOME temporal (solo se manipula si el entorno es aislado).
+const DSH_HOME = String(process.env.DSH_HOME || "").trim();
+const REGISTRY = DSH_HOME ? path.join(DSH_HOME, "companion-devices.json") : "";
 const BRIDGE = { host: process.env.DSH_TEST_HOST || "127.0.0.1", port: Number(process.env.DSH_TEST_PORT || 57420) };
 const PANEL = { host: "127.0.0.1", port: Number(process.env.DSH_PANEL_PORT || 57421) };
 
@@ -159,7 +165,7 @@ check("el panel muestra la fecha local dd/mm/aaaa hh:mm (no ISO UTC)",
   !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(notesSection));
 check("el panel muestra el vencimiento humanizado", notesSection.includes("Vence 31/12/2026"));
 for (const file of noteFiles) {
-  try { if (file) fs.unlinkSync(path.join(REPO_ROOT, "synced_chats", "notes", file)); } catch { /* nota de la prueba */ }
+  try { if (file) fs.unlinkSync(path.join(SYNC_DIR, "notes", file)); } catch { /* nota de la prueba */ }
 }
 
 // 5. Un telefono pide acceso por la VPN. Se guarda su cookie de canje para que
@@ -206,6 +212,111 @@ check("revocar dispositivo responde", revoke.status === 303, `status=${revoke.st
 
 const after = await call(BRIDGE, "/", { headers: { accept: "text/html", "sec-fetch-dest": "document" }, cookie: device });
 check("tras revocar, el telefono ya no entra", after.body.includes("Acceso pendiente"), `status=${after.status}`);
+
+// 11. H-08: un rechazo es de la SOLICITUD concreta, no de la IP. Otro equipo
+// detras del mismo NAT (la misma IPv4 de loopback en CI) debe seguir pudiendo
+// pedir acceso; antes el rechazo bloqueaba a todos los equipos de esa IP.
+const QA_UA = "Mozilla/5.0 (Linux; Android 7X.X; Pixel QA) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36";
+const rejectAgent = QA_UA.replace("7X.X", "77.7");
+const otherAgent = QA_UA.replace("7X.X", "76.6");
+// El flujo anterior deja una solicitud sin User-Agent (documento sin UA): se
+// parte de un registro limpio, igual que hace el runner entre suites, para que
+// la solicitud de esta prueba sea reconocible por su agente.
+if (REGISTRY) {
+  fs.rmSync(REGISTRY, { force: true });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+const rejectPoll = await call(BRIDGE, "/dsh-companion/status", { headers: { "user-agent": rejectAgent } });
+const rejectClaimCookie = cookiePair(rejectPoll.setCookie, "dsh-companion-claim");
+const rejectPage = await call(PANEL, "/pair", { cookie });
+const rejectId = pendingIdFor(rejectPage.body, "Teléfono Android 77.7");
+const rejectAction = await call(PANEL, "/pair/reject", { method: "POST", cookie, body: `id=${encodeURIComponent(rejectId)}` });
+const rejectedState = await call(BRIDGE, "/dsh-companion/pair-state", { cookie: rejectClaimCookie || null });
+const otherState = await call(BRIDGE, "/dsh-companion/pair-state", { headers: { "user-agent": otherAgent } });
+check("H-08: el rechazado ve rejected y otro equipo de la misma IP sigue pendiente",
+  rejectAction.status === 303 && String(rejectAction.headers.location || "").includes("flash=reject") &&
+    rejectedState.body.includes('"rejected":true') &&
+    otherState.status === 200 && otherState.body.includes('"rejected":false') &&
+    otherState.body.includes('"pending":true'),
+  `id=${rejectId} reject=${rejectAction.status} ${rejectAction.headers.location} ` +
+    `rechazado=${rejectedState.body.slice(0, 60)} otro=${otherState.body.slice(0, 60)}`);
+
+// 12. H-10: "no existe" y "no se pudo guardar" no pueden traducirse ambos a
+// "expired". Sin sesion de panel nada de esto toca dispositivos reales.
+const missingApprove = await call(PANEL, "/pair/approve", { method: "POST", cookie, body: "id=no-existe-qa" });
+check("H-10: aprobar una solicitud inexistente se muestra como 'expired'",
+  missingApprove.status === 303 && String(missingApprove.headers.location || "").includes("flash=expired"),
+  `status=${missingApprove.status} loc=${missingApprove.headers.location}`);
+if (!REGISTRY) {
+  console.log("SKIP  H-10 fallo de disco: DSH_HOME no apunta a una instancia aislada");
+} else {
+  const diskFailAgent = QA_UA.replace("7X.X", "66.6");
+  // Registro limpio: la prueba anterior dejo una solicitud pendiente de otro
+  // agente y el sondeo por loopback la reutilizaria (la solicitud se ata a IP +
+  // agente; aqui hace falta una propia).
+  fs.rmSync(REGISTRY, { force: true });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  await call(BRIDGE, "/dsh-companion/status", { headers: { "user-agent": diskFailAgent } });
+  const failPage = await call(PANEL, "/pair", { cookie });
+  const failId = pendingIdFor(failPage.body, "Teléfono Android 66.6");
+  const originalRegistry = fs.readFileSync(REGISTRY);
+  let failedAction = { status: 0, headers: {} };
+  // Un registro que no se puede reescribir (ruta ocupada por un directorio)
+  // simula el fallo de disco sin tocar nada fuera del DSH_HOME temporal.
+  fs.rmSync(REGISTRY, { force: true });
+  fs.mkdirSync(REGISTRY);
+  try {
+    failedAction = await call(PANEL, "/pair/approve", { method: "POST", cookie, body: `id=${encodeURIComponent(failId)}` });
+  } finally {
+    fs.rmSync(REGISTRY, { recursive: true, force: true });
+    fs.writeFileSync(REGISTRY, originalRegistry);
+  }
+  check("H-10: un fallo de disco al aprobar se muestra como 'failed' (no 'expired')",
+    failedAction.status === 303 && String(failedAction.headers.location || "").includes("flash=failed"),
+    `status=${failedAction.status} loc=${failedAction.headers.location}`);
+}
+
+// 13. H-01: rotacion real de la clave. Con clave en archivo el kill switch debe
+// rotarla; con DSH_ACCESS_KEY no debe fingir (respuesta y log explicitos).
+const bridgeTarget = (b) => ({ host: "127.0.0.1", port: b.bridgePort });
+const basicAuth = (key) => ({ authorization: `Basic ${Buffer.from(`dsh:${key}`, "utf8").toString("base64")}` });
+const fileBridge = await startBridge({ accessKeyMode: "file" });
+const fileRotation = {};
+try {
+  const beforeKey = fileBridge.accessKey;
+  fileRotation.kill = await call(bridgeTarget(fileBridge), "/dsh-companion/kill-switch", { method: "POST", headers: basicAuth(beforeKey) });
+  fileRotation.afterKey = fs.readFileSync(path.join(fileBridge.dshHome, "companion-access-key"), "utf8").trim();
+  fileRotation.oldAuth = await call(bridgeTarget(fileBridge), "/dsh-companion/status", { headers: basicAuth(beforeKey) });
+  fileRotation.newAuth = await call(bridgeTarget(fileBridge), "/dsh-companion/status", { headers: basicAuth(fileRotation.afterKey) });
+  fileRotation.beforeKey = beforeKey;
+  fileRotation.log = fileBridge.output();
+} finally {
+  await fileBridge.stop();
+}
+check("H-01: con clave en archivo el kill switch rota de verdad (rotated:true)",
+  fileRotation.kill.status === 200 && fileRotation.kill.body.includes('"rotated":true') &&
+    fileRotation.afterKey !== fileRotation.beforeKey && fileRotation.log.includes("Clave de acceso rotada"),
+  `status=${fileRotation.kill.status} body=${fileRotation.kill.body.slice(0, 120)}`);
+check("H-01: la clave vieja deja de autorizar y la nueva si autoriza",
+  fileRotation.oldAuth.status === 200 && fileRotation.oldAuth.body.includes('"status":"pairing"') &&
+    fileRotation.newAuth.status === 200 && !fileRotation.newAuth.body.includes('"status":"pairing"'),
+  `vieja=${fileRotation.oldAuth.body.slice(0, 50)} nueva=${fileRotation.newAuth.body.slice(0, 50)}`);
+const envBridge = await startBridge();
+const envRotation = {};
+try {
+  envRotation.kill = await call(bridgeTarget(envBridge), "/dsh-companion/kill-switch", { method: "POST", headers: basicAuth(envBridge.accessKey) });
+  envRotation.stillValid = await call(bridgeTarget(envBridge), "/dsh-companion/status", { headers: basicAuth(envBridge.accessKey) });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  envRotation.log = envBridge.output();
+} finally {
+  await envBridge.stop();
+}
+check("H-01: con DSH_ACCESS_KEY el kill switch NO finge (rotated:false, reason:env) y lo registra",
+  envRotation.kill.status === 200 && envRotation.kill.body.includes('"rotated":false') &&
+    envRotation.kill.body.includes('"rotationReason":"env"') &&
+    envRotation.stillValid.status === 200 && !envRotation.stillValid.body.includes('"status":"pairing"') &&
+    envRotation.log.includes("no rotada: la fija DSH_ACCESS_KEY"),
+  `body=${envRotation.kill.body.slice(0, 140)} log=${envRotation.log.includes("DSH_ACCESS_KEY")}`);
 
 console.log(`\nRESULTADO: ${checks.filter(Boolean).length}/${checks.length}`);
 if (checks.some((c) => !c)) process.exitCode = 1;

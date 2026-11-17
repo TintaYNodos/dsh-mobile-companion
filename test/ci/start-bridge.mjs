@@ -4,13 +4,14 @@
  * See LICENSE file in repository root for full terms.
  */
 /**
- * Arranque del puente para CI, aislado de la instalación del usuario.
- *
  * Crea en el directorio temporal del sistema:
  *   - un HOME temporal (para que las pruebas que usan os.homedir() no lean ni
  *     escriban %USERPROFILE%\.dsh / $HOME/.dsh);
  *   - un DSH_HOME temporal con un .credentials.yaml mínimo válido para
  *     src/crypto.mjs (se comprueba antes de arrancar el puente);
+ *   - un synced_chats/ temporal (DSH_SYNC_DIR), un bridge.log temporal
+ *     (DSH_LOG_FILE) y una bandera de parada temporal (DSH_STOP_FLAG): H-17, la
+ *     suite NUNCA escribe ni rota los del repositorio/instalación real;
  *   - un backend DSH mínimo de pruebas (ver stub-dsh-backend.mjs).
  *
  * Después arranca bridge.mjs enlazado a 127.0.0.1 en puertos libres de
@@ -87,15 +88,67 @@ export async function pingPanel(panelPort) {
   return getJson(panelPort, "/pair", 1000);
 }
 
+/** Id de la conversacion sembrada en el synced_chats temporal (verify_bridge la lista). */
+export const SEED_CHAT_ID = "sync_ci_seed_0001";
+
+/**
+ * Siembra una conversacion valida en el synced_chats temporal: verify_bridge
+ * comprueba /dsh-companion/chats y /dsh-companion/chat/:id, y antes dependia de
+ * los archivos que hubiera en el synced_chats del repositorio del usuario.
+ */
+const seedChats = (syncDir) => {
+  fs.mkdirSync(syncDir, { recursive: true });
+  const now = Date.now();
+  const syncedAt = new Date(now).toISOString();
+  const messages = [{ role: "user", content: "Hola desde el doble de CI", timestamp: now }];
+  const document = {
+    id: SEED_CHAT_ID,
+    sessionTitle: "Chat de prueba CI",
+    syncedAt,
+    syncedTimestamp: now,
+    messageCount: messages.length,
+    messages,
+  };
+  fs.writeFileSync(path.join(syncDir, `${SEED_CHAT_ID}.json`), JSON.stringify(document, null, 2), "utf8");
+  fs.writeFileSync(
+    path.join(syncDir, `${SEED_CHAT_ID}.md`),
+    `# Sesion sincronizada: Chat de prueba CI\n\n- Fecha: ${syncedAt}\n- Mensajes: 1\n\n---\n\n` +
+      "### Usuario\n\nHola desde el doble de CI\n\n---\n",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(syncDir, "index.jsonl"),
+    `${JSON.stringify({
+      id: SEED_CHAT_ID,
+      savedAt: now,
+      title: "Chat de prueba CI",
+      messageCount: messages.length,
+      json: `${SEED_CHAT_ID}.json`,
+      markdown: `${SEED_CHAT_ID}.md`,
+    })}\n`,
+    "utf8"
+  );
+};
+
 /**
  * Arranca el puente aislado. Devuelve un manejador con puertos, credenciales,
  * entorno para las pruebas y `stop()` idempotente.
  */
-export async function startBridge() {
+export async function startBridge(options = {}) {
+  // "env" (por defecto): DSH_ACCESS_KEY en el entorno (rotacion imposible).
+  // "file": sin DSH_ACCESS_KEY, el puente genera companion-access-key en el
+  // DSH_HOME temporal (rotacion real) — lo usa la regresion de H-01.
+  const keyMode = options.accessKeyMode === "file" ? "file" : "env";
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-companion-ci-"));
   const home = path.join(root, "home");
   const dshHome = path.join(home, ".dsh");
   fs.mkdirSync(dshHome, { recursive: true });
+  // H-17: todo lo que el puente escribe (notas, chats, log, bandera de parada)
+  // vive en este arbol temporal, nunca en el repositorio del usuario.
+  const syncDir = path.join(root, "synced_chats");
+  const logFile = path.join(root, "bridge.log");
+  const stopFlag = path.join(root, "companion.stop");
+  seedChats(syncDir);
 
   const [bridgePort, panelPort, stubPort] = await pickPorts(3);
   const accessKey = crypto.randomBytes(24).toString("base64url");
@@ -123,7 +176,11 @@ export async function startBridge() {
     // Vacío a propósito: loadSecret() debe leer el .credentials.yaml temporal.
     DSH_BROWSER_SECRET: "",
     DSH_ACCESS_DISABLE: "0",
+    DSH_SYNC_DIR: syncDir,
+    DSH_LOG_FILE: logFile,
+    DSH_STOP_FLAG: stopFlag,
   };
+  if (keyMode === "file") delete childEnv.DSH_ACCESS_KEY;
   delete childEnv.DSH_COMPANION_TOKEN;
   delete childEnv.DSH_ALLOWED_HOSTS;
   delete childEnv.DSH_ALLOW_CIDR;
@@ -230,11 +287,25 @@ export async function startBridge() {
     );
   }
 
+  // En modo archivo la clave efectiva es la que el puente genero en DSH_HOME.
+  let resolvedAccessKey = accessKey;
+  if (keyMode === "file") {
+    try {
+      resolvedAccessKey = fs.readFileSync(path.join(dshHome, "companion-access-key"), "utf8").trim();
+    } catch {
+      resolvedAccessKey = "";
+    }
+  }
+
   return {
     root,
     home,
     dshHome,
-    accessKey,
+    syncDir,
+    logFile,
+    stopFlag,
+    accessKey: resolvedAccessKey,
+    accessKeyMode: keyMode,
     panelToken,
     browserSecret,
     bridgePort,
@@ -243,6 +314,11 @@ export async function startBridge() {
     env: childEnv,
     output: describeOutput,
     exitCode: () => exitCode,
+    waitForExit: async (timeoutMs = 5000) => {
+      const deadline = Date.now() + timeoutMs;
+      while (!exited && Date.now() < deadline) await sleep(50);
+      return exited ? exitCode : null;
+    },
     stop,
   };
 }

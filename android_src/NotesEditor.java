@@ -330,7 +330,12 @@ final class NotesEditor implements NotesEditorView.Actions {
         NotesStore.Note note = store.get(noteId);
         if (note == null) return;
         NotesSync.sendNote(activity, store, note, report -> {
-            if (report.allSent()) {
+            // El candado H-03 ya se soltó: se reafirma el estado real del botón
+            // por si el usuario cambió «solo en el teléfono» durante el envío.
+            updateLocalOnlyState(false);
+            if (report.outcome == NotesSync.Outcome.BUSY) {
+                setSaveState("Envío en curso", ThemePalette.inkDim(activity));
+            } else if (report.allSent()) {
                 setSaveState("Enviada a la PC", ThemePalette.accentInk(activity));
             } else if (report.sent == 0) {
                 setSaveState("Se queda en el teléfono", NotesUi.dangerInk(activity));

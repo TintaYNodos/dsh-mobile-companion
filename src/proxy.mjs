@@ -240,6 +240,22 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode, device
     return;
   }
 
+  /**
+   * H-07: un GET/HEAD puede traer `content-length` (o `transfer-encoding`) del
+   * cliente. Se reenviaba tal cual aunque el proxy llama a `proxyReq.end()` sin
+   * cuerpo: el backend se queda esperando bytes que nunca llegan y envenena la
+   * conexion keep-alive (la peticion siguiente pagaba ~6 s). Sin cuerpo no se
+   * reenvia framing de cuerpo.
+   */
+  const dropBodylessFraming = (outgoing) => {
+    if (idempotent) {
+      delete outgoing["content-length"];
+      delete outgoing["transfer-encoding"];
+    }
+    return outgoing;
+  };
+  dropBodylessFraming(headers);
+
   if (wantsHtml || wantsEventStream) headers["accept-encoding"] = "identity";
 
   const requestOnce = (useKeepAlive) => {
@@ -347,7 +363,7 @@ export async function handleHttpProxy(req, res, { targetPort, mobileMode, device
     // destino POR DISPOSITIVO (puerto fijo o fallback al backend por defecto).
     targetPort = await resolveTargetPortForDevice(device, { force: true });
     authority = getAuthority(config.targetHost, targetPort);
-    headers = scrubHeaders(injectSessionHeaders(req.headers, authority));
+    headers = dropBodylessFraming(scrubHeaders(injectSessionHeaders(req.headers, authority)));
     result = await requestOnce(false);
     if (result.error) return;
   }

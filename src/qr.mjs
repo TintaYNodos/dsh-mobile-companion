@@ -55,12 +55,24 @@ const VERSIONS = [
 ];
 
 /**
+ * Capacidad maxima real en modo byte de la version mayor soportada (v6, nivel
+ * L): 136 codewords de datos menos los 2 bytes del indicador de modo y el
+ * contador de longitud. Un texto mas largo NO se puede codificar.
+ */
+export const QR_MAX_BYTES = VERSIONS[VERSIONS.length - 1].data - 2;
+
+/**
  * Generador nativo de códigos QR en SVG puro mediante matriz matemática.
  * Sin dependencias externas ni librerías de terceros.
  *
+ * H-05/H-06: antes, un texto que no cabia se truncaba en silencio eligiendo la
+ * ultima version y escribiendo solo los primeros bytes: dos URLs distintas y
+ * largas producian el MISMO QR (y uno invalido). Ahora, si el texto no cabe, se
+ * devuelve `null` de forma explicita; el llamador debe mostrar la URL en texto.
+ *
  * @param {string} text Contenido a codificar (p.ej. http://<VPN_IP>:57420)
  * @param {object} [options] Opciones de visualización (size, margin, bg, fg)
- * @returns {string} Código SVG vectorial puro y nítido
+ * @returns {string|null} SVG vectorial puro, o `null` si el texto no cabe.
  */
 export function generateQrSvg(text, options = {}) {
   const {
@@ -71,6 +83,8 @@ export function generateQrSvg(text, options = {}) {
   } = options;
 
   const rawBytes = Buffer.from(String(text || ""), "utf8");
+  if (rawBytes.length > QR_MAX_BYTES) return null;
+
   let chosen = null;
   for (const v of VERSIONS) {
     if (rawBytes.length <= v.data - 2) {
@@ -78,7 +92,7 @@ export function generateQrSvg(text, options = {}) {
       break;
     }
   }
-  if (!chosen) chosen = VERSIONS[VERSIONS.length - 1];
+  if (!chosen) return null;
 
   const { ver, size: modCount, data: dataLen, ec: ecLen, align } = chosen;
 

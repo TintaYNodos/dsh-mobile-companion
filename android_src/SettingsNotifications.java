@@ -13,6 +13,7 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -20,12 +21,17 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.lang.ref.WeakReference;
+
 /**
  * Seccion NOTIFICACIONES del dialogo de Ajustes: aviso maestro, avisos de la
  * PC, configuracion del vigilante, pruebas de la cadena de avisos y arranque
  * tras reiniciar el telefono.
  */
 class SettingsNotifications {
+
+    /** H-10: interruptor «Permitir en segundo plano», para re-sincronizarlo. */
+    private static WeakReference<Switch> batterySwitch;
 
     static void addSection(MainActivity a, LinearLayout form) {
         form.addView(UiKit.sectionHeader(a, "NOTIFICACIONES"));
@@ -178,14 +184,43 @@ class SettingsNotifications {
         // plano. Samsung y otros fabricantes lo matan si la app no esta exenta de
         // la optimizacion de bateria, y entonces el aviso deja de llegar sin que
         // nada lo indique. Aqui se pide la exencion con un toque.
-        form.addView(UiKit.settingSwitchCard(a,
+        LinearLayout batteryCard = UiKit.settingSwitchCard(a,
                 "Permitir en segundo plano",
                 "Evita que el telefono mate el servicio de avisos cuando la app esta cerrada.",
                 isBatteryExempt(a),
                 (view, checked) -> {
                     if (checked && !isBatteryExempt(a)) requestBatteryExemption(a);
                     else if (checked) Toast.makeText(a, "Ya esta exento de la optimizacion de bateria", Toast.LENGTH_SHORT).show();
-                }));
+                });
+        // H-10: se guarda el interruptor para re-sincronizarlo en onResume.
+        batterySwitch = new WeakReference<>(firstSwitch(batteryCard));
+        form.addView(batteryCard);
+    }
+
+    /** Primer {@link Switch} de una tarjeta de ajuste (la que crea UiKit). */
+    private static Switch firstSwitch(View view) {
+        if (view instanceof Switch) return (Switch) view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                Switch found = firstSwitch(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * H-10: al volver del diálogo del sistema el interruptor se quedaba
+     * encendido aunque el usuario DENEGARA la exención. Se re-sincroniza con el
+     * estado real de PowerManager; setChecked(false) no relanza la petición
+     * (el listener solo actúa al activar).
+     */
+    static void resyncBatterySwitch(MainActivity a) {
+        Switch toggle = batterySwitch == null ? null : batterySwitch.get();
+        if (a == null || toggle == null) return;
+        boolean exempt = isBatteryExempt(a);
+        if (toggle.isChecked() != exempt) toggle.setChecked(exempt);
     }
 
     /**

@@ -4,10 +4,10 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.2.9 (current, `versionCode` 53) | Yes — security fixes only |
+| 5.2.10 (current, `versionCode` 54) | Yes — security fixes only |
 | 5.2.8 and earlier | No (previous builds) |
 
-5.2.9 is the current stable version of the 5.2 series.
+5.2.10 is the current stable version of the 5.2 series.
 
 ## Verifying a build
 
@@ -107,10 +107,10 @@ registro ya no puede corromper el registro real del usuario. Los cuatro puntos a
 mantienen su mitigación; el detalle punto por punto y la evidencia están en
 [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
 
-## APK permissions (5.2.9 review)
+## APK permissions (5.2.10 review)
 
 Every permission declared in `android_src/AndroidManifest.xml` was checked against real code use in
-5.2.9. Nothing was removed that the client actually needs, and nothing is requested "just in case"
+5.2.10. Nothing was removed that the client actually needs, and nothing is requested "just in case"
 at install time.
 
 | Permission | Real use | Decision |
@@ -120,7 +120,7 @@ at install time.
 | `RECORD_AUDIO` | `CompanionChromeClient.onPermissionRequest` only for the **same-origin bunker** frame when the page asks for `RESOURCE_AUDIO_CAPTURE`; a cross-origin frame is denied. It powers the WebView's audio capture (voice input) without granting anything else. | Keep: removing it would silently break audio capture in the proxied GUI. It is never requested at startup; the system dialog appears only when the page asks. |
 | `POST_NOTIFICATIONS` | PC-event notifications. Requested once from `MainActivity` on Android 13+. | Keep. |
 | `VIBRATE` | Haptic feedback of the mobile key bar, approval results and the kill switch. | Keep. |
-| `REQUEST_INSTALL_PACKAGES` | In-app update: `UpdateInstaller` only installs after the SHA-256 anchor is verified. | Keep; installation still needs the user's confirmation. |
+| `REQUEST_INSTALL_PACKAGES` | In-app update: `UpdateInstaller` verifies the SHA-256 anchor when the release publishes one (GitHub asset `digest`) or when the bridge publishes `apkSha256` in `/status`. A legacy bridge that does not publish `apkSha256` falls back to Android's own signature check (same signing key required) and is flagged as unanchored. | Keep; installation still needs the user's confirmation. |
 | `USE_BIOMETRIC` + `USE_FINGERPRINT` | `BiometricGate` for critical approvals. `USE_FINGERPRINT` is the legacy alias required on API 26–27. | Keep for Android 8.0 compatibility. |
 | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC` | The PC-event watcher runs in a `dataSync` foreground service while notifications are enabled. | Keep. |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | `SettingsNotifications.requestBatteryExemption` is called **only** when the user turns on the "Permitir en segundo plano" switch after enabling notifications; it is never requested on launch. | Keep: the switch is opt-in and the request is tied to it. |

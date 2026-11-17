@@ -139,7 +139,16 @@ export const stateStamp = ({ pending = [], devices = [], events = [] } = {}) =>
 export function approvalPage({ pending = [], devices = [], events = [], flash = "", stamp = "", bunkerUrl = "" } = {}, helpers = {}) {
   const { describeAgent = (a) => a, when = (w) => w, ago = (a) => a, isoOf = (i) => i } = helpers;
   const effectiveBunkerUrl = bunkerUrl || `http://${config.bindHost || "127.0.0.1"}:${config.listenPort}`;
+  // H-05/H-06: si la URL no cabe en el QR, `generateQrSvg` devuelve null (antes
+  // truncaba en silencio y dos URLs distintas daban el mismo codigo). En ese caso
+  // se muestra la URL en texto como alternativa, sin inventar un QR invalido.
   const qrSvg = generateQrSvg(effectiveBunkerUrl, { size: 180, margin: 2 });
+  const qrBlock = qrSvg
+    ? `<div style="background:#ffffff;padding:12px;border-radius:12px;display:inline-flex;box-shadow:0 4px 16px rgba(0,0,0,0.18);">
+         ${qrSvg}
+       </div>
+       <p style="margin-top:14px;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.4;">Escanea con la cámara del teléfono para conectar al instante</p>`
+    : `<p class="flash bad" role="status">La direccion es demasiado larga para un codigo QR: escribela en el telefono a mano.</p>`;
 
   const pendingCard = (entry) => `<article class="card">
   <div class="row">
@@ -222,10 +231,7 @@ export function approvalPage({ pending = [], devices = [], events = [], flash = 
     `${brand("DSH Companion", "Autorizar dispositivos · solo esta computadora")}
      ${flashText ? `<div class="flash ${flashTone}" role="status">${escapeHtml(flashText)}</div>` : ""}
      <div class="qr-container" style="display:flex;flex-direction:column;align-items:center;text-align:center;margin:16px auto 24px;padding:18px 16px;background:var(--raised);border:1px solid var(--line);border-radius:14px;max-width:340px;">
-       <div style="background:#ffffff;padding:12px;border-radius:12px;display:inline-flex;box-shadow:0 4px 16px rgba(0,0,0,0.18);">
-         ${qrSvg}
-       </div>
-       <p style="margin-top:14px;font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.4;">Escanea con la cámara del teléfono para conectar al instante</p>
+       ${qrBlock}
        <p class="meta" style="margin-top:6px;font-size:12px;word-break:break-all;"><code>${escapeHtml(effectiveBunkerUrl)}</code></p>
      </div>
      <div class="stats">

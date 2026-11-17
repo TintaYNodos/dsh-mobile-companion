@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.tintaynodos.dshcompanion"
-    android:versionCode="53"
-    android:versionName="5.2.9">
+    android:versionCode="54"
+    android:versionName="5.2.10">
 
     <uses-sdk
         android:minSdkVersion="26"
         android:targetSdkVersion="35" />
+
+    <!-- H-12: con targetSdk 30+ Android oculta las apps ajenas que no se
+         declaren aquí; sin esto resolveActivity() del escáner QR siempre
+         devolvía null y el botón caía al diálogo de respaldo en Android 11+.
+         Se declara solo lo que usa el cliente: la acción de escaneo del lector
+         ZXing y su paquete. -->
+    <queries>
+        <intent>
+            <action android:name="com.google.zxing.client.android.SCAN" />
+        </intent>
+        <package android:name="com.google.zxing.client.android" />
+    </queries>
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -47,8 +59,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Fix rotación en Notas: la actividad no se recrea al girar (la lista
+             es un LinearLayout con ScrollView y los insets se reaplican solos),
+             así que búsqueda, filtros y orden se conservan. Sin uiMode para que
+             el cambio de tema oscuro sí vuelva a crear la pantalla. -->
         <activity
             android:name=".NotesActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:exported="false"
             android:label="@string/app_name"
             android:windowSoftInputMode="adjustResize" />

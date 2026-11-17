@@ -22,8 +22,9 @@ import path from "node:path";
 import { startBridge } from "./ci/start-bridge.mjs";
 import {
   IDS, INBOX, ISO_RE, NOTES_DIR, NOTE_NAME_RE, createNotesClient, createRetentionHarness, request,
-  runInboxCapCheck, runRetentionChecks, sleep,
+  runInboxCapCheck, runReadLimitChecks, runRetentionChecks, setNotesSyncDir, sleep,
 } from "./notes-harness.mjs";
+import { runChaosKillChecks, runConcurrencyChecks, runStoreCrashChecks } from "./notes-crash-harness.mjs";
 
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -32,6 +33,9 @@ const check = (name, ok, detail = "") => {
 };
 
 const bridge = await startBridge();
+// H-17: el indice y la bandeja que se inspeccionan son los del synced_chats
+// TEMPORAL de este puente, no los del repositorio.
+setNotesSyncDir(bridge.syncDir);
 const client = createNotesClient(bridge);
 const retention = createRetentionHarness();
 const { jsonHeaders, authHeader, postNote, getNotes, makeDevice, writeRegistry, cookieOf,
@@ -336,7 +340,7 @@ try {
   check("GET solo devuelve los campos documentados (sin cuerpo)",
     notes.every((note) => JSON.stringify(Object.keys(note).sort()) === JSON.stringify([...allowedFields].sort()) &&
       !("body" in note) && !("content" in note)));
-  check("GET no pasa de 200 notas", notes.length <= 200, `n=${notes.length}`);
+  check("GET no pasa de 500 notas (tope de la retencion)", notes.length <= 500, `n=${notes.length}`);
   fs.appendFileSync(INBOX, '{"file":"roto.md","title":"linea cortada"\n', "utf8"); // JSON invalido a proposito
   fs.appendFileSync(INBOX, '{"title":"sin archivo"}\n', "utf8"); // JSON valido pero sin file
   const tolerant = await getNotes();
@@ -349,6 +353,10 @@ try {
   // 13b. La bandeja se acota tambien SIN syncs de chats: basta escribir una nota
   // con la bandeja por encima del tope (poda rapida de routes-notes.mjs).
   await runInboxCapCheck(check, client, richFile);
+  // 13c. Regresiones H-13/H-18/H-19/H-20: lectura de 205 notas, cortes de
+  // escritura y rafagas/podas concurrentes (helpers aparte por el tope de 400).
+  await runReadLimitChecks(check, client); await runStoreCrashChecks(check, client);
+  await runConcurrencyChecks(check, client, bridge, richFile); await runChaosKillChecks(check, bridge);
   // 14. La ruta y el recurso retirados siguen fuera (nombres armados por partes
   // para que el grep de limpieza del repositorio siga en cero).
   const removedRoute = "/dsh-companion/absorb-" + ["sate", "llite"].join("");

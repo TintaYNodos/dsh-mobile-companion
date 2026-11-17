@@ -134,6 +134,8 @@ final class NotesSender {
     /** Texto y descripción accesible de «Enviar todas» (solo enviables). */
     static void updateSendAllButton(Button button, List<NotesStore.Note> notes) {
         if (button == null) return;
+        // H-03: la tercera ruta de envío también se apunta al candado compartido.
+        NotesSendGuard.watch(button);
         int pending = pending(notes).size();
         if (pending == 0) {
             button.setVisibility(android.view.View.GONE);

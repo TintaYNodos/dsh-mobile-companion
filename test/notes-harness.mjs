@@ -19,9 +19,24 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { REPO_ROOT } from "./ci/start-bridge.mjs";
 
-export const NOTES_DIR = path.join(REPO_ROOT, "synced_chats", "notes");
-export const INBOX = path.join(NOTES_DIR, "inbox.jsonl");
-export const IDS = path.join(NOTES_DIR, "ids.json");
+/**
+ * H-17: rutas al arbol de sincronizacion AISLADO. Se inicializan desde
+ * DSH_SYNC_DIR (lo fija run-suite/start-bridge) y verify_notes las re-apunta con
+ * setNotesSyncDir() al arrancar su propio puente. Asi la suite nunca escribe en
+ * companion/synced_chats.
+ */
+export let SYNC_DIR = path.resolve(process.env.DSH_SYNC_DIR || path.join(REPO_ROOT, "synced_chats"));
+export let NOTES_DIR = path.join(SYNC_DIR, "notes");
+export let INBOX = path.join(NOTES_DIR, "inbox.jsonl");
+export let IDS = path.join(NOTES_DIR, "ids.json");
+
+/** Re-apunta las rutas al synced_chats temporal de un startBridge() concreto. */
+export function setNotesSyncDir(syncDir) {
+  SYNC_DIR = path.resolve(syncDir);
+  NOTES_DIR = path.join(SYNC_DIR, "notes");
+  INBOX = path.join(NOTES_DIR, "inbox.jsonl");
+  IDS = path.join(NOTES_DIR, "ids.json");
+}
 /** Nombre de nota: AAAA-MM-DD-HHMMSS-<slug>.md; slug solo [a-z0-9-]. */
 export const NOTE_NAME_RE = /^\d{4}-\d{2}-\d{2}-\d{6}-[a-z0-9-]+\.md$/;
 export const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -60,6 +75,13 @@ export function createNotesClient(bridge) {
       body: typeof payload === "string" ? payload : JSON.stringify(payload),
     });
   const getNotes = (headers = authHeader()) => request(bridge.bridgePort, "/dsh-companion/notes", { headers });
+  /** POST /dsh-companion/sync: dispara la poda completa de retencion. */
+  const syncChat = (sessionTitle) =>
+    request(bridge.bridgePort, "/dsh-companion/sync", {
+      method: "POST",
+      headers: jsonHeaders(authHeader()),
+      body: JSON.stringify({ sessionTitle, messages: [{ role: "user", content: "hola", timestamp: Date.now() }] }),
+    });
   const makeDevice = (overrides = {}) => ({
     id: crypto.randomBytes(12).toString("base64url"), name: "", address: "10.9.9.9", agent: "prueba-notas",
     approvedAt: new Date().toISOString(), lastSeen: new Date().toISOString(), lastRefresh: new Date().toISOString(),
@@ -106,7 +128,7 @@ export function createNotesClient(bridge) {
   };
 
   return {
-    jsonHeaders, authHeader, postNote, getNotes, makeDevice, writeRegistry, cookieOf,
+    jsonHeaders, authHeader, postNote, getNotes, syncChat, makeDevice, writeRegistry, cookieOf,
     createdFiles, remember, notePath, noteText, readIds, splitNote, inboxLines, inboxLineFor, inboxRecordFor,
   };
 }
@@ -133,10 +155,16 @@ export function createRetentionHarness() {
     fixtures.push(root);
     return { root, dir };
   };
+  // Los arboles de retencion se prueban con el synced_chats DEL FIXTURE: se
+  // limpian los overrides DSH_SYNC_DIR/DSH_LOG_FILE heredados del runner (H-17)
+  // para que config.mjs vuelva a resolver ROOT/synced_chats del arbol copiado.
+  const fixtureEnv = { ...process.env };
+  delete fixtureEnv.DSH_SYNC_DIR;
+  delete fixtureEnv.DSH_LOG_FILE;
   const runPrune = (fixture, extraEnv) =>
     spawnSync(process.execPath, ["--input-type=module", "-e",
       "const { pruneSyncedChats } = await import('./src/sync-retention.mjs'); console.log('removed=' + (await pruneSyncedChats()));"],
-      { cwd: fixture.root, env: { ...process.env, ...extraEnv }, encoding: "utf8", timeout: 30000, windowsHide: true });
+      { cwd: fixture.root, env: { ...fixtureEnv, ...extraEnv }, encoding: "utf8", timeout: 30000, windowsHide: true });
   const ageFile = (file, hoursAgo) => {
     const when = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
     fs.utimesSync(file, when, when);
@@ -226,3 +254,26 @@ export async function runInboxCapCheck(check, client, seedFile) {
     lines.some((line) => line.includes(`"file":"${file}"`)),
     `status=${res.status} lineas=${lines.length}`);
 }
+
+/**
+ * H-13: GET devuelve las 205 notas sembradas (el tope real es 500).
+ * Recibe el cliente de la suite para hablar con el puente aislado.
+ */
+export async function runReadLimitChecks(check, client) {
+  const fileOf = (index) => `2026-01-01-000000-lectura-${String(index).padStart(3, "0")}.md`;
+  const lines = Array.from({ length: 205 }, (_, index) =>
+    JSON.stringify({
+      file: fileOf(index),
+      id: `lectura-${index}`,
+      title: `lectura ${index}`,
+      receivedAt: new Date(Date.now() - index * 1000).toISOString(),
+    }));
+  fs.writeFileSync(INBOX, `${lines.join("\n")}\n`, "utf8");
+  const res = await client.getNotes();
+  const notes = Array.isArray(res.json?.notes) ? res.json.notes : [];
+  check("H-13: GET /notes devuelve 205 notas (tope alineado con la retencion de 500)",
+    res.status === 200 && notes.length === 205, `status=${res.status} n=${notes.length}`);
+}
+
+
+

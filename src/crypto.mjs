@@ -210,14 +210,31 @@ export function resolveAccessKey() {
 export const accessKeyEnabled = () => resolveAccessKey().length > 0;
 
 /**
- * Rota la clave de acceso: borra la persistida y genera otra.
+ * Rota la clave de acceso persistida en disco: borra la clave y genera otra.
  *
- * La usaba el kill switch solo para revocar dispositivos; la clave seguia siendo
- * la misma, asi que "cortar accesos" no cortaba la credencial maestra.
- * Los dispositivos emparejados se identifican por cookie, no por la clave, y el
- * kill switch los revoca aparte: quien quiera volver a entrar debe emparejarse.
+ * H-01: antes SIEMPRE se borraba el archivo y se volvia a `resolveAccessKey()`,
+ * pero si la clave viene de `DSH_ACCESS_KEY` (entorno) esa funcion devuelve el
+ * mismo valor: fingia rotar y el kill switch seguia dejando viva la credencial
+ * maestra. Ahora el resultado es explicito:
+ *
+ *   { rotated: true,  reason: null }       la clave de archivo se roto de verdad
+ *   { rotated: false, reason: "env" }      DSH_ACCESS_KEY manda; no se puede rotar
+ *   { rotated: false, reason: "disabled" } DSH_ACCESS_DISABLE=1: no hay clave
+ *
+ * El kill switch refleja ese resultado en su respuesta y en el log. Los
+ * dispositivos emparejados se identifican por cookie y el kill switch los
+ * revoca aparte: quien quiera volver a entrar debe emparejarse.
  */
 export function rotateAccessKey() {
+  if (config.accessKey) {
+    log("bridge", "Clave de acceso no rotada: la fija DSH_ACCESS_KEY (entorno)");
+    return { rotated: false, reason: "env" };
+  }
+  if (config.accessKeyDisabled) {
+    log("bridge", "Clave de acceso no rotada: desactivada por DSH_ACCESS_DISABLE=1");
+    return { rotated: false, reason: "disabled" };
+  }
+
   const keyFile = path.join(config.dshHome, "companion-access-key");
   try {
     if (fs.existsSync(keyFile)) fs.unlinkSync(keyFile);
@@ -228,7 +245,7 @@ export function rotateAccessKey() {
   const fresh = resolveAccessKey();
   invalidateSession();
   log("bridge", `Clave de acceso rotada (****${fresh.slice(-4)})`);
-  return fresh;
+  return { rotated: true, reason: null };
 }
 
 const BASIC_HEADER = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i;
@@ -277,7 +294,12 @@ export function hasValidAccessKey(req) {
   if (!String(req?.headers?.authorization || "").trim()) return false;
   if (authThrottled(req)) return false;
   const key = resolveAccessKey();
-  if (!key) return true;
+  // H-09: con la clave vacia (DSH_ACCESS_DISABLE=1) esta funcion devolvia true
+  // con CUALQUIER Authorization: marcaba como "autenticado por clave" a un
+  // cliente que no presento ninguna. La puerta abierta del modo desactivado la
+  // mantiene el gate explicitamente (accessKeyEnabled() === false), no esta
+  // comprobacion. Sin clave que comparar, no hay autenticacion por clave.
+  if (!key) return false;
 
   const match = BASIC_HEADER.exec(String(req.headers.authorization || ""));
   if (!match) { noteAuthFailure(req); return false; }

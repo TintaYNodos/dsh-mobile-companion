@@ -6,52 +6,25 @@
 package com.tintaynodos.dshcompanion;
 
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
+import android.view.Window;
+import android.webkit.CookieManager;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
-import java.util.ArrayList;
-import java.util.List;
+
+import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Enumeration;
-import java.util.LinkedHashSet;
 import java.util.Locale;
-import java.util.Set;
-import java.util.concurrent.ExecutorCompletionService;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import android.util.Base64;
-import java.nio.charset.StandardCharsets;
-import android.provider.Settings;
-import android.webkit.CookieManager;
-import java.io.File;
-import android.graphics.drawable.ColorDrawable;
-import android.view.Window;
 
 import static com.tintaynodos.dshcompanion.PrefKeys.*;
 
@@ -124,19 +97,53 @@ class UpdateInstaller {
     }
 
     static boolean isVersionNewer(String remote, String local) {
-        if (remote == null || remote.trim().isEmpty()) return false;
-        try {
-            String[] rParts = remote.replaceAll("[^0-9.]", "").split("\\.");
-            String[] lParts = local.replaceAll("[^0-9.]", "").split("\\.");
-            int max = Math.max(rParts.length, lParts.length);
-            for (int i = 0; i < max; i++) {
-                int r = i < rParts.length ? Integer.parseInt(rParts[i]) : 0;
-                int l = i < lParts.length ? Integer.parseInt(lParts[i]) : 0;
-                if (r > l) return true;
-                if (r < l) return false;
-            }
-        } catch (Exception ignored) {}
+        int[] remoteParts = versionParts(remote);
+        int[] localParts = versionParts(local);
+        // H-11: si cualquiera de las dos no es una versión numérica, no se
+        // anuncia actualización (fail-closed). Antes se arrancaban los dígitos
+        // con replaceAll y la basura podía parecer más nueva.
+        if (remoteParts == null || localParts == null) return false;
+        int max = Math.max(remoteParts.length, localParts.length);
+        for (int i = 0; i < max; i++) {
+            int r = i < remoteParts.length ? remoteParts[i] : 0;
+            int l = i < localParts.length ? localParts[i] : 0;
+            if (r != l) return r > l;
+        }
         return false;
+    }
+
+    /**
+     * Partes numéricas de una versión tipo `v5.2.10`, `5.2.10-rc1` o
+     * `5.2.10+build7`.
+     *
+     * H-11: el sufijo de pre-release (`-rc1`, `-beta`, `-pre`, `-alpha`) y el de
+     * build (`+build…`) se descartan ANTES de comparar; si no, `5.2.9-rc1` se
+     * limpiaba a `5.2.91` y parecía más nueva que `5.2.9`. Devuelve null cuando
+     * no queda una versión numérica válida (fail-closed: no se ofrece instalar).
+     */
+    static int[] versionParts(String raw) {
+        if (raw == null) return null;
+        String text = raw.trim().toLowerCase(Locale.ROOT);
+        if (text.startsWith("v")) text = text.substring(1).trim();
+        int cut = text.length();
+        int plus = text.indexOf('+');
+        if (plus >= 0) cut = plus;
+        int dash = text.indexOf('-');
+        if (dash >= 0 && dash < cut) cut = dash;
+        text = text.substring(0, cut).trim();
+        if (text.isEmpty()) return null;
+        String[] pieces = text.split("\\.");
+        int[] parts = new int[pieces.length];
+        for (int i = 0; i < pieces.length; i++) {
+            String piece = pieces[i].trim();
+            if (piece.isEmpty() || !piece.matches("\\d+")) return null;
+            try {
+                parts[i] = Integer.parseInt(piece);
+            } catch (NumberFormatException overflow) {
+                return null;
+            }
+        }
+        return parts;
     }
 
     static void downloadAndInstallApk(MainActivity a) {

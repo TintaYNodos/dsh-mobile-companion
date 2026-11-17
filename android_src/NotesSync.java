@@ -55,7 +55,9 @@ final class NotesSync {
         REJECTED,
         NETWORK,
         SERVER,
-        LOCAL_ONLY
+        LOCAL_ONLY,
+        /** H-03: ya hay otro envío en vuelo; este toque no se ejecuta. */
+        BUSY
     }
 
     /** Resumen de un envío (una nota o varias). */
@@ -124,31 +126,62 @@ final class NotesSync {
             return;
         }
 
-        // CookieManager se consulta en el hilo de la interfaz, antes del worker.
-        String cookie = cookieFor(base);
+        // H-03: el candado se toma antes de crear el hilo. Un segundo toque no
+        // se encola ni duplica la nota: se avisa y se deja la nota local.
         final List<NotesStore.Note> batch = new ArrayList<>(pending);
         final int skipped = localOnly;
+        if (!NotesSendGuard.acquire()) {
+            finish(activity, listener, new Report(0, batch.size(), Outcome.BUSY, "", skipped));
+            return;
+        }
+
+        // CookieManager se consulta en el hilo de la interfaz, antes del worker.
+        String cookie = cookieFor(base);
         final Handler main = new Handler(Looper.getMainLooper());
 
         Thread worker = new Thread(() -> {
-            int sent = 0;
-            Outcome failure = null;
-            String detail = "";
-            for (NotesStore.Note note : batch) {
-                PostResult result = post(endpoint, cookie, note);
-                if (result.outcome == Outcome.SENT) {
-                    store.markSynced(note.id);
-                    sent++;
-                } else if (failure == null) {
-                    failure = result.outcome;
-                    detail = result.detail;
-                }
+            Report report;
+            try {
+                report = sendBatch(endpoint, cookie, store, batch, skipped);
+            } catch (Throwable error) {
+                report = new Report(0, batch.size(), Outcome.NETWORK, "", skipped);
             }
-            Report report = new Report(sent, batch.size(), failure, detail, skipped);
-            main.post(() -> finish(activity, listener, report));
+            // Pase lo que pase en el hilo, el candado y los botones se sueltan
+            // en el principal (equivale al finally de toda la operación).
+            final Report done = report;
+            main.post(() -> {
+                NotesSendGuard.release();
+                finish(activity, listener, done);
+            });
         }, "dsh-notes-sync");
-        worker.setDaemon(true);
-        worker.start();
+        try {
+            worker.setDaemon(true);
+            worker.start();
+        } catch (Throwable error) {
+            // No se pudo lanzar el hilo: se suelta el candado igual que en el
+            // finally del envío para no dejar los botones bloqueados.
+            NotesSendGuard.release();
+            finish(activity, listener, new Report(0, batch.size(), Outcome.NETWORK, "", skipped));
+        }
+    }
+
+    /** POST de cada nota del lote; lo llama el hilo de trabajo. */
+    private static Report sendBatch(String endpoint, String cookie, NotesStore store,
+                                    List<NotesStore.Note> batch, int skipped) {
+        int sent = 0;
+        Outcome failure = null;
+        String detail = "";
+        for (NotesStore.Note note : batch) {
+            PostResult result = post(endpoint, cookie, note);
+            if (result.outcome == Outcome.SENT) {
+                sent++;
+                store.markSynced(note.id);
+            } else if (failure == null) {
+                failure = result.outcome;
+                detail = result.detail;
+            }
+        }
+        return new Report(sent, batch.size(), failure, detail, skipped);
     }
 
     private static void finish(Activity activity, Listener listener, Report report) {
@@ -176,6 +209,8 @@ final class NotesSync {
         switch (report.outcome) {
             case LOCAL_ONLY:
                 return "Solo del teléfono: estas notas no se envían a la PC";
+            case BUSY:
+                return "Ya hay un envío de notas en curso; espera a que termine. La nota se queda en el teléfono";
             case NO_PC:
                 return "No hay ninguna PC configurada; la nota se queda en el teléfono";
             case INCOMPLETE:

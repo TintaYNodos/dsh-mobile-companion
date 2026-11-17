@@ -1,6 +1,6 @@
 # Pruebas del puente y del cliente
 
-Documento de la versión bajo prueba: **5.2.9** (`versionCode` 53). El contrato de notas que
+Documento de la versión bajo prueba: **5.2.10** (`versionCode` 54). El contrato de notas que
 describen estas suites (nota de solo título, idempotencia por `id`, bandeja `inbox.jsonl` y
 `GET /dsh-companion/notes`) es el de esta release.
 
@@ -46,9 +46,9 @@ node test/verify_bridge.mjs
 
 | Variable | Por defecto | Para qué |
 | --- | --- | --- |
-| `DSH_TEST_HOST` | `127.0.0.1` | Host del puente. |
-| `DSH_TEST_PORT` | `57420` | Puerto del puente. |
-| `DSH_PANEL_PORT` | `57421` | Puerto del panel local. |
+| `DSH_TEST_HOST` | **obligatoria, sin valor por defecto** | Host del puente. `run-all.mjs` aborta si falta. |
+| `DSH_TEST_PORT` | **obligatoria, sin valor por defecto** | Puerto del puente. `run-all.mjs` aborta si falta. |
+| `DSH_PANEL_PORT` | `DSH_TEST_PORT` + 1 | Puerto del panel local. |
 | `DSH_ACCESS_KEY` | archivo del HOME | Clave de acceso, si no quieres usar el archivo. |
 | `DSH_PANEL_TOKEN` | archivo del HOME | Boleto de apertura del panel, para las pruebas de panel y aprobación. |
 | `DSH_TEST_DESTRUCTIVE` | sin definir | `1` habilita la prueba del kill switch **real**. |
@@ -94,8 +94,8 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
 - corre cada suite en un proceso hijo, resume `PASS`/`FAIL`/`SKIP` y sale con
   código 1 si algo falla;
 - al terminar envía **SIGTERM** al puente, limpia el directorio temporal y
-  restaura `synced_chats/` (contenido de `synced_chats/index.jsonl` y archivos
-  de prueba).
+  comprueba (**H-17**) que el `synced_chats/` y el `bridge.log` del repositorio
+  no cambiaron: la suite escribe en `DSH_SYNC_DIR` y `DSH_LOG_FILE` temporales.
 
 ### Suites que corren en CI
 
@@ -110,6 +110,9 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
 | [verify_battery_and_landscape.mjs](verify_battery_and_landscape.mjs) | CSS de paisaje, batería de `system-stats` y navegación de `offline.html`. | No |
 | `verify_subagente_a.mjs` | QR, temas, barra de teclas y rutas retiradas. | No |
 | `verify_panel.mjs` | Aprobación, cookie de dispositivo y revocación. | No (basta el doble) |
+| `verify_log_rotation.mjs` | Rotación en caliente de `bridge.log`, `DSH_LOG_MAX_MB` y `DSH_LOG_KEEP`. | No |
+| `verify_vpn_detection.mjs` | Detección de la VPN (Tailscale, ZeroTier, NetBird, Nebula, EasyTier, Headscale, Twingate, Hamachi/Radmin y genérica). | No |
+| `verify_device_profiles.mjs` | Roles `full`/`viewer`, `targetPort` por dispositivo y acciones del panel. | No |
 
 ### Suites fuera de CI y por qué
 
@@ -143,16 +146,16 @@ un `DSH_HOME` temporal y limpia al terminar; puedes correrla con tu puente real
 en marcha sin interrumpirlo. Además del resumen, el runner devuelve código 1 si
 alguna suite falla.
 
-Nota: el runner no redirige la salida del puente a `bridge.log`. `bridge.mjs`
-rota `bridge.log` al arrancar si supera 5 MB; es comportamiento del puente, no
-del runner, y en CI ese archivo no existe (está en `.gitignore`).
+Nota (**H-17**): el runner arranca el puente con `DSH_SYNC_DIR`, `DSH_LOG_FILE` y
+`DSH_STOP_FLAG` dentro de su directorio temporal, así que ni escribe ni rota el
+`synced_chats/` ni el `bridge.log` del repositorio.
 
 ## Verificaciones adicionales (5.2.0)
 
 Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
-quedan **fuera** del conteo histórico de la suite (14 suites / 235 comprobaciones en local y 203 en
-CI). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`, así que no alteran esas cifras
-ni la comparabilidad con las releases de la serie 5.
+quedan **fuera** del conteo de las suites (17 suites / 416 comprobaciones en local y 344 en CI).
+No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus 42 comprobaciones se suman
+aparte y no alteran la comparabilidad con las releases de la serie 5.
 
 | Archivo | Qué cubre | Necesita un puente real |
 | --- | --- | --- |

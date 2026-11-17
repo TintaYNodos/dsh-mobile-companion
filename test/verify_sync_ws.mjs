@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { authHeader, HOST, PORT } from "./_harness.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const SYNC_DIR = path.join(here, "..", "synced_chats");
+const SYNC_DIR = path.resolve(process.env.DSH_SYNC_DIR || path.join(here, "..", "synced_chats"));
 
 const pas = [];
 const check = (name, ok, detail) => {

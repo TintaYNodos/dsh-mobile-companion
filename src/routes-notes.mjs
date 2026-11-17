@@ -32,7 +32,6 @@ import { isJsonRequest, readBody, sendJson } from "./http.mjs";
 import { sanitizeLogMessage } from "./log.mjs";
 import { NOTES_MAX_BYTES, listInboxNotes, saveNote } from "./notes-store.mjs";
 import { validateNotePayload } from "./notes-format.mjs";
-import { capNotesInboxSafe } from "./sync-retention.mjs";
 import { resolveDevice } from "./routes-pairing.mjs";
 
 const NOTES_PATH = "/dsh-companion/notes";
@@ -78,11 +77,10 @@ const handleCreateNote = async (req, res) => {
 
   try {
     const note = validateNotePayload(parsed);
+    // H-20: `saveNote` incluye la poda rapida de la bandeja DENTRO de la cola de
+    // escritura (notes-store.mjs). Antes se llamaba aqui, fuera de `serialize`:
+    // dos POST concurrentes reescribian inbox.jsonl a la vez (EPERM + .tmp).
     const { file, updated } = await saveNote(note);
-    // Uso exclusivo de notas (sin syncs de chats): la bandeja no debe crecer
-    // sin limite. El modo rapido solo actua si supera el tope y nunca hace
-    // fallar la escritura ya confirmada.
-    await capNotesInboxSafe();
     // Solo se responde 200 cuando el archivo ya esta escrito: no hay exito sin efecto.
     sendJson(res, 200, { ok: true, file, updated });
   } catch (error) {

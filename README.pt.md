@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.9-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-387%20passing-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **[Português (Brasil)](README.pt.md)** · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,7 @@ O aplicativo móvel não reimplementa a interface: ele renderiza a própria Web 
 
 Edição endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versão atual: **5.2.9** (ponte e APK, `versionCode` 53).
+Versão atual: **5.2.10** (ponte e APK, `versionCode` 54).
 
 ---
 
@@ -103,7 +103,7 @@ companion/
 │   ├── KeyStoreVault.java    criptografia com Android Keystore para chaves armazenadas
 │   └── …                     descoberta, telemetria, notas locais, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dezessete suítes de verificação (387 verificações)
+│   ├── verify_*.mjs           dezessete suítes de verificação (416 verificações)
 │   ├── _harness.mjs           cliente compartilhado
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversas persistidas (.md e .json)
@@ -261,7 +261,7 @@ A chave de acesso manual continua disponível como contingência para acesso por
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão **5.2.9**, `versionCode` 53, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versão **5.2.10**, `versionCode` 54, `minSdk` 26, `targetSdk` 35.
 - Sem AndroidX e sem Kotlin: bytecode Java puro, cerca de 262 KB.
 - **Texto claro bloqueado fora da rede privada**: o `CleartextPolicy` rejeita qualquer requisição que não seja HTTPS ou que não aponte para o bunker configurado ou para um endereço privado/loopback, e a configuração de segurança de rede proíbe texto claro para os serviços públicos com os quais o app fala (GitHub, para verificar atualizações). Isso é aplicado acima da WebView, porque a configuração de segurança de rede do Android não consegue expressar "somente faixas de IP privadas".
 - Acesso a arquivos locais desativado, conteúdo misto bloqueado, pop-ups e depuração remota desativados.
@@ -302,7 +302,7 @@ npm test
 ```
 
 
-Dezessete suítes, **387 verificações** (313 na CI), cobrindo descoberta, injeção móvel, `?dshc=off`, rejeição de origem cruzada, defesas contra contrabando de requisições, limites de corpo, sanitização de conteúdo, integridade do handshake WebSocket, segurança contra corrupção do registro, controle de acesso, notas locais, TTL do registro de dispositivos, fluxo do painel e o interruptor de segurança.
+Dezessete suítes, **416 verificações** (344 na CI), cobrindo descoberta, injeção móvel, `?dshc=off`, rejeição de origem cruzada, defesas contra contrabando de requisições, limites de corpo, sanitização de conteúdo, integridade do handshake WebSocket, segurança contra corrupção do registro, controle de acesso, notas locais, TTL do registro de dispositivos, fluxo do painel e o interruptor de segurança.
 
 A suíte conversa com uma **ponte em execução** (não é um mock): inicie a ponte primeiro. A execução real do interruptor de segurança é destrutiva — revoga dispositivos e rotaciona a chave —, por isso é opcional com `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -392,7 +392,7 @@ Este design foi pensado para **uso pessoal**: um operador, seus dispositivos con
 
 ## Estabilidade
 
-**A 5.2.9 é a versão estável atual da série 5.2.** A rama `stable/5` preserva esta árvore; a 5.1.x permanece como linha anterior.
+**A 5.2.10 é a versão estável atual da série 5.2.** A rama `stable/5` preserva esta árvore; a 5.1.x permanece como linha anterior.
 
 ## Capturas
 

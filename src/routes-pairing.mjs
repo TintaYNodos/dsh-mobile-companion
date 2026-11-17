@@ -16,7 +16,6 @@ import {
   isViewer,
   logReadOnlyRejection,
   onDeviceApproved,
-  readClaimToken,
   readCookie,
   rejectRequest,
   requestAccess,
@@ -26,6 +25,7 @@ import {
 } from "./devices.mjs";
 import { isDocumentRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
 import { log, warn } from "./log.mjs";
+import { deniedKey, handleOpenPanel, isLocalRequest } from "./open-panel.mjs";
 import { rejectedPage, waitingPage } from "./pairing.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { terminateAllWsConnections } from "./proxy-ws.mjs";
@@ -33,22 +33,8 @@ import { invalidatePanelSessions } from "./panel-session.mjs";
 
 const waitingClients = new Set();
 
-/**
- * H1: un privilegio de loopback (panel, aprobacion, retry, pair-events) solo se
- * concede si la conexion viene de verdad del propio equipo. Detras de un proxy
- * o tunel el socket tambien es 127.0.0.1, pero el cliente es remoto: ahi no hay
- * privilegios locales ni con DSH_ALLOW_PROXY_ACCESS=1.
- */
-const isLocalRequest = (remoteAddress, proxyHeaders) =>
-  !proxyHeaders && normalizeAddress(remoteAddress).startsWith("127.");
-
-// H-08: clave de una peticion concreta (token de canje o IP + user-agent), nunca
-// la IP sola: un rechazo no debe bloquear a otros equipos detras del mismo NAT.
-const deniedKey = (req, remoteAddress) => ({
-  address: remoteAddress,
-  claimToken: readClaimToken(req) || "",
-  agent: String(req.headers?.["user-agent"] || "").slice(0, 120),
-});
+// La frontera de privilegios locales y el boton "Abrir el panel" viven en
+// open-panel.mjs (aqui solo se enrutan).
 
 /**
  * H6: /pair-state sondea cada 700 ms y `requestAccess` guarda el registro con
@@ -165,21 +151,7 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
   }
 
   if (pathname === "/dsh-companion/open-panel" && req.method === "POST") {
-    // Abrir ventanas en el escritorio del host es una accion local: solo se
-    // permite desde loopback real. Antes cualquier cliente de la red podia
-    // hacerlo; detras de un proxy el socket tambien es loopback, pero el cliente
-    // no esta delante de la pantalla del host.
-    if (!isLocalRequest(remoteAddress, proxyHeaders)) {
-      sendJson(res, 403, { ok: false, error: "Solo disponible desde la computadora" });
-      return true;
-    }
-    if (!consumeAllowance(`open:${remoteAddress}`, { capacity: 3, refillPerSecond: 0.05 })) {
-      sendJson(res, 429, { ok: false, error: "Espera un momento" });
-      return true;
-    }
-    const hasRequest = !isDenied(remoteAddress, deniedKey(req, remoteAddress)) && !findPairedDevice(req);
-    sendJson(res, 200, { ok: hasRequest ? openPanelWindow({ force: true }) : false });
-    return true;
+    return handleOpenPanel(req, res, { remoteAddress, proxyHeaders, openPanelWindow });
   }
 
   if (pathname === "/dsh-companion/retry" && req.method === "POST") {

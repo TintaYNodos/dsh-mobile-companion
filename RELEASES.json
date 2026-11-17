@@ -26,7 +26,7 @@
       "versionCode": 51,
       "channel": "stable",
       "releasedAt": "2026-11-16",
-      "commit": "523ed0b",
+      "commit": "523ed0bf2a755327e7431d92d2e0782548695d32",
       "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Parche de seguridad solo puente: /healthz no revela topología fuera de loopback y el contrato de turnos es estricto. El APK no cambia (5.2.0 / versionCode 51)."
@@ -36,7 +36,7 @@
       "versionCode": 52,
       "channel": "stable",
       "releasedAt": "2026-11-16",
-      "commit": "e7349f3",
+      "commit": "e7349f3ec14b3e2216cb05c7bcabd77412896336",
       "apkSha256": "6592adaa6579c4320d23cb96e46ac71cc3a54776e637d8c47736bc79f20fbddd",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Retira el modo satelite y agrega Notas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PC. El telefono ya no guarda la clave de API ni habla con api.deepseek.com."
@@ -46,10 +46,20 @@
       "versionCode": 53,
       "channel": "stable",
       "releasedAt": "2026-11-16",
-      "commit": "f0feab8",
+      "commit": "f0feab884f0503b0d82f1a9a88026019596473e5",
       "apkSha256": "06e0af8f9727a76d6588deaa983b11bcb1688e4e90eac38af4ccd22e4a1bb83d",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Notas profesionales por area: 7 perfiles, fechas limite, privacidad (cifrado local, FLAG_SECURE, Solo en el telefono), envio idempotente y bandeja en el panel, accesibilidad. Sin chat destino."
+    },
+    {
+      "version": "5.2.10",
+      "versionCode": 54,
+      "channel": "stable",
+      "releasedAt": "2026-11-17",
+      "commit": "5dc4ee7ca8d155bd25d647c50d3e4da30bbf5b43",
+      "apkSha256": "cfe79d6e1272fba592878c5301ddc561bf66de63a3c28b9b7685f057b8d970ce",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. Detalle en CHANGELOG.md y RELEASE_5.2.10.md."
     }
   ]
 }

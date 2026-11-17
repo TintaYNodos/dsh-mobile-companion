@@ -43,9 +43,10 @@ class QrDialogs {
     }
 
     static void showQrFallbackDialog(MainActivity a, EditText targetField) {
-        // Sugerir la puerta de enlace (x.y.z.1) no servía: esa IP es el router,
-        // no la computadora. Se ofrece la última computadora conocida y, si no
-        // hay, se invita a escribir la dirección o a explorar la red.
+        // La cámara del teléfono NO puede leer un QR por sí sola: Android no
+        // expone un decodificador al sistema y esta app no lleva uno dentro.
+        // El QR solo contiene la dirección (http://IP:57420), asi que este
+        // dialogo ofrece los caminos equivalentes y deja de parecer un error.
         String suggested = PcRegistryStore.lastKnownBunkerUrl(a);
         final String finalSuggested = suggested == null ? "" : suggested.trim();
 
@@ -54,16 +55,24 @@ class QrDialogs {
         body.setPadding(ThemePalette.dp(a, 18), ThemePalette.dp(a, 4), ThemePalette.dp(a, 18), 0);
 
         TextView message = new TextView(a);
-        message.setText("No hay una aplicación de escaneo QR instalada en el teléfono.\n\n"
-                + "Instala un lector (por ejemplo ZXing) o escribe la dirección de la "
-                + "computadora a mano; también puedes buscarla en la red con «Explorar red».");
+        message.setText("Este teléfono no tiene una app que lea códigos QR, así que la cámara "
+                + "no puede leerlo. No hace falta para conectar: el QR solo lleva la dirección "
+                + "de la computadora, y puedes llegar a ella igual de rápido.");
         message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         message.setTextColor(ThemePalette.ink(a));
         body.addView(message);
 
+        TextView hint = new TextView(a);
+        hint.setText("1) «Explorar red» busca tu PC en la red privada.\n"
+                + "2) O escribe/pega la dirección a mano.");
+        hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+        hint.setTextColor(ThemePalette.inkDim(a));
+        hint.setPadding(0, ThemePalette.dp(a, 10), 0, 0);
+        body.addView(hint);
+
         if (!finalSuggested.isEmpty()) {
             TextView label = new TextView(a);
-            label.setText("Última computadora conocida (texto seleccionable):");
+            label.setText("Última dirección usada (seleccionable):");
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
             label.setTextColor(ThemePalette.inkDim(a));
             label.setPadding(0, ThemePalette.dp(a, 10), 0, ThemePalette.dp(a, 2));
@@ -79,18 +88,30 @@ class QrDialogs {
             body.addView(url);
         }
 
+        TextView optional = new TextView(a);
+        optional.setText("Opcional: si instalas un lector de QR, la app lo usará automáticamente "
+                + "la próxima vez.");
+        optional.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+        optional.setTextColor(ThemePalette.inkDim(a));
+        optional.setPadding(0, ThemePalette.dp(a, 12), 0, 0);
+        body.addView(optional);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(a)
-                .setTitle("Escáner no disponible")
+                .setTitle("Conectar con la computadora")
                 .setView(body)
-                .setNegativeButton("Cerrar", null);
+                .setNegativeButton("Escribir a mano", (d, w) -> {
+                    if (targetField != null) {
+                        targetField.requestFocus();
+                        targetField.setSelection(targetField.getText().length());
+                    }
+                })
+                .setPositiveButton("Explorar red", (d, w) -> Discovery.discover(a, false));
 
         if (!finalSuggested.isEmpty()) {
-            builder.setPositiveButton("Usar esta dirección", (d, w) -> {
+            builder.setNeutralButton("Usar esta dirección", (d, w) -> {
                 if (targetField != null) targetField.setText(finalSuggested);
             });
         }
-
-        builder.setNeutralButton("Explorar red", (d, w) -> Discovery.discover(a, false));
 
         AlertDialog dialog = builder.create();
         UiKit.styleDialog(a, dialog);

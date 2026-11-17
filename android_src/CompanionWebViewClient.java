@@ -164,6 +164,8 @@ class CompanionWebViewClient extends WebViewClient {
         CharSequence title = view.getTitle();
         if (title != null && (title.toString().toLowerCase().contains("esperando")
                 || title.toString().toLowerCase().contains("pendiente"))) {
+            // La página de espera sí cargó: se retira la capa y queda el banner.
+            ConnectionScreen.hide(a);
             ConnectionController.markRetrying(a);
             BannerUi.showBanner(a, "Esperando aprobación en la computadora.");
             ConnectionController.scheduleReconnect(a, 1500);
@@ -181,10 +183,14 @@ class CompanionWebViewClient extends WebViewClient {
     @Override
     public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
         if (request == null || !request.isForMainFrame()) return;
-        if (!UrlTools.isTransientNetworkError(error)) return;
+        if (!ConnectionScreen.isNetworkFailure(error)) return;
         a.pageLoading = false;
         a.mainFrameFailed = true;
         ConnectionController.markFailed(a);
+        // La página de error de Chromium queda tapada por la capa a pantalla
+        // completa: el aviso nativo es lo único que ve el usuario.
+        ConnectionScreen.showNetworkFailure(a, error,
+                request.getUrl() != null ? request.getUrl().toString() : (view == null ? null : view.getUrl()));
     }
 
     @Override
@@ -192,9 +198,15 @@ class CompanionWebViewClient extends WebViewClient {
                                     android.webkit.WebResourceResponse response) {
         if (request == null || !request.isForMainFrame()) return;
         if (response == null || response.getStatusCode() < 500) return;
+        // Si el puente devuelve una página HTML propia (aunque sea de error), es
+        // contenido válido: no se tapa. La capa es solo para 5xx sin HTML.
+        String mime = response.getMimeType();
+        if (mime != null && mime.toLowerCase(java.util.Locale.ROOT).contains("html")) return;
         a.pageLoading = false;
         a.mainFrameFailed = true;
         ConnectionController.markFailed(a);
+        ConnectionScreen.showHttpFailure(a, response.getStatusCode(),
+                request.getUrl() != null ? request.getUrl().toString() : (view == null ? null : view.getUrl()));
     }
 
     /**

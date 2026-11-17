@@ -245,6 +245,7 @@ public class MainActivity extends Activity {
         BannerUi.buildBanner(this);
         WebViewSetup.configureWebView(this);
         PillUi.buildPill(this);
+        ConnectionScreen.build(this);
         PillUi.applyOrientationLayout(this, getResources().getConfiguration().orientation);
         ConnectionController.watchNetwork(this);
 

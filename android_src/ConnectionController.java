@@ -139,6 +139,7 @@ class ConnectionController {
         ConnectionController.recordHeartbeat(a);
         PillUi.paintDot(a, Color.parseColor("#10B981"));
         BannerUi.hideBanner(a);
+        ConnectionScreen.hide(a);
         PillUi.updatePillDescription(a);
         PillUi.collapseSoon(a);
         if (a.prefs != null) {
@@ -159,21 +160,46 @@ class ConnectionController {
         CompanionWidget.updateAllWidgets(a);
     }
 
+    /** Textos que comparten el banner (avisos menores) y la capa sin conexión. */
+    static final String MSG_NO_INTERNET = "Sin conexión a internet en el celular.";
+    static final String MSG_NO_VPN = "Red privada inactiva en el teléfono. Abre ZeroTier o Tailscale.";
+    static final String MSG_BRIDGE_DOWN =
+            "Computadora no responde. Revisa que la PC esté encendida y conectada a la VPN.";
+
+    static final int DIAG_NO_INTERNET = 1;
+    static final int DIAG_NO_VPN = 2;
+    static final int DIAG_BRIDGE_DOWN = 3;
+
+    /**
+     * El fallo lo pinta {@link ConnectionScreen} a pantalla completa (llamado
+     * desde el WebViewClient con el error concreto); aquí solo se actualiza el
+     * estado y se programa el reintento automático.
+     */
     static void markFailed(MainActivity a) {
         ConnectionController.markRetrying(a);
-        String diagnosticMsg = ConnectionController.diagnoseConnectionFailure(a);
-        BannerUi.showBanner(a, diagnosticMsg);
         ConnectionController.scheduleReconnect(a, 0);
     }
 
     static String diagnoseConnectionFailure(MainActivity a) {
+        switch (ConnectionController.diagnoseCase(a)) {
+            case DIAG_NO_INTERNET:
+                return ConnectionController.MSG_NO_INTERNET;
+            case DIAG_NO_VPN:
+                return ConnectionController.MSG_NO_VPN;
+            default:
+                return ConnectionController.MSG_BRIDGE_DOWN;
+        }
+    }
+
+    /** Clasifica el fallo: sin internet, sin red privada o puente inalcanzable. */
+    static int diagnoseCase(MainActivity a) {
         ConnectivityManager cm = (ConnectivityManager) a.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm != null) {
             Network net = cm.getActiveNetwork();
-            if (net == null) return "Sin conexión a internet en el celular.";
+            if (net == null) return DIAG_NO_INTERNET;
             NetworkCapabilities cap = cm.getNetworkCapabilities(net);
             if (cap == null || !cap.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
-                return "Sin conexión a internet en el celular.";
+                return DIAG_NO_INTERNET;
             }
         }
 
@@ -192,10 +218,10 @@ class ConnectionController {
         } catch (Throwable ignored) {}
 
         if (!hasVpnInterface) {
-            return "Red privada inactiva en el teléfono. Abre ZeroTier o Tailscale.";
+            return DIAG_NO_VPN;
         }
 
-        return "Computadora no responde. Revisa que la PC esté encendida y conectada a la VPN.";
+        return DIAG_BRIDGE_DOWN;
     }
 
     static void scheduleReconnect(MainActivity a, long delayMs) {

@@ -46,6 +46,9 @@ class Cleanup {
         }
         a.settingsDialog = null;
 
+        // La capa sin conexión guarda referencias a vistas de la Activity.
+        ConnectionScreen.release(a);
+
         try {
             if (a.networkCallback != null) {
                 ConnectivityManager manager = (ConnectivityManager) a.getSystemService(Context.CONNECTIVITY_SERVICE);

@@ -153,7 +153,7 @@ class WebBridge {
 
     /** Interruptor de Ajustes: copia del chat en localStorage para el lector offline. */
     static boolean isOfflineCopyEnabled(MainActivity a) {
-        return a.prefs == null || a.prefs.getBoolean(KEY_OFFLINE_COPY, true);
+        return a.prefs != null && a.prefs.getBoolean(KEY_OFFLINE_COPY, false);
     }
 
     /**

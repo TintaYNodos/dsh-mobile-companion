@@ -15,7 +15,7 @@ export const MOBILE_CLIENT_OFFLINE = `  /**
    * pintar listas, citas y bloques de codigo sin perder la estructura. El
    * formato es compatible con la copia antigua (texto plano).
    */
-  var offlineCopyEnabled = true;
+  var offlineCopyEnabled = false;
   window.__DSH_SET_OFFLINE_COPY__ = function(enabled) {
     offlineCopyEnabled = Boolean(enabled);
     if (!offlineCopyEnabled) {

@@ -116,12 +116,13 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 <SHA-256-DEL-APK-5.4.0> `
+  --expect-apk-sha256 b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 
-El SHA-256 de la 5.4.0 se toma del campo `apkSha256` de `RELEASES.json` una vez compilada la build
-(hasta entonces figura como `PENDIENTE`); no se inventa ni se copia de una versión anterior.
+El SHA-256 de la 5.4.0 (`b0da9570…fabc1ca`) se toma del campo `apkSha256` de `RELEASES.json` una
+vez compilada la build; no se inventa ni se copia de una versión anterior. La verificación de esa
+build dio 377 comprobaciones en CI y 875 comprobaciones Java ejecutadas en local.
 
 Texto mínimo de handoff para un asistente sin shell:
 

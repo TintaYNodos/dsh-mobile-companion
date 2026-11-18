@@ -276,7 +276,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 **原生应用（Android）**
 
 - `DSH-Companion.apk` — 版本 **5.4.0**、`versionCode` 66、`minSdk` 26、`targetSdk` 35。
-- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码；5.4.0 的大小随发布公布。
+- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码；5.4.0 的 APK 为 282 KB（288 776 字节）。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、用于检查更新）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
 - 麦克风访问仅限堡垒节点的精确来源（协议、主机和端口）。

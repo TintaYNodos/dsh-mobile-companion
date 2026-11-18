@@ -23,7 +23,7 @@ Los demás archivos son **espejos** que se actualizan a partir de esos campos:
 - `README*.md` (los 7 idiomas), `SECURITY.md` y `CHANGELOG.md` — texto para personas; se copian
   los valores de `config.mjs` al publicar y no se inventan cifras nuevas.
 - `RELEASES.json` — registro de las versiones selladas; la entrada se añade al sellar, no en cada
-  commit, y puede prepararse con `commit`/`apkSha256` en `PENDIENTE` hasta que exista la build
+  commit, y puede prepararse con `commit`/`apkSha256` sin completar hasta que exista la build
   (campos y política en la sección 1b).
 
 **Cómo se valida:** [`tools/audit-repo.mjs`](tools/audit-repo.mjs) lee los tres archivos de código y
@@ -66,8 +66,8 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
       "versionCode": 66,
       "channel": "stable",
       "releasedAt": "2026-11-18",
-      "commit": "PENDIENTE",
-      "apkSha256": "PENDIENTE",
+      "commit": "d162cd7adbfffaa428d7588976fbb02fd066e04a",
+      "apkSha256": "b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Version estable final de la serie 5 (versionCode 66). Detalle en CHANGELOG.md y RELEASE_5.4.0.md."
     }
@@ -75,9 +75,10 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
 }
 ```
 
-**Preparación antes de compilar.** La entrada puede escribirse con `commit` y `apkSha256` en
-`PENDIENTE` mientras la build no exista; se completan con `git rev-parse HEAD` y el SHA-256 que
-imprime `build-release.ps1` **antes** de etiquetar. El registro nunca se publica con `PENDIENTE`.
+**Preparación antes de compilar.** La entrada se escribe con el `commit` y el `apkSha256` reales
+del build que se publica; si la build aún no existe, esos dos campos se dejan sin completar y se
+rellenan con `git rev-parse HEAD` y el SHA-256 que imprime `build-release.ps1` **antes** de
+etiquetar. El registro nunca se publica con campos sin completar.
 
 | Campo | Tipo | Cómo se rellena |
 | --- | --- | --- |

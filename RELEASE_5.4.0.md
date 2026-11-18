@@ -83,9 +83,9 @@ por computadora.
 
 ## Verificación
 
-- **17 suites**, **373+ comprobaciones en CI** (12 suites + 3 omitidas con motivo) y **865+
-  comprobaciones Java** puras (watchdog, cleartext, bridgeguard, apkdigest, notas, reenvío, copia
-  para el chat, comandos, versiones y lector offline).
+- **17 suites**, **377 comprobaciones en CI** (12 suites + 3 omitidas con motivo) y **875
+  comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
+  notas, reenvío, copia para el chat, comandos, versiones y lector offline).
 - `node tools/audit-repo.mjs`: sin hallazgos.
 - `doctor.ps1 -Json -Report` con recibo verificado por `tools/verify-receipt.mjs`.
 - Suite aislada: `synced_chats/` y `bridge.log` del repositorio sin cambios (comprobado por
@@ -96,13 +96,17 @@ por computadora.
 | Dato | Valor |
 | --- | --- |
 | Versión | `versionCode 66` / `versionName 5.4.0` |
-| Tamaño | PENDIENTE (se publica con la build) |
-| SHA-256 | PENDIENTE (lo imprime `build-release.ps1` y se registra en `RELEASES.json`) |
+| Tamaño | 288 776 bytes (282 KB) |
+| SHA-256 | `b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca` |
 | Firma | v2+v3, certificado de release RSA 4096 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
-## Pendiente de la build
+## Build
 
-- Compilar el APK firmado y anotar **tamaño**, **SHA-256** y **commit de origen**.
-- Rellenar `commit` y `apkSha256` (hoy `PENDIENTE`) en la entrada 5.4.0 de `RELEASES.json`.
-- Sustituir los «PENDIENTE» de tamaño en los 7 README y en `RELEASE_5.4.0.md`.
-- Repetir la verificación completa sobre el binario compilado antes de etiquetar `v5.4.0`.
+- APK firmado con el keystore de release: **288 776 bytes (282 KB)**, SHA-256
+  `b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca`.
+- Commit de origen: `d162cd7adbfffaa428d7588976fbb02fd066e04a` (el sello del registro se anota en
+  el commit siguiente, que es el que se etiqueta).
+- Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
+  `certSha256`.
+- Verificación sobre el binario publicado: **377 comprobaciones en CI** y **875 comprobaciones Java
+  ejecutadas en local**.

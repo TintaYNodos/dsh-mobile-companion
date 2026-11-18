@@ -108,9 +108,11 @@ de seguridad y mantenimiento.
 
 ### Notas de la build
 
-- El commit de origen y el SHA-256 del APK se registran en `RELEASES.json` al compilar el sello de
-  la 5.4.0; hasta entonces ambos campos figuran como `PENDIENTE`. El tamaño del APK se publica con
-  la build.
+- APK: **288 776 bytes (282 KB)**, SHA-256
+  `b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca`. Commit de origen
+  `d162cd7adbfffaa428d7588976fbb02fd066e04a`; el registro completo está en `RELEASES.json`.
+- Verificación sobre el binario publicado: **377 comprobaciones en CI** y **875 comprobaciones Java
+  ejecutadas en local**.
 
 ## 5.2.10 — `versionCode` 54
 

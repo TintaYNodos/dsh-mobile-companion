@@ -279,7 +279,7 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 **Native Anwendung (Android)**
 
 - `DSH-Companion.apk` — Version **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
-- Kein AndroidX und kein Kotlin: reiner Java-Bytecode; die Größe von 5.4.0 wird mit dem Release veröffentlicht.
+- Kein AndroidX und kein Kotlin: reiner Java-Bytecode; das APK 5.4.0 wiegt 282 KB (288 776 Bytes).
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, für Update-Prüfungen). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
 - Mikrofonzugriff auf die exakte Origin des Bunkers beschränkt (Schema, Host und Port).

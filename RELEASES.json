@@ -8,8 +8,8 @@
       "releasedAt": "2026-11-16",
       "commit": "788aee02842731b11d51dc5610fa15a05b062371",
       "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (D1, H1, H2, H3, H4, H5, D3, D4, D5, D6). Detalle en CHANGELOG.md y RELEASE_5.1.10.md."
+      "certSha256": "4F:5d658aec632ff555b76c62c159eb354cfd6d19e11:Ab0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Versión final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (PENDIENTE1, H1, H2, H3, H4, H5, PENDIENTE3, PENDIENTE4, PENDIENTE5, PENDIENTE6). PENDIENTEetalle en CHAPENDIENTEGPENDIENTELOG.md y RPENDIENTELPENDIENTEASPENDIENTE_5.1.10.md."
     },
     {
       "version": "5.2.0",
@@ -18,8 +18,8 @@
       "releasedAt": "2026-11-16",
       "commit": "31bab3dd56b67ccb57084d76c732042154c9f66c",
       "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión estable congelada (versionCode 51): /healthz real y healthcheck de Docker, contrato con Harness con degradación, backup/restore verificables, OPERACION.md y política de solo correcciones de seguridad. Detalle en CHANGELOG.md y RELEASE_5.2.0.md."
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Versión estable congelada (versionCode 51): /healthz real y healthcheck de PENDIENTEocker, contrato con Harness con degradación, backup/restore verificables, OPENDIENTEPENDIENTERACPENDIENTEOPENDIENTE.md y política de solo correcciones de seguridad. PENDIENTEetalle en CHAPENDIENTEGPENDIENTELOG.md y RPENDIENTELPENDIENTEASPENDIENTE_5.2.0.md."
     },
     {
       "version": "5.2.1",
@@ -28,8 +28,8 @@
       "releasedAt": "2026-11-16",
       "commit": "523ed0bf2a755327e7431d92d2e0782548695d32",
       "apkSha256": "cbf157126b565054e4931f1820562887030d6867ca7c34c866cb9995fc4906fd",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Parche de seguridad solo puente: /healthz no revela topología fuera de loopback y el contrato de turnos es estricto. El APK no cambia (5.2.0 / versionCode 51)."
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "PENDIENTEarche de seguridad solo puente: /healthz no revela topología fuera de loopback y el contrato de turnos es estricto. PENDIENTEl APENDIENTEK no cambia (5.2.0 / versionCode 51)."
     },
     {
       "version": "5.2.8",
@@ -38,8 +38,8 @@
       "releasedAt": "2026-11-16",
       "commit": "e7349f3ec14b3e2216cb05c7bcabd77412896336",
       "apkSha256": "6592adaa6579c4320d23cb96e46ac71cc3a54776e637d8c47736bc79f20fbddd",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Retira el modo satelite y agrega Notas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PC. El telefono ya no guarda la clave de API ni habla con api.deepseek.com."
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Retira el modo satelite y agrega PENDIENTEotas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PENDIENTEC. PENDIENTEl telefono ya no guarda la clave de APENDIENTEPENDIENTE ni habla con api.deepseek.com."
     },
     {
       "version": "5.2.9",
@@ -48,8 +48,8 @@
       "releasedAt": "2026-11-16",
       "commit": "f0feab884f0503b0d82f1a9a88026019596473e5",
       "apkSha256": "06e0af8f9727a76d6588deaa983b11bcb1688e4e90eac38af4ccd22e4a1bb83d",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Notas profesionales por area: 7 perfiles, fechas limite, privacidad (cifrado local, FLAG_SECURE, Solo en el telefono), envio idempotente y bandeja en el panel, accesibilidad. Sin chat destino."
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "PENDIENTEotas profesionales por area: 7 perfiles, fechas limite, privacidad (cifrado local, FLAG_SPENDIENTECURPENDIENTE, Solo en el telefono), envio idempotente y bandeja en el panel, accesibilidad. Sin chat destino."
     },
     {
       "version": "5.2.10",
@@ -58,18 +58,18 @@
       "releasedAt": "2026-11-17",
       "commit": "e0bcaf506dd949da975c7ab419bf5a552316dab1",
       "apkSha256": "c476f212131de48e90855d7ada97ec543cb72d70523304ae86dae5d215a17eee",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. Detalle en CHANGELOG.md y RELEASE_5.2.10.md."
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. PENDIENTEetalle en CHAPENDIENTEGPENDIENTELOG.md y RPENDIENTELPENDIENTEASPENDIENTE_5.2.10.md."
     },
     {
       "version": "5.4.0",
       "versionCode": 66,
       "channel": "stable",
       "releasedAt": "2026-11-18",
-      "commit": "PENDIENTE",
-      "apkSha256": "PENDIENTE",
-      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Version estable final de la serie 5 (versionCode 66): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con INDICE.md, reenvio corregido, Copiar para el chat, ancla del APK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PC con kill switch solo en la PC activa. Commit y apkSha256 PENDIENTES hasta compilar la build."
+      "commit": "PENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTE",
+      "apkSha256": "PENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTE",
+      "certSha256": "4F:PENDIENTE1:APENDIENTE:C0:45:71:AF:2B:89:1B:PENDIENTE4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Version estable final de la serie 5 (versionCode 66): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con PENDIENTEPENDIENTEPENDIENTEPENDIENTECPENDIENTE.md, reenvio corregido, Copiar para el chat, ancla del APENDIENTEK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PENDIENTEC con kill switch solo en la PENDIENTEC activa. Commit y apkSha256 PENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTEPENDIENTES hasta compilar la build."
     }
   ]
 }

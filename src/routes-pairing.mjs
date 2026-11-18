@@ -24,6 +24,7 @@ import {
   touchDevice,
 } from "./devices.mjs";
 import { isDocumentRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { findApprovedDeviceByAddressAndAgent } from "./device-recovery.mjs";
 import { log, warn } from "./log.mjs";
 import { deniedKey, handleOpenPanel, hasPendingRequestFor, isLocalRequest } from "./open-panel.mjs";
 import { rejectedPage, waitingPage } from "./pairing.mjs";
@@ -81,7 +82,19 @@ export const resolveDevice = (req, res, remoteAddress) => {
   // Un equipo aprobado que aun no tiene cookie la recibe aqui, una sola vez.
   const claimed = claimApprovedDevice(remoteAddress);
   if (claimed) res.setHeader("Set-Cookie", deviceCookieHeader(claimed.id));
-  return claimed;
+  if (claimed) return claimed;
+
+  // Regresion 5.4.1: la navegacion que sigue a la aprobacion puede llegar sin
+  // cookie (el WebView navega antes de guardar la que recibio el sondeo). Si ya
+  // hay un dispositivo aprobado de la MISMA direccion y user-agent, se reutiliza
+  // y se re-emite la cookie EN ESTA MISMA respuesta, que es la que ve el WebView.
+  // Asi el telefono no vuelve a "Acceso pendiente" ni se crea otra solicitud.
+  const recovered = findApprovedDeviceByAddressAndAgent(req, remoteAddress);
+  if (recovered) {
+    res.setHeader("Set-Cookie", deviceCookieHeader(recovered.id));
+    return recovered;
+  }
+  return null;
 };
 
 export async function handlePairingRoutes(req, res, { url, pathname, remoteAddress, context, proxyHeaders = false }) {

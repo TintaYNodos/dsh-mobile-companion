@@ -13,9 +13,10 @@ import {
   normalizeDeviceRole,
   normalizeTargetPort,
 } from "./registry.mjs";
-import { normalize, prune, readCookie } from "./device-claim.mjs";
+import { prune, readCookie } from "./device-claim.mjs";
 import { probeDshPort, resolveTargetPort } from "./network.mjs";
-import { sendJson } from "./http.mjs";
+import { deviceLabel } from "./device-readonly.mjs";
+import { isDeviceExpired, reuseApprovedDevice } from "./device-recovery.mjs";
 
 // El canje y los rechazos por solicitud viven en device-claim.mjs.
 export {
@@ -30,81 +31,20 @@ export {
   runWithRequestContext,
 } from "./device-claim.mjs";
 
+// Perfiles de solo lectura y recuperacion sin cookie viven en sus modulos para
+// que este (registro y emparejamiento) quede por debajo de 400 lineas.
+export {
+  READ_ONLY_ERROR,
+  VIEWER_POST_ALLOWLIST,
+  deviceLabel,
+  isReadOnlyWriteBlocked,
+  isViewer,
+  logReadOnlyRejection,
+  sendReadOnly,
+} from "./device-readonly.mjs";
+
 const MAX_DEVICES = 8;
 const ONLINE_WINDOW_MS = 3 * 60 * 1000;
-
-/**
- * Perfiles por dispositivo. `full` es el comportamiento de siempre; `viewer`
- * deja al dispositivo en solo lectura (el APK no cambia, el rol es del
- * servidor): el puente rechaza sus escrituras HTTP, la API de mutacion del
- * puente y las aprobaciones de herramientas.
- */
-export const READ_ONLY_ERROR = "dispositivo en solo lectura";
-
-export const isViewer = (device) => normalizeDeviceRole(device?.role) === "viewer";
-
-export const deviceLabel = (device) => String(device?.name || device?.address || "dispositivo");
-
-export const sendReadOnly = (res) => sendJson(res, 403, { error: READ_ONLY_ERROR });
-
-/**
- * POST que un `viewer` puede seguir haciendo: lecturas que DSH transporta como
- * `POST /api/<namespace>/<metodo>` (toda llamada Remote unaria). Es el
- * subconjunto de solo lectura que el propio DSH clasifica como
- * `reader-global-read` / `reader-session-read` en su politica de LiveShare
- * (dsh-experimental-liveshare, endpoint-classification.ts). Se excluye
- * `fileUploads/upload` (escribe adjuntos) y todo lo `owner-only`; cualquier otro
- * mutante se rechaza, incluido `POST /api/$events/result`, por donde el
- * navegador responde aprobaciones de herramientas y preguntas del agente.
- */
-export const VIEWER_POST_ALLOWLIST = Object.freeze([
-  "/api/commands/list",
-  "/api/goals/get",
-  "/api/llm/listConfigurableProviders",
-  "/api/llm/listProviders",
-  "/api/session/attachment",
-  "/api/session/canOpenWorkspacePath",
-  "/api/session/list",
-  "/api/session/modelCatalog",
-  "/api/session/page",
-  "/api/session/projections",
-  "/api/session/state",
-  "/api/session/wait",
-  "/api/skills/list",
-]);
-
-const READ_ONLY_WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
-/** Metodo mutante que un `viewer` tiene prohibido (allowlist aparte). */
-export const isReadOnlyWriteBlocked = (device, method, pathname) => {
-  if (!isViewer(device)) return false;
-  if (!READ_ONLY_WRITE_METHODS.has(String(method || "").toUpperCase())) return false;
-  return !VIEWER_POST_ALLOWLIST.includes(String(pathname || ""));
-};
-
-/** Registra el rechazo (sin secretos) sin inundar el log por cada asset. */
-const readOnlyLogAt = new Map();
-export const logReadOnlyRejection = (device, method, pathname) => {
-  const key = `${device?.id || "?"}|${method}|${pathname}`;
-  const now = Date.now();
-  if (now - (readOnlyLogAt.get(key) || 0) < 10_000) return;
-  readOnlyLogAt.set(key, now);
-  log("proxy", `Escritura rechazada para ${deviceLabel(device)} (solo lectura): ${method} ${pathname}`);
-};
-
-/**
- * Un dispositivo caduca si lleva mas de `deviceTtlDays` sin aparecer. Antes el
- * TTL solo alimentaba el Max-Age de la cookie: el servidor aceptaba para
- * siempre a un dispositivo de hace meses porque solo comparaba el id.
- */
-export const isDeviceExpired = (device) => {
-  if (!device) return true;
-  const stamp = device.lastSeen || device.lastRefresh || device.approvedAt;
-  const seen = stamp ? new Date(stamp).getTime() : 0;
-  if (!seen) return true;
-  const ttlMs = config.deviceTtlDays * 24 * 60 * 60 * 1000;
-  return Date.now() - seen > ttlMs;
-};
 
 export const findPairedDevice = (req) => {
   // Solo la cookie identifica al dispositivo. Emparejar por direccion IP dejaba
@@ -200,6 +140,17 @@ export function approveRequest(id) {
 
   const [entry] = current.pending.splice(index, 1);
   current.denied = current.denied.filter((row) => row.address !== entry.address);
+
+  // Regresion 5.4.1: una solicitud repetida del mismo equipo reutiliza el
+  // dispositivo ya aprobado (misma direccion y user-agent) en vez de duplicarlo.
+  const reusedDevice = reuseApprovedDevice(current, entry);
+  if (reusedDevice) {
+    log("pair", `Acceso aprobado para ${entry.address} (dispositivo ya emparejado reutilizado)`);
+    const reused = saveRegistry();
+    if (reused) recordEvent("approve", entry.address);
+    notifyApprovalListeners();
+    return reused ? { ok: true, reason: null, device: reusedDevice } : { ok: false, reason: "failed", device: null };
+  }
 
   const device = {
     id: crypto.randomBytes(24).toString("base64url"),

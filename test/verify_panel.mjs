@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startBridge } from "./ci/start-bridge.mjs";
+import { runPairCookieRegression } from "./ci/pair-cookie-regression.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // H-17: las notas de la prueba viven en el synced_chats temporal del puente.
@@ -205,6 +206,8 @@ check(
   Boolean(deviceId) && new RegExp(`action="/pair/revoke-device"[\\s\\S]{0,400}?name="id" value="${deviceId}"`).test(listed.body),
   "formulario de revocar propio"
 );
+// 9b. Regresion 5.4.1 (cookie perdida / aprobacion duplicada): ver ci/pair-cookie-regression.mjs.
+await runPairCookieRegression({ call, check, BRIDGE, PANEL, OWN_AGENT, deviceId, panelCookie: cookie, REGISTRY });
 
 // 10. Revocar individualmente SOLO el dispositivo que creo esta prueba.
 const revoke = await call(PANEL, "/pair/revoke-device", { method: "POST", cookie, body: `id=${encodeURIComponent(deviceId)}` });

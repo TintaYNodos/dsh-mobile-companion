@@ -50,13 +50,14 @@ Apoyamos la investigación ética y de buena fe:
 
 ## 5. Versión única y verificación automática
 
-- **Fuente de verdad:** [`src/config.mjs`](src/config.mjs) (`version`, `apkVersion`, `apkVersionCode`,
-  `previousApkVersion`, `previousApkVersionCode`). `package.json` y `AndroidManifest.xml` son
-  espejos; los README, `SECURITY.md` y `CHANGELOG.md` se copian de ahí al publicar.
-- **Validación:** `node tools/audit-repo.mjs` falla si los tres archivos se desincronizan. La CI
-  (`.github/workflows/verify.yml`) ejecuta además la sintaxis de todos los módulos, la auditoría y
-  `node test/verify_config_guard.mjs` (guardas de `DSH_ACCESS_DISABLE` y `DSH_ALLOWED_HOSTS`, sin
-  necesidad de puente).
+- **Fuente de verdad:** [`src/config.mjs`](src/config.mjs) (`version`, `apkVersion`, `apkVersionCode`).
+  `package.json` y `AndroidManifest.xml` son espejos; los README, `SECURITY.md` y `CHANGELOG.md` se
+  copian de ahí al publicar.
+- **Validación:** `node tools/audit-repo.mjs` falla si los tres archivos se desincronizan o si el
+  `version`/`versionCode` de los 7 README o de la última entrada del `CHANGELOG.md` no coincide con
+  `src/config.mjs`. La CI (`.github/workflows/verify.yml`) ejecuta además la sintaxis de todos los
+  módulos, la auditoría y `node test/verify_config_guard.mjs` (guardas de `DSH_ACCESS_DISABLE` y
+  `DSH_ALLOWED_HOSTS`, sin necesidad de puente).
 - **Cómo publicar:** el checklist completo, con tag y release, está en [RELEASING.md](RELEASING.md).
 
 ## Licencia de las contribuciones

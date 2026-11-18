@@ -58,8 +58,6 @@ export const buildStatusPayload = async (options = {}) => {
     apkVersion: config.apkVersion || config.version,
     apkVersionCode: config.apkVersionCode || 14,
     ...apkAnchorStatus(), // 5.3.4: ruta anclada a config.root; true = sin ancla, no instalar.
-    previousApkVersion: config.previousApkVersion || "3.9.2",
-    previousApkVersionCode: config.previousApkVersionCode || 13,
     status: "online",
     dshOnline,
     targetPort,

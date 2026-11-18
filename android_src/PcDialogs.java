@@ -226,7 +226,7 @@ class PcDialogs {
                 dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ThemePalette.accentInk(a));
                 dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ThemePalette.inkDim(a));
                 if (dialog.getButton(AlertDialog.BUTTON_NEUTRAL) != null) {
-                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(Color.parseColor("#EF4444"));
+                    dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(ThemePalette.danger(a));
                 }
             } catch (Throwable ignored) {}
 

@@ -89,8 +89,6 @@ class PcStatusPoller {
 
                 String serverVer = obj.optString("apkVersion", obj.optString("version", ""));
                 int serverCode = obj.optInt("apkVersionCode", 0);
-                String prevVer = obj.optString("previousApkVersion", "");
-                int prevCode = obj.optInt("previousApkVersionCode", 0);
                 String serverSha = obj.optString("apkSha256", "");
                 a.prefs.edit().putLong("last_pc_ok", System.currentTimeMillis()).apply();
                 if (serverCode > 0) {
@@ -98,8 +96,6 @@ class PcStatusPoller {
                             .putString("server_apk_version", serverVer)
                             .putInt("server_apk_code", serverCode)
                             .putString("server_apk_sha256", serverSha)
-                            .putString("server_prev_apk_version", prevVer)
-                            .putInt("server_prev_apk_code", prevCode)
                             .apply();
 
                     int installedCode = UpdateInstaller.getInstalledVersionCode(a);

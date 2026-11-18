@@ -104,6 +104,7 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
 | --- | --- | --- |
 | `verify_config_guard.mjs` | Guardas de `DSH_ACCESS_DISABLE` / `DSH_ALLOWED_HOSTS`. | No |
 | `verify_injection.mjs` | Inyección del shell móvil en el HTML proxificado. | No (basta el doble) |
+| `verify_client_ux.mjs` | Regresiones sin dispositivo: 44 dp del dock y su fila compacta, selector de archivos que oculta/restaura el dock, orden del kill switch (borra la copia sin conexión solo tras el 2xx y dice que afecta solo a ESTA PC) y contraste AA del rojo en ambos temas. | No |
 | `verify_access_key.mjs` | Clave de acceso, origen cruzado y pantalla de espera. | No (basta el doble) |
 | `verify_registry_safety.mjs` | Registro de dispositivos ilegible/ausente. | No |
 | `verify_bridge.mjs` | Proxy, sync, chats, cabeceras y frontera de origen. | No (basta el doble) |
@@ -154,7 +155,7 @@ Nota (**H-17**): el runner arranca el puente con `DSH_SYNC_DIR`, `DSH_LOG_FILE` 
 ## Verificaciones adicionales (5.2.0)
 
 Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
-quedan **fuera** del conteo de las suites (17 suites; 373+ comprobaciones en CI y 865+
+quedan **fuera** del conteo de las suites (18 suites; 405+ comprobaciones en CI y 915+
 comprobaciones Java puras). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus
 comprobaciones se suman aparte y no alteran la comparabilidad con las releases de la serie 5.
 

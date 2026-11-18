@@ -58,10 +58,8 @@ class HubSheet {
         final LinearLayout container = new LinearLayout(a);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, ThemePalette.dp(a, 24), 0, 0);
-        // El panel del AlertDialog se mide con AT_MOST: sin un minimo, el
-        // LinearLayout con peso se quedaria a la altura del contenido y la
-        // hoja flotaria arriba. El AT_MOST del dialogo recorta este minimo al
-        // espacio real disponible, asi que nunca se sale de la pantalla.
+        // El panel del AlertDialog se mide con AT_MOST: sin un minimo el
+        // LinearLayout con peso flotaria arriba; el AT_MOST lo recorta al espacio real.
         android.util.DisplayMetrics screen = new android.util.DisplayMetrics();
         a.getWindowManager().getDefaultDisplay().getRealMetrics(screen);
         container.setMinimumHeight(screen.heightPixels);
@@ -69,24 +67,26 @@ class HubSheet {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         container.addView(scroll, scrollParams);
 
-        // Hoja inferior: arrastrar tirador o cabecera la cierra; el cuerpo no
-        // inicia el gesto (conserva el scroll). Umbral: 120 dp o 25 % del alto.
-        final int dismissAfter = Math.min(ThemePalette.dp(a, 120), Math.round(screen.heightPixels * 0.25f));
+        // Hoja inferior: arrastrar tirador o cabecera la cierra (el cuerpo no,
+        // conserva el scroll). Las reglas viven en HubDragPolicy (probado en JVM).
+        final int dismissAfter = HubDragPolicy.dismissAfterPx(ThemePalette.dp(a, HubDragPolicy.DISMISS_DP), screen.heightPixels);
+        final int slop = ThemePalette.dp(a, HubDragPolicy.DRAG_SLOP_DP);
         final float[] dragStart = {0f};
         final View.OnTouchListener dragSheet = (v, event) -> {
             int action = event.getActionMasked();
             if (action == MotionEvent.ACTION_DOWN) { dragStart[0] = event.getRawY(); v.getParent().requestDisallowInterceptTouchEvent(true); }
             else if (action == MotionEvent.ACTION_MOVE) {
                 float moved = event.getRawY() - dragStart[0];
-                if (moved > ThemePalette.dp(a, 6)) {
+                if (HubDragPolicy.isDrag(moved, slop)) {
                     container.setTranslationY(moved);
-                    container.setAlpha(1f - Math.min(0.4f, moved / Math.max(1f, screen.heightPixels * 2f)));
+                    container.setAlpha(HubDragPolicy.dragAlpha(moved, screen.heightPixels));
                 }
             } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
                 float travelled = container.getTranslationY();
-                if (travelled >= dismissAfter) {
+                String drop = HubDragPolicy.dropAction(travelled, dismissAfter);
+                if (HubDragPolicy.ACTION_DISMISS.equals(drop)) {
                     container.animate().translationY(screen.heightPixels).alpha(0f).setDuration(180).withEndAction(() -> dialog.dismiss()).start();
-                } else if (travelled > 0f) {
+                } else if (HubDragPolicy.ACTION_RESTORE.equals(drop)) {
                     container.animate().translationY(0f).alpha(1f).setDuration(160).start();
                 }
             }

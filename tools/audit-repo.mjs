@@ -127,6 +127,41 @@ if (fs.existsSync("package.json") && fs.existsSync("src/config.mjs") && fs.exist
   I(`versión coherente: ${version} / versionCode ${manifestCode}`);
 }
 
+// 7b. La documentación publica la misma versión que el código: los 7 README
+// (badge + declaración de la versión actual + versionCode) y la última entrada
+// del CHANGELOG. Antes solo se comparaban package/config/manifest; una release
+// podía salir con los README en otra versión.
+if (fs.existsSync("src/config.mjs") && fs.existsSync("CHANGELOG.md")) {
+  const cfgDoc = read("src/config.mjs");
+  const version = (cfgDoc.match(/version:\s*"([^"]+)"/) || [])[1];
+  const apkCode = (cfgDoc.match(/apkVersionCode:\s*(\d+)/) || [])[1];
+  const readmes = tracked.filter((f) => /^README(\.[a-z]{2})?\.md$/.test(f)).sort();
+  if (readmes.length !== 7) F(`se esperaban 7 README versionados, hay ${readmes.length}`);
+  for (const f of readmes) {
+    const text = read(f);
+    const badge = (text.match(/badge\/version-(\d+\.\d+\.\d+)-/) || [])[1];
+    if (badge !== version) F(`${f}: badge de versión (${badge || "ausente"}) != config.version (${version})`);
+    // Declaraciones de la versión actual: "**5.4.0** ... `versionCode` 66".
+    // Se exige al menos una y que todas coincidan (la prosa "Current version",
+    // "Versión actual", etc. cambia de idioma, pero el par versión+code no).
+    const declarations = [...text.matchAll(/\*\*(\d+\.\d+\.\d+)\*\*[^\n]*?`versionCode`\s+(\d+)/g)];
+    if (declarations.length === 0) F(`${f}: no declara la versión actual con su versionCode`);
+    for (const [, declaredVersion, declaredCode] of declarations) {
+      if (declaredVersion !== version) F(`${f}: declara la versión (${declaredVersion}) != config.version (${version})`);
+      if (declaredCode !== apkCode) F(`${f}: versionCode (${declaredCode}) != apkVersionCode (${apkCode})`);
+    }
+  }
+  const changelog = read("CHANGELOG.md");
+  const lastEntry = changelog.match(/^##\s+(\d+\.\d+\.\d+)\s+—[^\n]*?`versionCode`\s+(\d+)/m) || [];
+  if (!lastEntry[1]) {
+    F("CHANGELOG.md: no hay entrada '## <version> — `versionCode` <n>'");
+  } else {
+    if (lastEntry[1] !== version) F(`CHANGELOG.md: última versión (${lastEntry[1]}) != config.version (${version})`);
+    if (lastEntry[2] !== apkCode) F(`CHANGELOG.md: versionCode (${lastEntry[2]}) != apkVersionCode (${apkCode})`);
+  }
+  I(`documentación coherente: ${readmes.length} README y CHANGELOG en ${version} / versionCode ${apkCode}`);
+}
+
 // 8. Nombres de archivo que la documentación afirma
 const allText = tracked.filter((x) => /\.(md|mjs|java|html)$/.test(x)).map(read).join("\n");
 // Archivos que la documentacion menciona pero viven en el HOME del usuario en

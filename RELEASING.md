@@ -13,7 +13,6 @@ otro sitio que se edite a mano:
 | `version` | Versión del proyecto (`MAJOR.MINOR.PATCH`). |
 | `apkVersion` | Versión que anuncia el APK; debe ser igual a `version`. |
 | `apkVersionCode` | Entero que sube de uno en uno en cada build publicado. |
-| `previousApkVersion` / `previousApkVersionCode` | Versión anterior real, para poder revertir. |
 
 Los demás archivos son **espejos** que se actualizan a partir de esos campos:
 
@@ -28,11 +27,13 @@ Los demás archivos son **espejos** que se actualizan a partir de esos campos:
 
 **Cómo se valida:** [`tools/audit-repo.mjs`](tools/audit-repo.mjs) lee los tres archivos de código y
 falla si `package.json` no coincide con `config.version`, si `apkVersion` no coincide con
-`versionName` o si `apkVersionCode` no coincide con `versionCode`. Cuando todo está bien imprime
-`versión coherente: <version> / versionCode <código>`. Los README y `SECURITY.md` no los comprueba
-la máquina: son texto que se copia del código en el paso anterior. La auditoría completa corre en la
+`versionName` o si `apkVersionCode` no coincide con `versionCode`. También falla si la versión y el
+`versionCode` que declaran los 7 README o la última entrada de `CHANGELOG.md` no son los de
+`config.mjs` (así una release no sale con documentación de otra versión). `SECURITY.md` y el resto
+de la prosa se revisan a mano. Cuando todo está bien imprime
+`versión coherente: <version> / versionCode <código>`. La auditoría completa corre en la
 CI (`.github/workflows/verify.yml`, Node 22) en cada push y en cada pull request, así que una
-versión desincronizada entre código y manifiesto no pasa el control.
+versión desincronizada entre código, manifiesto y documentación no pasa el control.
 
 Regla de numeración (SemVer):
 

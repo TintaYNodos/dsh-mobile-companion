@@ -36,6 +36,7 @@ const REPO_BRIDGE_LOG = path.join(REPO_ROOT, "bridge.log");
 const SUITES = [
   "verify_config_guard.mjs",
   "verify_injection.mjs",
+  "verify_client_ux.mjs",
   "verify_access_key.mjs",
   "verify_registry_safety.mjs",
   "verify_bridge.mjs",

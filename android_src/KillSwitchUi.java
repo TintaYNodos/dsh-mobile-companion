@@ -9,7 +9,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -66,11 +65,11 @@ class KillSwitchUi {
         killTitle.setText("Kill Switch (Revocar accesos)");
         killTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
         killTitle.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        killTitle.setTextColor(Color.parseColor("#EF4444"));
+        killTitle.setTextColor(ThemePalette.danger(a));
         killCard.addView(killTitle);
 
         TextView killDesc = new TextView(a);
-        killDesc.setText("Revoca de inmediato todos los dispositivos emparejados en la PC y, solo si la computadora confirma la revocación, cierra la sesión local.");
+        killDesc.setText("Revoca los dispositivos de ESTA computadora (las demás PCs no se tocan) y, solo si esta computadora confirma la revocación, cierra la sesión local y borra la copia sin conexión del chat.");
         killDesc.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
         killDesc.setTextColor(ThemePalette.inkDim(a));
         killDesc.setPadding(0, ThemePalette.dp(a, 2), 0, ThemePalette.dp(a, 10));
@@ -80,7 +79,7 @@ class KillSwitchUi {
             if (settingsDialogRef[0] != null) settingsDialogRef[0].dismiss();
             KillSwitchUi.confirmKillSwitch(a);
         });
-        btnKill.setTextColor(Color.parseColor("#EF4444"));
+        btnKill.setTextColor(ThemePalette.danger(a));
         killCard.addView(btnKill);
 
         LinearLayout.LayoutParams kcParams = new LinearLayout.LayoutParams(
@@ -94,8 +93,8 @@ class KillSwitchUi {
     static void confirmKillSwitch(MainActivity a) {
         AlertDialog dialog = new AlertDialog.Builder(a)
                 .setTitle("Kill Switch de Emergencia")
-                .setMessage("¿Deseas revocar de inmediato todos los dispositivos autorizados en la computadora? Si la computadora confirma la revocación, también se cerrará la sesión local.")
-                .setPositiveButton("Revocar todo ahora", (d, w) -> KillSwitchUi.executeKillSwitch(a))
+                .setMessage("¿Revocar los dispositivos autorizados de ESTA computadora? Las demás PCs no se tocan. Si esta computadora confirma la revocación, se cerrará la sesión local y se borrará la copia sin conexión del chat.")
+                .setPositiveButton("Revocar esta PC", (d, w) -> KillSwitchUi.executeKillSwitch(a))
                 .setNegativeButton("Cancelar", null)
                 .create();
         UiKit.styleDialog(a, dialog);
@@ -103,7 +102,7 @@ class KillSwitchUi {
         try {
             Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             if (pos != null) {
-                pos.setTextColor(Color.parseColor("#EF4444"));
+                pos.setTextColor(ThemePalette.danger(a));
                 pos.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             }
         } catch (Throwable ignored) {}
@@ -111,15 +110,12 @@ class KillSwitchUi {
 
     static void executeKillSwitch(MainActivity a) {
         a.vibrateHaptic("alert");
-        // P56: la copia cifrada del chat es privada; el pánico la borra también,
-        // sin esperar a la confirmación de la computadora.
-        OfflineChatStore.clear(a);
         String base = a.activeUrl != null ? a.activeUrl : PcRegistryStore.urlForSlot(a, 1);
         String target = base.replaceAll("/+$", "") + "/dsh-companion/kill-switch";
 
         // Aviso critico: aunque la app este abierta, el usuario debe ver que la
         // orden se autorizo y que esta en curso (y luego el resultado real).
-        NotificationHelper.notifyCritical(a, "Kill switch autorizado", "Procediendo: revocando accesos y cerrando la sesión en la computadora…");
+        NotificationHelper.notifyCritical(a, "Kill switch autorizado", "Procediendo: revocando los accesos de esta PC y cerrando su sesión en la computadora…");
 
         new Thread(() -> {
             boolean revoked = false;
@@ -153,6 +149,12 @@ class KillSwitchUi {
             final String failure = detail;
             a.ui.post(() -> {
                 if (confirmed) {
+                    // 5.4.0: la copia sin conexión (cifrada, privada) se borra
+                    // SOLO con el 2xx confirmado, igual que la sesión local: si
+                    // el POST falló no se toca nada en el teléfono. Antes se
+                    // borraba antes de la petición y el texto prometía lo
+                    // contrario ("solo si la computadora confirma").
+                    OfflineChatStore.clear(a);
                     // D3: el cierre de sesión local solo ocurre con la revocación
                     // confirmada. Si el POST falló no se borran cookies ni se
                     // recarga la sesión: el usuario se quedaría fuera de su
@@ -162,16 +164,17 @@ class KillSwitchUi {
                     if (a.webView != null) a.webView.loadUrl("about:blank");
                     ConnectionController.boot(a);
                     NotificationHelper.notifyCritical(a, "Kill switch ejecutado",
-                            "Accesos revocados y sesión cerrada en la computadora.");
-                    Toast.makeText(a, "Kill Switch ejecutado: accesos revocados", Toast.LENGTH_LONG).show();
+                            "Accesos de esta PC revocados; sesión local cerrada y copia sin conexión borrada.");
+                    Toast.makeText(a, "Kill Switch ejecutado: accesos de esta PC revocados", Toast.LENGTH_LONG).show();
                 } else {
-                    // Sin confirmación no se toca la sesión local: se conserva el
-                    // acceso que el usuario ya tenía y se avisa del fallo.
+                    // Sin confirmación no se toca la sesión local ni la copia
+                    // offline: se conserva el acceso que el usuario ya tenía y
+                    // se avisa del fallo.
                     NotificationHelper.notifyCritical(a, "Kill switch sin confirmar",
                             "La computadora no confirmó la revocación" + (failure.isEmpty() ? "" : " (" + failure + ")")
-                                    + ". No se cerró la sesión local; revisa la conexión y reintenta en Ajustes.");
+                                    + ". No se cerró la sesión local ni se borró la copia sin conexión; revisa la conexión y reintenta en Ajustes.");
                     Toast.makeText(a,
-                            "No se pudo confirmar la revocación en la computadora. No se cerró la sesión local; revisa la conexión y reintenta en Ajustes",
+                            "No se pudo confirmar la revocación en la computadora. No se cerró la sesión local ni se borró la copia sin conexión; revisa la conexión y reintenta en Ajustes",
                             Toast.LENGTH_LONG).show();
                 }
             });

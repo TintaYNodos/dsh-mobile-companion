@@ -348,6 +348,8 @@ public final class NotificationHelper {
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setAutoCancel(true)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
+                // Tinte del icono de la notificacion (no es texto, no aplica AA);
+                // el rojo de texto usa ThemePalette.danger() con contraste 6,04:1.
                 .setColor(Color.parseColor("#EF4444"));
 
         nm.notify(NOTIFICATION_ID_CRITICAL, builder.build());

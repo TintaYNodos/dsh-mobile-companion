@@ -213,7 +213,7 @@ class UiKit {
                 }
                 Button neu = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
                 if (neu != null) {
-                    neu.setTextColor(Color.parseColor("#EF4444"));
+                    neu.setTextColor(ThemePalette.danger(a));
                     neu.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
                 }
             } catch (Throwable ignored) {}

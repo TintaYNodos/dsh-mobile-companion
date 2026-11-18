@@ -59,7 +59,6 @@ const ASSETS = new Map([
   ["/icon.svg", { file: "icon.svg", type: "image/svg+xml", cache: "public, max-age=86400" }],
   ["/DSH-Companion.apk", { file: "DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
   ["/download/DSH-Companion.apk", { file: "DSH-Companion.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion.apk" }],
-  ["/DSH-Companion-previous.apk", { file: "DSH-Companion-previous.apk", type: "application/vnd.android.package-archive", cache: "no-store", download: "DSH-Companion-previous.apk" }],
 ]);
 
 // P51: las paginas propias no tenian CSP. La offline es autocontenida (sin

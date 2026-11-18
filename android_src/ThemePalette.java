@@ -90,6 +90,23 @@ class ThemePalette {
         return ThemePalette.color(a, Color.parseColor("#1F6FEB"), Color.parseColor("#0969DA"));
     }
 
+    /**
+     * Rojo de peligro con contraste AA (>= 4,5:1) medido en los dos temas.
+     *
+     * El #EF4444 anterior daba 4,04:1 sobre #21262D y 3,53:1 sobre #F6F8FA
+     * (por debajo de AA a 13 sp). En oscuro se aclara y en claro se oscurece:
+     *   - #FF7B72 sobre raised #21262D = 6,04:1 y sobre surface #161B22 = 6,86:1
+     *   - #D1242F sobre raised #F6F8FA = 4,93:1 y sobre surface #FFFFFF = 5,24:1
+     * Los ratios los comprueba `ThemeContrastTest` (Java) y
+     * `test/verify_client_ux.mjs` (estatico, leyendo estas constantes).
+     */
+    static final int DANGER_DARK = 0xFFFF7B72;
+    static final int DANGER_LIGHT = 0xFFD1242F;
+
+    static int danger(Activity a) {
+        return ThemePalette.color(a, DANGER_DARK, DANGER_LIGHT);
+    }
+
     static GradientDrawable rounded(Activity a, int fill, int stroke, float radiusDp) {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setShape(GradientDrawable.RECTANGLE);

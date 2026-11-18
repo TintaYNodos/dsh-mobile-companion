@@ -108,10 +108,10 @@ de seguridad y mantenimiento.
 
 ### Notas de la build
 
-- APK: **288 776 bytes (282 KB)**, SHA-256
-  `b0da957050f46abc1fdde7b34db7d9754b02c928c40ed2e6dabe02627fabc1ca`. Commit de origen
+- APK: **185,440 bytes (181 KB)**, SHA-256
+  `74d6a8c1d66ad45af661915db7a851535c74d80bd9b7166ead6c89784a701848`. Commit de origen
   `d162cd7adbfffaa428d7588976fbb02fd066e04a`; el registro completo está en `RELEASES.json`.
-- Verificación sobre el binario publicado: **377 comprobaciones en CI** y **875 comprobaciones Java
+- Verificación sobre el binario publicado: **405 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.
 
 ## 5.2.10 — `versionCode` 54

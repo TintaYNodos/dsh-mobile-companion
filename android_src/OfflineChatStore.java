@@ -24,6 +24,8 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -31,15 +33,10 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
 /**
- * Copia cifrada del último chat en el almacenamiento privado de la app, para
- * que {@link OfflineChatActivity} la lea sin red y con la PC apagada (el
- * localStorage del WebView solo se sirve desde el puente).
- *
- * Usa AES-256-GCM con una clave del AndroidKeyStore (alias propio, separado del
- * de credenciales y del de notas). Privacidad: el texto nunca se escribe en
- * claro; si el keystore no está disponible el guardado falla cerrado (return
- * false y aviso en el log, sin contenido). El formato es MAGIC + IV +
- * ciphertext, con escritura atómica; {@link #clear(Context)} borra la copia.
+ * Copia cifrada del último chat para {@link OfflineChatActivity}: AES-256-GCM
+ * con clave del AndroidKeyStore (fail-closed, nunca en claro), MAGIC + IV +
+ * ciphertext, escritura atómica. Guarda el formato estructurado (messages[]) o,
+ * para copias antiguas, texto plano; {@link #clear(Context)} la borra.
  */
 final class OfflineChatStore {
 
@@ -51,7 +48,6 @@ final class OfflineChatStore {
     static final String DEFAULT_TITLE = "Conversacion reciente";
     static final String FILE_NAME = "offline_chat.enc";
     static final String TEMP_FILE_NAME = "offline_chat.enc.tmp";
-
     private static final String TAG = "DshOfflineChat";
     private static final String KEYSTORE_PROVIDER = "AndroidKeyStore";
     private static final String KEY_ALIAS = "dsh_companion_offline_key";
@@ -61,45 +57,55 @@ final class OfflineChatStore {
     private static final int KEY_BITS = 256;
     /** Cabecera de los archivos cifrados: "DSHOFFL" + versión 1. */
     private static final byte[] MAGIC = {'D', 'S', 'H', 'O', 'F', 'F', 'L', 1};
-
     /** El aviso de "sin cifrado" se registra una sola vez por proceso. */
     private static boolean warningLogged;
-
     private OfflineChatStore() {}
-
-    /**
-     * Cifra y guarda la copia. Fail-closed: con el interruptor apagado, sin
-     * texto útil o sin keystore devuelve false y NO escribe nada en claro. La
-     * copia anterior, si existe, se conserva.
-     */
+    /** Guarda la copia de texto plano (formato antiguo). */
     static synchronized boolean save(Context context, String title, String text, String updatedAt) {
         if (context == null || !isEnabled(context)) return false;
-        String body = clampText(text);
+        String body = clampText(OfflineChatFormat.sanitize(text));
         if (body.length() < MIN_TEXT || body.trim().isEmpty()) return false;
         String json = toJson(defaultTitle(title), body, timestamp(updatedAt));
-        if (json == null) return false;
+        return json != null && persist(context, json);
+    }
 
+    /**
+     * Guarda la copia ESTRUCTURADA: recorta por mensajes completos al tope de
+     * {@link #MAX_TEXT}, con roles, horas y estructura. Sin mensajes válidos
+     * cae al formato antiguo con el texto recibido.
+     */
+    static synchronized boolean saveStructured(Context context, String title, String text,
+                                               String messagesJson, String updatedAt) {
+        if (context == null || !isEnabled(context)) return false;
+        List<OfflineChatFormat.Message> messages =
+                OfflineChatFormat.clampMessages(OfflineChatFormat.parseMessages(messagesJson), MAX_TEXT);
+        String body = messages.isEmpty()
+                ? clampText(OfflineChatFormat.sanitize(text))
+                : OfflineChatFormat.plainText(messages);
+        if (body.length() < MIN_TEXT || body.trim().isEmpty()) return false;
+        String json = messages.isEmpty()
+                ? toJson(defaultTitle(title), body, timestamp(updatedAt))
+                : OfflineChatFormat.toJson(defaultTitle(title), messages, timestamp(updatedAt));
+        return json != null && persist(context, json);
+    }
+
+    /** Cifra con el keystore y escribe de forma atómica. Fail-closed. */
+    private static boolean persist(Context context, String json) {
         byte[] stored;
         try {
             stored = seal(json.getBytes(StandardCharsets.UTF_8));
         } catch (Throwable unavailable) {
-            // Sin keystore no se guarda en claro: la copia se descarta y la
-            // pantalla nativa mostrará "no disponible".
             markUnavailable(context, true);
             warnNoEncryptionOnce();
             return false;
         }
-
         File directory = directory(context);
         if (directory == null || !writeAtomic(directory, stored)) return false;
         markUnavailable(context, false);
         return true;
     }
 
-    /**
-     * Lee y descifra la copia. El estado permite distinguir "todavía no hay
-     * copia" de "no se puede descifrar" en la pantalla nativa.
-     */
+    /** Lee y descifra la copia; el estado distingue vacía de ilegible. */
     static Load load(Context context) {
         if (context == null) return new Load(Load.STATUS_UNAVAILABLE, null);
         File directory = directory(context);
@@ -141,18 +147,14 @@ final class OfflineChatStore {
     /** true solo si el interruptor de la copia sin conexión está activo. */
     static boolean isEnabled(Context context) {
         if (context == null) return false;
-        try {
-            return prefs(context).getBoolean(PrefKeys.KEY_OFFLINE_COPY, true);
-        } catch (Throwable ignored) {
-            return false;
-        }
+        try { return prefs(context).getBoolean(PrefKeys.KEY_OFFLINE_COPY, true); }
+        catch (Throwable ignored) { return false; }
     }
 
     // --- Lógica pura (probada fuera de Android en OfflineChatStoreTest) ---
 
     /**
-     * Recorta por el final al tope de {@link #MAX_TEXT} caracteres: se conserva
-     * lo más reciente del chat. No parte un par sustituto (emoji) al empezar.
+     * Recorta por el final al tope de {@link #MAX_TEXT} sin partir un emoji.
      */
     static String clampText(String text) {
         if (text == null) return "";
@@ -183,14 +185,21 @@ final class OfflineChatStore {
     }
 
     /**
-     * Reconstruye la copia desde el JSON guardado. Devuelve null si el contenido
-     * no es válido o no queda texto; un título vacío cae en el de respaldo.
+     * Reconstruye la copia desde el JSON: estructurado (messages[]) o texto
+     * plano antiguo. Devuelve null si no queda contenido válido.
      */
     static Chat fromJson(String json) {
         if (json == null || json.trim().isEmpty()) return null;
         try {
             JSONObject object = new JSONObject(json);
-            String text = clampText(object.optString("text", ""));
+            List<OfflineChatFormat.Message> messages = OfflineChatFormat.clampMessages(
+                    OfflineChatFormat.readMessages(object.optJSONArray("messages")), MAX_TEXT);
+            if (!messages.isEmpty()) {
+                return new Chat(defaultTitle(object.optString("title", "")),
+                        OfflineChatFormat.plainText(messages),
+                        object.optString("updatedAt", "").trim(), messages);
+            }
+            String text = clampText(OfflineChatFormat.sanitize(object.optString("text", "")));
             if (text.trim().isEmpty()) return null;
             return new Chat(defaultTitle(object.optString("title", "")), text,
                     object.optString("updatedAt", "").trim());
@@ -306,17 +315,13 @@ final class OfflineChatStore {
     }
 
     private static void deleteQuietly(File file) {
-        try {
-            if (file != null && file.exists()) file.delete();
-        } catch (Throwable ignored) {}
+        try { if (file != null && file.exists()) file.delete(); }
+        catch (Throwable ignored) {}
     }
 
     private static File directory(Context context) {
-        try {
-            return context.getFilesDir();
-        } catch (Throwable ignored) {
-            return null;
-        }
+        try { return context.getFilesDir(); }
+        catch (Throwable ignored) { return null; }
     }
 
     private static SharedPreferences prefs(Context context) {
@@ -360,11 +365,19 @@ final class OfflineChatStore {
         final String title;
         final String text;
         final String updatedAt;
+        /** Vacía en una copia antigua de texto plano. */
+        final List<OfflineChatFormat.Message> messages;
 
         Chat(String title, String text, String updatedAt) {
+            this(title, text, updatedAt, Collections.emptyList());
+        }
+
+        Chat(String title, String text, String updatedAt,
+             List<OfflineChatFormat.Message> messages) {
             this.title = title == null ? DEFAULT_TITLE : title;
             this.text = text == null ? "" : text;
             this.updatedAt = updatedAt == null ? "" : updatedAt;
+            this.messages = messages == null ? Collections.emptyList() : messages;
         }
     }
 

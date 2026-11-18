@@ -244,6 +244,25 @@ public class CompanionBridge {
         return instance.saveOfflineChat(title, text, updatedAt);
     }
 
+    /**
+     * P57: copia ESTRUCTURADA del chat (lista de mensajes con rol y hora).
+     *
+     * Mismo contrato y guardián que {@link #saveOfflineChat}; el cliente cae al
+     * método de texto plano si el APK no trae este método. La lista viaja como
+     * JSON y {@link OfflineChatStore} la limpia y recorta antes de cifrarla.
+     */
+    @JavascriptInterface
+    public boolean saveOfflineChatStructured(String nonce, String title, String text,
+                                             String messagesJson, String updatedAt) {
+        MainActivity instance = MainActivity.getInstance();
+        if (!BridgeGuard.authorize(instance, nonce)) {
+            BridgeGuard.logRejected("saveOfflineChatStructured");
+            return false;
+        }
+        if (instance == null) return false;
+        return OfflineChatStore.saveStructured(instance, title, text, messagesJson, updatedAt);
+    }
+
     /** P1: getters de lectura; el nonce es defensa en profundidad (fail-closed). */
     @JavascriptInterface
     public boolean isDark(String nonce) {

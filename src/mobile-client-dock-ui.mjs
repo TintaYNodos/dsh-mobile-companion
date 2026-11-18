@@ -106,9 +106,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Comandos y teclas');
-    row.style.cssText = 'display:none;align-items:center;gap:8px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 10px;';
+    row.style.cssText = 'display:none;align-items:center;gap:6px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 8px;';
 
-    row.appendChild(compactButton('Ocultar', 'min-width:48px;padding:0 10px;', function(e) {
+    row.appendChild(compactButton('Ocultar', 'min-width:48px;padding:0 8px;', function(e) {
       e.preventDefault();
       e.stopPropagation();
       haptic('tick');
@@ -118,12 +118,12 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
 
     var quick = document.createElement('div');
     quick.id = 'dsh-compact-quick';
-    quick.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;';
+    quick.style.cssText = 'display:flex;align-items:center;gap:6px;flex:0 0 auto;';
     row.appendChild(quick);
 
     var keys = document.createElement('div');
     keys.id = 'dsh-compact-keys';
-    keys.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;';
+    keys.style.cssText = 'display:flex;align-items:center;gap:6px;flex:0 0 auto;';
     row.appendChild(keys);
 
     return row;
@@ -219,9 +219,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
       dock.style.flexDirection = 'column';
       dock.style.alignItems = 'stretch';
-      dock.style.gap = '8px';
+      dock.style.gap = '6px';
       dock.style.height = 'auto';
-      dock.style.padding = '8px 10px 10px 10px';
+      dock.style.padding = '6px 8px 8px 8px';
       dock.style.left = '0';
       dock.style.right = '0';
       setDockDisplay(dock, true);
@@ -304,7 +304,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var row = document.createElement('div');
     row.id = 'dsh-quick-actions';
     row.className = 'dsh-row';
-    row.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:18px;';
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:14px;';
     return row;
   }
 
@@ -314,7 +314,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Teclas de programacion');
-    row.style.cssText = 'display:flex;align-items:stretch;gap:8px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;user-select:none;-webkit-user-select:none;padding-right:18px;';
+    row.style.cssText = 'display:flex;align-items:stretch;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;user-select:none;-webkit-user-select:none;padding-right:14px;';
     return row;
   }
 
@@ -340,7 +340,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     dock.id = 'dsh-composer-dock';
     dock.setAttribute('data-visible', '0');
     dock.setAttribute('aria-hidden', 'true');
-    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px 10px 10px;border-top:1px solid var(--dshc-separator);';
+    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:6px;width:100%;box-sizing:border-box;padding:6px 8px 8px 8px;border-top:1px solid var(--dshc-separator);';
 
     dock.appendChild(buildQuickActionsRow());
     dock.appendChild(buildCodeKeysRow());

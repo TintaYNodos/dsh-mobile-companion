@@ -71,14 +71,16 @@ article img,
 }
 
 /* --- Dock del compositor: comandos y teclas ------------------------------
-   Defecto 4: chip/tecla de 48 dp de alto y 48 dp de ancho. Defecto 5:
+   Defecto 4: chip/tecla de 48 dp de alto y 48 dp de ancho minimo. Defecto 5:
    contorno y relleno con contraste suficiente sin tocar el color del texto.
-   Defecto 3: filas con scroll horizontal y degradado que lo anuncia. */
-.dsh-chip { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--dshc-chip-border); background: var(--dshc-chip-bg); color: var(--dshc-chip-text); font-size: 12.5px; font-weight: 600; line-height: 1.15; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+   Defecto 3: filas con scroll horizontal y degradado que lo anuncia.
+   Densidad: gaps de 6 px y padding interno de 10 px (antes 8/12) sin bajar
+   alto ni ancho táctil, para que quepan mas chips en la misma franja. */
+.dsh-chip { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--dshc-chip-border); background: var(--dshc-chip-bg); color: var(--dshc-chip-text); font-size: 12.5px; font-weight: 600; line-height: 1.15; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 /* Fila con scroll horizontal: scroll-padding + snap suave para que un chip no
    quede a medias, y mascara de degradado SOLO por el lado que tiene contenido
    oculto (al inicio nunca hay degradado izquierdo: «Escena» se ve entera). */
-.dsh-row { box-sizing: border-box; overscroll-behavior-x: contain; scroll-padding: 0 12px; scroll-snap-type: x proximity; }
+.dsh-row { box-sizing: border-box; overscroll-behavior-x: contain; scroll-padding: 0 10px; scroll-snap-type: x proximity; }
 .dsh-row > .dsh-chip { scroll-snap-align: start; }
 .dsh-row[data-overflow-start="1"]:not([data-overflow-end="1"]) { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 18px); mask-image: linear-gradient(to right, transparent 0, #000 18px); }
 .dsh-row[data-overflow-end="1"]:not([data-overflow-start="1"]) { -webkit-mask-image: linear-gradient(to right, #000 0 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to right, #000 0 calc(100% - 18px), transparent 100%); }

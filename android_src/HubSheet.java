@@ -37,32 +37,82 @@ class HubSheet {
         UpdateInstaller.checkGitHubReleases(a, bridgeOffline);
         final AlertDialog dialog = new AlertDialog.Builder(a).create();
         dialog.setCanceledOnTouchOutside(true);
+        // Atras cancela el dialogo; el listener de abajo deja la referencia de
+        // la Activity limpia pase lo que pase.
+        dialog.setCancelable(true);
         a.sheetDialog = dialog;
 
         LinearLayout sheet = HubSheet.buildSheet(a);
         ScrollView scroll = new ScrollView(a);
-        scroll.setFillViewport(false);
+        // fillViewport: la hoja estira su fondo hasta el borde inferior y el
+        // ScrollView conserva la altura acotada del dialogo, que es lo que le
+        // permite desplazar cuando el contenido no cabe.
+        scroll.setFillViewport(true);
         scroll.addView(sheet);
 
-        dialog.setView(scroll, 0, 0, 0, 0);
+        // Contenedor transparente con un respiro arriba. Antes el dialogo se
+        // pedia WRAP_CONTENT: crecia con el contenido, Android lo recortaba
+        // contra la pantalla y el ScrollView no tenia overflow que desplazar,
+        // asi que «MANTENIMIENTO» y su cierre quedaban inalcanzables.
+        final LinearLayout container = new LinearLayout(a);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, ThemePalette.dp(a, 24), 0, 0);
+        // El panel del AlertDialog se mide con AT_MOST: sin un minimo, el
+        // LinearLayout con peso se quedaria a la altura del contenido y la
+        // hoja flotaria arriba. El AT_MOST del dialogo recorta este minimo al
+        // espacio real disponible, asi que nunca se sale de la pantalla.
+        android.util.DisplayMetrics screen = new android.util.DisplayMetrics();
+        a.getWindowManager().getDefaultDisplay().getRealMetrics(screen);
+        container.setMinimumHeight(screen.heightPixels);
+        LinearLayout.LayoutParams scrollParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
+        container.addView(scroll, scrollParams);
+
+        dialog.setView(container, 0, 0, 0, 0);
+        HubSheet.applySafeArea(a, container, sheet);
         dialog.setOnShowListener(d -> {
             Window window = dialog.getWindow();
             if (window == null) return;
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             int widthDp = a.getResources().getConfiguration().screenWidthDp;
+            // Alto MATCH_PARENT en ambas formas: nunca depende del contenido,
+            // asi que el ScrollView siempre recibe una altura util y scrollea.
             if (widthDp >= 600) {
-                window.setLayout(ThemePalette.dp(a, 540), ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setLayout(ThemePalette.dp(a, 540), ViewGroup.LayoutParams.MATCH_PARENT);
                 window.setGravity(Gravity.CENTER);
             } else {
-                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
                 window.setGravity(Gravity.BOTTOM);
             }
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
             WindowManager.LayoutParams attributes = window.getAttributes();
             attributes.dimAmount = 0.55f;
             window.setAttributes(attributes);
+            container.requestApplyInsets();
+        });
+        // Cerrar con Atras o con «Cerrar» deja a.sheetDialog en null para que
+        // KeyRouter y Cleanup no vean una hoja ya cerrada.
+        dialog.setOnDismissListener(d -> {
+            if (a.sheetDialog == dialog) a.sheetDialog = null;
         });
         dialog.show();
+    }
+
+    /**
+     * Rellena el contenido con los insets de las barras del sistema: el tirador
+     * queda debajo del estado y el ultimo boton por encima de la navegacion.
+     * Con Android 15 en borde a borde (targetSdk 35) el dialogo puede dibujarse
+     * bajo las barras; sin este relleno el final de la hoja quedaba tapado.
+     */
+    static void applySafeArea(MainActivity a, LinearLayout container, LinearLayout sheet) {
+        container.setOnApplyWindowInsetsListener((view, insets) -> {
+            int topInset = insets.getSystemWindowInsetTop();
+            int bottomInset = insets.getSystemWindowInsetBottom();
+            view.setPadding(0, ThemePalette.dp(a, 24) + topInset, 0, 0);
+            sheet.setPadding(ThemePalette.dp(a, 18), ThemePalette.dp(a, 12),
+                    ThemePalette.dp(a, 18), ThemePalette.dp(a, 24) + bottomInset);
+            return insets;
+        });
     }
 
     static LinearLayout buildSheet(MainActivity a) {
@@ -284,6 +334,17 @@ class HubSheet {
         maintenanceActions.addView(btnReload);
         maintenanceActions.addView(btnClear);
         sheet.addView(maintenanceActions);
+
+        // Ultima accion de la hoja: siempre alcanzable al final del scroll,
+        // 48 dp de alto y ancho completo. Tambien cierra con Atras.
+        Button btnClose = UiKit.action(a, "Cerrar", 1, () -> HubSheet.dismissHub(a));
+        btnClose.setContentDescription("Cerrar el panel");
+        btnClose.setMinHeight(ThemePalette.dp(a, 48));
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ThemePalette.dp(a, 48));
+        closeParams.topMargin = ThemePalette.dp(a, 16);
+        btnClose.setLayoutParams(closeParams);
+        sheet.addView(btnClose);
 
         return sheet;
     }

@@ -256,14 +256,14 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   function dshRenderQuickChips(container, compact) {
     var chips = dshQuickChips();
     var notas = QUICK_BY_ID.notas;
-    var css = compact ? 'font-size:11.5px;padding:0 8px;' : 'border-radius:15px;padding:0 9px;';
+    var css = compact ? 'font-size:11.5px;padding:0 6px;' : 'border-radius:15px;padding:0 9px;';
     container.textContent = '';
     chips.visible.forEach(function(id) {
       var cmd = QUICK_BY_ID[id];
       container.appendChild(dshChipButton(cmd.label, cmd.label + ': ' + cmd.desc, css, function() { dshInsertQuick(cmd); }));
     });
     // Defecto 7: el "+" se ofrece siempre (aunque solo haya 4 activos).
-    container.appendChild(dshChipButton('+', 'Más comandos', 'min-width:48px;padding:0 10px;font-weight:700;', function() {
+    container.appendChild(dshChipButton('+', 'Más comandos', 'min-width:48px;padding:0 8px;font-weight:700;', function() {
       dshOpenSheet('comandos', chips.overflow);
     }));
     container.appendChild(dshChipButton(notas.label, notas.label + ': ' + notas.desc, css, function() {
@@ -273,7 +273,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
 
   function dshRenderKeyChips(container, compact) {
     var chips = dshKeyChips();
-    var css = (compact ? 'padding:0 10px;' : 'flex:1 1 auto;')
+    var css = (compact ? 'padding:0 8px;' : 'flex:1 1 auto;')
       + 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;';
     container.textContent = '';
     chips.visible.forEach(function(id) {
@@ -283,7 +283,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
       }));
     });
     // Defecto 6/7: texto claro en la etiqueta accesible y "+" siempre presente.
-    container.appendChild(dshChipButton('+', 'Más teclas', 'min-width:48px;padding:0 10px;font-weight:700;', function() {
+    container.appendChild(dshChipButton('+', 'Más teclas', 'min-width:48px;padding:0 8px;font-weight:700;', function() {
       dshOpenSheet('teclas', chips.overflow);
     }));
   }

@@ -25,11 +25,12 @@ import {
 } from "./devices.mjs";
 import { isDocumentRequest, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
 import { log, warn } from "./log.mjs";
-import { deniedKey, handleOpenPanel, isLocalRequest } from "./open-panel.mjs";
+import { deniedKey, handleOpenPanel, hasPendingRequestFor, isLocalRequest } from "./open-panel.mjs";
 import { rejectedPage, waitingPage } from "./pairing.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 import { terminateAllWsConnections } from "./proxy-ws.mjs";
 import { invalidatePanelSessions } from "./panel-session.mjs";
+import { resetPanelTabState } from "./panel.mjs";
 
 const waitingClients = new Set();
 
@@ -116,7 +117,16 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
         sendJson(res, 200, { approved: false, rejected: true, pending: false });
         return true;
       }
-      if (shouldPersistPairState(remoteAddress, req.headers["user-agent"])) requestAccess(remoteAddress, req.headers["user-agent"]);
+      // H6 limita la reescritura del registro, pero si esta peticion se quedo
+      // SIN solicitud viva (el kill switch borra las pendientes) el sondeo debe
+      // crearla ya: si no, el boton "Abrir el panel" responde 403 hasta un
+      // minuto despues del kill switch.
+      if (
+        shouldPersistPairState(remoteAddress, req.headers["user-agent"]) ||
+        !hasPendingRequestFor(req, remoteAddress)
+      ) {
+        requestAccess(remoteAddress, req.headers["user-agent"]);
+      }
     }
 
     sendJson(res, 200, { approved, rejected: false, pending: !approved });
@@ -203,6 +213,9 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
     // Ademas del tunel, se cierran las sesiones del panel: si no, la pestana
     // abierta sigue aprobando dispositivos despues del kill switch.
     const panelSessionsClosed = invalidatePanelSessions();
+    // Y se olvidan las pestanas abiertas: sin esto su SSE seguia contando como
+    // "panel abierto" y el boton del telefono no abria una ventana con boleto.
+    const panelTabsClosed = resetPanelTabState();
     // Ademas de revocar dispositivos se rota la clave maestra. H-01: rotar
     // devuelve un resultado explicito; con DSH_ACCESS_KEY no se puede rotar.
     let rotation = { rotated: false, reason: "error" };
@@ -222,12 +235,14 @@ export async function handlePairingRoutes(req, res, { url, pathname, remoteAddre
             : "La rotacion de la clave de acceso fallo."
       );
     }
-    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotation.rotated}${rotation.reason ? ` (${rotation.reason})` : ""}, sesiones de panel cerradas: ${panelSessionsClosed}`);
+    log("pair", `Kill switch activado desde ${remoteAddress}: ${revokedCount} dispositivos revocados, ${wsClosed} tuneles WS terminados, clave rotada: ${rotation.rotated}${rotation.reason ? ` (${rotation.reason})` : ""}, sesiones de panel cerradas: ${panelSessionsClosed}, pestanas de panel cerradas: ${panelTabsClosed}`);
     sendJson(res, 200, {
       ok: true,
       revoked: revokedCount,
       rotated: rotation.rotated,
       rotationReason: rotation.reason,
+      panelSessionsClosed,
+      panelTabsClosed,
       message: "Todos los dispositivos han sido revocados",
     });
     return true;

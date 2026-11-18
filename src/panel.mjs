@@ -36,9 +36,16 @@ let activePort = config.panelPort;
 
 let lastPanelPing = 0;
 const sseClients = new Set();
+// Tras un kill switch no queda ninguna sesion valida. Mientras no se canjee un
+// boleto nuevo, ningun ping (la pestana vieja recargada muestra la pagina de
+// credencial) puede hacer creer que el panel sigue abierto ni suprimir la
+// apertura de una ventana nueva.
+let panelClosedUntilSession = false;
 
 export const isPanelTabOpen = () => {
-  return sseClients.size > 0 || (Date.now() - lastPanelPing < 7000);
+  if (sseClients.size > 0) return true;
+  if (panelClosedUntilSession) return false;
+  return Date.now() - lastPanelPing < 7000;
 };
 
 export const recordPanelPing = () => {
@@ -57,6 +64,31 @@ export const notifyPanelClients = () => {
 };
 
 let lastFocusAt = 0;
+
+/**
+ * El kill switch invalida las sesiones del panel, pero la pestana que ya estaba
+ * abierta seguia contando como panel abierto: su SSE permanecia en
+ * `sseClients` y cualquier recarga del navegador refrescaba `lastPanelPing`.
+ * Asi `openPanelWindow` se limitaba a enfocar esa pestana (ya sin credencial) y
+ * NO abria una ventana nueva con boleto: el telefono no podia autorizarse otra
+ * vez. Se cierran esos SSE y se olvida el pulso; la siguiente apertura si crea
+ * una ventana/boleto nuevos.
+ */
+export const resetPanelTabState = () => {
+  const closed = sseClients.size;
+  for (const client of sseClients) {
+    try {
+      client.end();
+    } catch {
+      // El cliente ya se habia desconectado.
+    }
+  }
+  sseClients.clear();
+  lastPanelPing = 0;
+  lastFocusAt = 0;
+  panelClosedUntilSession = true;
+  return closed;
+};
 
 /**
  * P33: traer la ventana del panel al frente es una accion con efectos: se hace
@@ -88,7 +120,15 @@ const readPanelCookie = (req) => {
   return null;
 };
 
-const isAuthorized = (req) => sessionValid(readPanelCookie(req));
+/**
+ * Una peticion con sesion valida demuestra que hay una pestana del panel de
+ * verdad en uso: el kill switch deja de considerar el panel cerrado.
+ */
+const isAuthorized = (req) => {
+  const authorized = sessionValid(readPanelCookie(req));
+  if (authorized) panelClosedUntilSession = false;
+  return authorized;
+};
 
 /**
  * P13: el panel solo atiende peticiones cuyo `Host` sea el de este mismo
@@ -183,6 +223,7 @@ const handler = async (req, res) => {
         html(res, recoveryPage(), 403);
         return;
       }
+      panelClosedUntilSession = false;
       redirect(res, "/pair", { "Set-Cookie": panelCookie(createSession()) });
       return;
     }

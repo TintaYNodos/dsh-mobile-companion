@@ -147,7 +147,11 @@ const trackPairingPoll = (remoteAddress, userAgent) => {
   const address = normalizeAddress(remoteAddress || "desconocida");
   const key = pollKey(address, userAgent);
   const previous = pairingPolls.get(key);
-  if (previous?.entry && now - previous.persistedAt < PAIRING_PERSIST_INTERVAL_MS) {
+  // El kill switch vacia las pendientes: una cache que ya no existe no puede
+  // saltarse requestAccess (el telefono se quedaria sin solicitud y open-panel
+  // responderia 403 hasta el minuto siguiente).
+  const stillPending = Boolean(previous?.entry) && pendingRequests().some((e) => e.id === previous.entry.id);
+  if (stillPending && now - previous.persistedAt < PAIRING_PERSIST_INTERVAL_MS) {
     previous.entry.requestedAt = new Date(now).toISOString();
     previous.attempts += 1;
     previous.entry.attempts = previous.attempts;

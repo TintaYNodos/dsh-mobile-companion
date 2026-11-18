@@ -318,5 +318,79 @@ check("H-01: con DSH_ACCESS_KEY el kill switch NO finge (rotated:false, reason:e
     envRotation.log.includes("no rotada: la fija DSH_ACCESS_KEY"),
   `body=${envRotation.kill.body.slice(0, 140)} log=${envRotation.log.includes("DSH_ACCESS_KEY")}`);
 
+// 14. Regresion 5.3.2: tras el kill switch, la pestana del panel que ya estaba
+// abierta no puede impedir que el telefono pida abrir el panel otra vez. Antes
+// su sesion moria pero su SSE seguia contando como "panel abierto": open-panel
+// respondia 200 sin abrir ninguna ventana con boleto, y la solicitud pendiente
+// del telefono se perdia (sondeo throttled) hasta un minuto despues del kill.
+// Instancia aislada; el spawn de la ventana se intercepta con un colector
+// temporal para registrar el boleto sin abrir navegadores durante la prueba.
+const spawnRoot = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-panel-spawn-"));
+const spawnStub = path.join(spawnRoot, "stub.cjs");
+const spawnLog = path.join(spawnRoot, "spawn.log");
+fs.writeFileSync(spawnStub, `const cp=require("node:child_process"),fs=require("node:fs"),original=cp.spawn;
+const fake=()=>({unref(){},on(){},once(){},kill(){}});
+cp.spawn=function(file,args){const a=Array.isArray(args)?args.map(String):[];
+if(/^cmd$/i.test(file)&&a[1]==="start"){try{fs.appendFileSync(process.env.DSH_TEST_SPAWN_LOG,"panel "+a.slice(2).join(" ")+"\\n");}catch{}return fake();}
+if(/^powershell$/i.test(file))return fake();return original.apply(this,arguments);};`, "utf8");
+const spawns = () => {
+  try { return fs.readFileSync(spawnLog, "utf8").trim().split(/\r?\n/).filter(Boolean); } catch { return []; }
+};
+process.env.DSH_TEST_SPAWN_LOG = spawnLog;
+process.env.DSH_ALLOW_PROXY_ACCESS = "1"; // el telefono se simula con cabeceras de proxy
+process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ""} --require ${spawnStub}`.trim();
+const killBridge = await startBridge();
+const killFlow = { sseClosed: false };
+try {
+  const panelTarget = { host: "127.0.0.1", port: killBridge.panelPort };
+  const login = await call(panelTarget, `/pair?t=${encodeURIComponent(killBridge.panelToken)}`);
+  const oldCookie = cookiePair(login.setCookie, "dsh-panel");
+  killFlow.page = await call(panelTarget, "/pair", { cookie: oldCookie });
+  await new Promise((resolve) => {
+    const req = http.get({ hostname: "127.0.0.1", port: killBridge.panelPort, path: "/pair/events", headers: { cookie: oldCookie } }, (res) => {
+      res.once("data", resolve);
+      res.on("close", () => { killFlow.sseClosed = true; });
+    });
+    req.on("error", resolve);
+  });
+  fs.writeFileSync(spawnLog, ""); // la ventana del sondeo de arranque no cuenta
+  const phone = { "x-forwarded-for": "203.0.113.20", "user-agent": OWN_AGENT, accept: "text/html", "sec-fetch-dest": "document" };
+  const waiting = await call(bridgeTarget(killBridge), "/", { headers: phone });
+  const claim = cookiePair(waiting.setCookie, "dsh-companion-claim");
+  killFlow.polled = await call(bridgeTarget(killBridge), "/dsh-companion/pair-state", { headers: phone, cookie: claim });
+  killFlow.kill = await call(bridgeTarget(killBridge), "/dsh-companion/kill-switch", { method: "POST", headers: basicAuth(killBridge.accessKey) });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  killFlow.stale = await call(panelTarget, "/pair", { cookie: oldCookie });
+  killFlow.polledAgain = await call(bridgeTarget(killBridge), "/dsh-companion/pair-state", { headers: phone, cookie: claim });
+  killFlow.open = await call(bridgeTarget(killBridge), "/dsh-companion/open-panel", { method: "POST", headers: phone, cookie: claim });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const urls = spawns().filter((line) => line.startsWith("panel ")).map((line) => (line.match(/http:\/\/\S+/) || [""])[0]).filter(Boolean);
+  const ticket = urls.length ? new URL(urls[urls.length - 1]).searchParams.get("t") : "";
+  killFlow.redeem = ticket ? await call(panelTarget, `/pair?t=${encodeURIComponent(ticket)}`) : { status: 0, setCookie: [] };
+  const freshCookie = cookiePair(killFlow.redeem.setCookie, "dsh-panel");
+  killFlow.fresh = freshCookie ? await call(panelTarget, "/pair", { cookie: freshCookie }) : { body: "" };
+  killFlow.urls = urls.length;
+} finally {
+  await killBridge.stop();
+  fs.rmSync(spawnRoot, { recursive: true, force: true });
+}
+check("kill switch: sesion y pestana viejas del panel dejan de contar como panel abierto",
+  killFlow.kill.status === 200 && /"panelTabsClosed":[1-9]/.test(killFlow.kill.body) &&
+    /"panelSessionsClosed":[1-9]/.test(killFlow.kill.body) && killFlow.sseClosed &&
+    killFlow.stale.body.includes("Falta la credencial"),
+  `body=${killFlow.kill.body.slice(0, 120)} sseCerrado=${killFlow.sseClosed}`);
+check("kill switch -> el telefono conserva su solicitud pendiente y open-panel responde 200",
+  killFlow.polledAgain.status === 200 && killFlow.open.status === 200 &&
+    (process.platform !== "win32" || killFlow.open.body.includes('"ok":true')),
+  `poll=${killFlow.polledAgain.status} open=${killFlow.open.status} ${killFlow.open.body.slice(0, 90)}`);
+if (process.platform === "win32") {
+  check("kill switch -> open-panel abre ventana con boleto nuevo y el boleto canjea sesion",
+    killFlow.urls > 0 && killFlow.redeem.status === 303 &&
+      killFlow.fresh.body.includes("Dispositivos autorizados"),
+    `boletos=${killFlow.urls} redeem=${killFlow.redeem.status}`);
+} else {
+  console.log("OMITIDO  ventana del panel tras el kill switch: solo Windows abre ventanas");
+}
+
 console.log(`\nRESULTADO: ${checks.filter(Boolean).length}/${checks.length}`);
 if (checks.some((c) => !c)) process.exitCode = 1;

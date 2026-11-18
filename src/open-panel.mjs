@@ -41,8 +41,13 @@ export const deniedKey = (req, remoteAddress) => ({
   agent: String(req.headers?.["user-agent"] || "").slice(0, 120),
 });
 
-/** True si esta misma peticion (token de canje o IP+agente) tiene solicitud viva. */
-const hasPendingRequestFor = (req, remoteAddress) => {
+/**
+ * True si esta misma peticion (token de canje o IP+agente) tiene solicitud viva.
+ * Lo usa tambien la pantalla de espera (`pair-state`): si el kill switch borro
+ * su solicitud, el siguiente sondeo debe crearla de nuevo aunque la escritura
+ * del registro este limitada a una por minuto.
+ */
+export const hasPendingRequestFor = (req, remoteAddress) => {
   const token = readClaimToken(req);
   const agent = String(req.headers?.["user-agent"] || "").slice(0, 120);
   const address = normalizeAddress(remoteAddress);

@@ -174,16 +174,47 @@ export const MOBILE_CLIENT_UI = `  // El latido periodico de checkState ya no ti
 
   window.__DSH_EXTRACT_CHAT_TEXT__ = function() {
     try {
-      var messages = Array.from(document.querySelectorAll('[data-role], [data-message-role], article, .message'));
-      if (messages.length === 0) return '';
-      var lines = [];
-      messages.forEach(function(msg) {
-        var role = msg.getAttribute('data-role') || msg.getAttribute('data-message-role') || (msg.classList.contains('user') ? 'user' : 'assistant');
-        var roleLabel = /user/i.test(role) ? '### Usuario:' : '### Asistente:';
-        var text = (msg.innerText || msg.textContent || '').trim();
-        if (text) lines.push(roleLabel + '\\n\\n' + text + '\\n');
-      });
-      return lines.join('\\n---\\n\\n');
+      var out = [];
+      var seen = [];
+      // No depender de un unico atributo interno de DSH: se prueban varios y,
+      // si ninguno aparece, se usa el scroller con mas texto. Asi sobrevive a
+      // cambios del DOM sin dejar la copia offline vacia.
+      var selectors = ['[data-message-role]', '[data-role]', '[data-testid*="message"]', 'article', '[class*="message_"]', '[class*="message-"]'];
+      for (var s = 0; s < selectors.length && !out.length; s++) {
+        var nodes = document.querySelectorAll(selectors[s]);
+        for (var i = 0; i < nodes.length; i++) {
+          var el = nodes[i];
+          var dup = false;
+          for (var j = 0; j < seen.length; j++) {
+            if (seen[j] === el || (seen[j].contains && seen[j].contains(el))) { dup = true; break; }
+          }
+          if (dup) continue;
+          var txt = (el.innerText || el.textContent || '').trim();
+          if (txt.length < 2) continue;
+          seen.push(el);
+          var role = el.getAttribute('data-message-role') || el.getAttribute('data-role') || '';
+          var label = /user|human/i.test(role) ? '### Usuario:' : '### Asistente:';
+          out.push(label + '\\n\\n' + txt + '\\n');
+        }
+      }
+      if (!out.length) {
+        var best = null;
+        var bestLen = 0;
+        var all = document.querySelectorAll('div,main,section');
+        for (var k = 0; k < all.length; k++) {
+          var e = all[k];
+          var oy = '';
+          try { oy = window.getComputedStyle(e).overflowY; } catch (ignore) {}
+          if (!/(auto|scroll)/.test(oy)) continue;
+          if (e.scrollHeight <= e.clientHeight + 40) continue;
+          var len = (e.innerText || '').length;
+          if (len > bestLen) { best = e; bestLen = len; }
+        }
+        if (best) out.push('### Conversacion:\\n\\n' + (best.innerText || '').trim() + '\\n');
+      }
+      var text = out.join('\\n---\\n\\n').trim();
+      if (text.length > 20000) text = text.slice(-20000);
+      return text;
     } catch(e) {
       return '';
     }

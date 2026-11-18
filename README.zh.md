@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-373%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-pendiente-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,17 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.2.10**（桥接与 APK，`versionCode` 54）。
+当前版本：**5.4.0**（桥接与 APK，`versionCode` 66）。
+
+**5.4.0 新增内容：**
+
+- 可按配置档案自定义的快捷命令与代码按键，编辑器高度上限为可见高度的 35%，横屏时使用
+  44 dp 紧凑停靠栏。
+- 全屏「无连接」界面、可切换为手动输入的 QR 对话框，以及可滚动、拖动关闭的 Hub。
+- 离线聊天副本**默认关闭**（在设置中开启）；即使电脑关机，应用也能读取最近保存的聊天。
+- 笔记：面向代理的 `synced_chats/notes/INDICE.md` 索引、修正的重发、「复制到聊天」、
+  按客户端限流以及损坏编码的自动修复。
+- 多电脑：终止开关**只影响当前电脑**；APK 锚点从仓库根目录解析，`/status` 不再阻塞。
 
 ---
 
@@ -103,7 +113,7 @@ companion/
 │   ├── KeyStoreVault.java     使用 Android Keystore 加密存储的密钥
 │   └── …                      发现、遥测、本地笔记、WOL、小组件
 ├── test/
-│   ├── verify_*.mjs           十七个验证套件（416 项检查）
+│   ├── verify_*.mjs           十七个验证套件（CI 中 373+ 项检查）
 │   ├── _harness.mjs           共享客户端
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              已持久化的会话（.md 与 .json）
@@ -148,7 +158,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 两种等效方式：
 
-- **原生应用：** 从 *Releases* 区域安装 `DSH-Companion.apk`。多电脑选择器、自动重连、前台通知服务、生物识别锁。约 262 KB，零第三方依赖：纯净、可复现的 Java，一个资源图标和主题。
+- **原生应用：** 从 *Releases* 区域安装 `DSH-Companion.apk`。多电脑选择器、自动重连、前台通知服务、生物识别锁。零第三方依赖：纯净、可复现的 Java，一个资源图标和主题。
 - **无需安装任何东西：** 在浏览器中打开 `http://<VPN_IP>:57420`，选择“添加到主屏幕”。
 
 ---
@@ -265,8 +275,8 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.2.10**、`versionCode` 54、`minSdk` 26、`targetSdk` 35。
-- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码，约 262 KB。
+- `DSH-Companion.apk` — 版本 **5.4.0**、`versionCode` 66、`minSdk` 26、`targetSdk` 35。
+- 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码；5.4.0 的大小随发布公布。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、用于检查更新）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
 - 麦克风访问仅限堡垒节点的精确来源（协议、主机和端口）。
@@ -306,7 +316,7 @@ npm test
 ```
 
 
-十七个套件、**416 项检查**（其中 344 项在 CI 运行），覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、本地笔记、设备注册表 TTL、面板流程以及终止开关。
+十七个套件：**CI 中 373+ 项检查** 以及 **865+ 项 Java 检查**，覆盖发现、移动端注入、`?dshc=off`、跨域拒绝、请求走私防御、请求体上限、内容净化、WebSocket 握手完整性、注册表损坏安全、访问控制、本地笔记、设备注册表 TTL、面板流程以及终止开关。
 
 套件与**运行中的桥接服务**通信（不是模拟）：请先启动桥接服务。真正的终止开关运行具有破坏性——它会撤销设备并轮换密钥——因此需要以 `DSH_TEST_DESTRUCTIVE=1` 主动启用。
 
@@ -385,7 +395,7 @@ PC 面板有一个 **“Notas recibidas”（已接收笔记）** 收件箱，�
 
 ## 稳定性
 
-**5.2.10 是 5.2 系列的当前稳定版。** `stable/5` 分支保存此版本树；5.1.x 为上一版本线。
+**5.4.0 是 5 系列的当前稳定版。** `stable/5` 分支保存此版本树，仅接收安全与维护修复；5.3.x 为上一版本线。
 
 ## 截图
 

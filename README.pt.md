@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-373%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-pendiente-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · **[Português (Brasil)](README.pt.md)** · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,20 @@ O aplicativo móvel não reimplementa a interface: ele renderiza a própria Web 
 
 Edição endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versão atual: **5.2.10** (ponte e APK, `versionCode` 54).
+Versão atual: **5.4.0** (ponte e APK, `versionCode` 66).
+
+**Novidades da 5.4.0:**
+
+- Comandos rápidos e teclas de código configuráveis por perfil, compositor com teto de 35 % da
+  altura visível e dock compacto de 44 dp em paisagem.
+- Ecrã «sem ligação» em ecrã inteiro, diálogo QR com entrada manual selecionável e Hub deslizável
+  que fecha ao arrastar.
+- A cópia offline do chat fica **desativada por predefinição** (ativa-se nos Ajustes); a app pode
+  ler o último chat guardado com o PC desligado.
+- Notas: índice `synced_chats/notes/INDICE.md` para agentes, reenvio corrigido, «Copiar para o
+  chat», limite de pedidos por cliente e reparação automática de codificação quebrada.
+- Multi-PC: o kill switch afeta **apenas o PC ativo**; a âncora do APK é resolvida a partir da
+  raiz do repositório e `/status` já não bloqueia.
 
 ---
 
@@ -103,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java    criptografia com Android Keystore para chaves armazenadas
 │   └── …                     descoberta, telemetria, notas locais, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dezessete suítes de verificação (416 verificações)
+│   ├── verify_*.mjs           dezessete suítes de verificação (373+ verificações na CI)
 │   ├── _harness.mjs           cliente compartilhado
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversas persistidas (.md e .json)
@@ -148,7 +161,7 @@ Node.js 22.15 ou mais recente, sem dependências de npm.
 
 Dois métodos equivalentes:
 
-- **Aplicativo nativo:** instale o `DSH-Companion.apk` a partir da seção *Releases*. Seletor multipc, reconexão automática, serviço de notificação em primeiro plano e bloqueio biométrico. Cerca de 262 KB sem dependências de terceiros: Java puro e reproduzível, um ícone de recurso e o tema.
+- **Aplicativo nativo:** instale o `DSH-Companion.apk` a partir da seção *Releases*. Seletor multipc, reconexão automática, serviço de notificação em primeiro plano e bloqueio biométrico. Sem dependências de terceiros: Java puro e reproduzível, um ícone de recurso e o tema.
 - **Sem instalar nada:** abra `http://<VPN_IP>:57420` no navegador e escolha "Adicionar à tela inicial".
 
 ---
@@ -265,8 +278,8 @@ A chave de acesso manual continua disponível como contingência para acesso por
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão **5.2.10**, `versionCode` 54, `minSdk` 26, `targetSdk` 35.
-- Sem AndroidX e sem Kotlin: bytecode Java puro, cerca de 262 KB.
+- `DSH-Companion.apk` — versão **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
+- Sem AndroidX e sem Kotlin: bytecode Java puro; o tamanho da 5.4.0 é publicado com o release.
 - **Texto claro bloqueado fora da rede privada**: o `CleartextPolicy` rejeita qualquer requisição que não seja HTTPS ou que não aponte para o bunker configurado ou para um endereço privado/loopback, e a configuração de segurança de rede proíbe texto claro para os serviços públicos com os quais o app fala (GitHub, para verificar atualizações). Isso é aplicado acima da WebView, porque a configuração de segurança de rede do Android não consegue expressar "somente faixas de IP privadas".
 - Acesso a arquivos locais desativado, conteúdo misto bloqueado, pop-ups e depuração remota desativados.
 - Acesso ao microfone restrito à origem exata do bunker (esquema, host e porta).
@@ -306,7 +319,7 @@ npm test
 ```
 
 
-Dezessete suítes, **416 verificações** (344 na CI), cobrindo descoberta, injeção móvel, `?dshc=off`, rejeição de origem cruzada, defesas contra contrabando de requisições, limites de corpo, sanitização de conteúdo, integridade do handshake WebSocket, segurança contra corrupção do registro, controle de acesso, notas locais, TTL do registro de dispositivos, fluxo do painel e o interruptor de segurança.
+Dezessete suítes: **373+ verificações na CI** e **865+ verificações Java**, cobrindo descoberta, injeção móvel, `?dshc=off`, rejeição de origem cruzada, defesas contra contrabando de requisições, limites de corpo, sanitização de conteúdo, integridade do handshake WebSocket, segurança contra corrupção do registro, controle de acesso, notas locais, TTL do registro de dispositivos, fluxo do painel e o interruptor de segurança.
 
 A suíte conversa com uma **ponte em execução** (não é um mock): inicie a ponte primeiro. A execução real do interruptor de segurança é destrutiva — revoga dispositivos e rotaciona a chave —, por isso é opcional com `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -396,7 +409,7 @@ Este design foi pensado para **uso pessoal**: um operador, seus dispositivos con
 
 ## Estabilidade
 
-**A 5.2.10 é a versão estável atual da série 5.2.** A rama `stable/5` preserva esta árvore; a 5.1.x permanece como linha anterior.
+**A 5.4.0 é a versão estável atual da série 5.** A rama `stable/5` preserva esta árvore e recebe apenas correções de segurança e manutenção; a 5.3.x permanece como linha anterior.
 
 ## Capturas
 

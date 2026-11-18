@@ -22,8 +22,9 @@ Los demás archivos son **espejos** que se actualizan a partir de esos campos:
   `config.apkVersionCode` y `config.apkVersion`.
 - `README*.md` (los 7 idiomas), `SECURITY.md` y `CHANGELOG.md` — texto para personas; se copian
   los valores de `config.mjs` al publicar y no se inventan cifras nuevas.
-- `RELEASES.json` — registro de las versiones publicadas; la entrada se añade **al publicar**, no en
-  cada commit (campos y política en la sección 1b).
+- `RELEASES.json` — registro de las versiones selladas; la entrada se añade al sellar, no en cada
+  commit, y puede prepararse con `commit`/`apkSha256` en `PENDIENTE` hasta que exista la build
+  (campos y política en la sección 1b).
 
 **Cómo se valida:** [`tools/audit-repo.mjs`](tools/audit-repo.mjs) lee los tres archivos de código y
 falla si `package.json` no coincide con `config.version`, si `apkVersion` no coincide con
@@ -40,13 +41,15 @@ Regla de numeración (SemVer):
 - **MINOR** si añade funciones sin romper nada.
 - **PATCH** si solo corrige fallos.
 
-`versionCode` sube **solo al publicar**, de uno en uno: es lo que permite instalar la actualización
-encima. Durante el desarrollo y las pruebas no se toca; al publicar se parte del último valor del
-registro (`RELEASES.json`) y se suma uno. Si una versión no llega a publicarse, su número no se
-consume.
+`versionCode` sube **solo al sellar**, de uno en uno sobre el `apkVersionCode` de `src/config.mjs`
+(el registro puede no ser consecutivo: si hubo builds internas que no se registraron, el salto queda
+documentado en las `notes` de la entrada). Es lo que permite instalar la actualización encima.
+Durante el desarrollo y las pruebas no se toca; al publicar debe coincidir con el build que se sube.
 
-Después actualiza `README*.md` (versión y `versionCode`), `SECURITY.md` (versiones soportadas) y
-`CHANGELOG.md` (entrada nueva arriba, con una sección `### Breaking changes` si es MAJOR).
+Después actualiza `README*.md` (versión y `versionCode`), `SECURITY.md` (versiones soportadas),
+`SUPPORT.md`, `OPERACION.md`, `AGENT_COMPAT.md`, `test/README.md`, `LICENSING.md`/`LICENSE` y
+`CHANGELOG.md` (entrada nueva arriba, con una sección `### Breaking changes` si es MAJOR). El detalle
+del release va en `RELEASE_<version>.md`.
 
 ### 1b. `RELEASES.json`: el registro legible por máquina
 
@@ -59,18 +62,22 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
   "schemaVersion": 1,
   "releases": [
     {
-      "version": "5.2.10",
-      "versionCode": 54,
+      "version": "5.4.0",
+      "versionCode": 66,
       "channel": "stable",
-      "releasedAt": "2026-11-17",
-      "commit": "5dc4ee7ca8d155bd25d647c50d3e4da30bbf5b43",
-      "apkSha256": "cfe79d6e1272fba592878c5301ddc561bf66de63a3c28b9b7685f057b8d970ce",
+      "releasedAt": "2026-11-18",
+      "commit": "PENDIENTE",
+      "apkSha256": "PENDIENTE",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Resumen de una línea de la release."
+      "notes": "Version estable final de la serie 5 (versionCode 66). Detalle en CHANGELOG.md y RELEASE_5.4.0.md."
     }
   ]
 }
 ```
+
+**Preparación antes de compilar.** La entrada puede escribirse con `commit` y `apkSha256` en
+`PENDIENTE` mientras la build no exista; se completan con `git rev-parse HEAD` y el SHA-256 que
+imprime `build-release.ps1` **antes** de etiquetar. El registro nunca se publica con `PENDIENTE`.
 
 | Campo | Tipo | Cómo se rellena |
 | --- | --- | --- |
@@ -169,7 +176,7 @@ El tag debe apuntar al commit que se publica. Si algo se corrige después, o se 
 
 ## 5b. Presentación del repositorio
 
-En *Settings → Social preview* sube `docs/images/social-preview.png` (1280×640). En *About* revisa la descripción y los topics; el release de la serie 5 debe quedar como *latest* y los 5.2.x como *pre-release*.
+En *Settings → Social preview* sube `docs/images/social-preview.png` (1280×640). En *About* revisa la descripción y los topics; el release de la 5.4.0 debe quedar como *latest* y las builds anteriores de la serie 5 como *pre-release*.
 
 ## 6. Comprobar lo publicado
 

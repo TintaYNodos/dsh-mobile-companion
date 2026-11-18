@@ -110,6 +110,14 @@ export function createSessionCookie(authority) {
   return value;
 }
 
+/**
+ * Cookies propias del puente que NUNCA deben llegar al backend DeepSeek
+ * Harness: identifican la sesion del panel y el canje de un dispositivo, y no
+ * forman parte de su protocolo. 5.3.7: antes solo se filtraba la cookie de
+ * dispositivo y `dsh-panel`/`dsh-companion-claim` viajaban al backend.
+ */
+const BRIDGE_COOKIES = ["dsh-companion-device=", "dsh-companion-claim=", "dsh-panel="];
+
 export function injectSessionHeaders(headers, authority) {
   const outgoing = { ...headers };
   outgoing.host = authority;
@@ -125,7 +133,12 @@ export function injectSessionHeaders(headers, authority) {
     .map((entry) => entry.trim())
     // Se descarta la cookie propia del puente y cualquier sesion previa homonima:
     // el backend solo debe recibir la cookie que firmamos aqui.
-    .filter((entry) => entry && !entry.startsWith(`${name}=`) && !entry.startsWith("dsh-companion-device="));
+    .filter(
+      (entry) =>
+        entry &&
+        !entry.startsWith(`${name}=`) &&
+        !BRIDGE_COOKIES.some((cookie) => entry.startsWith(cookie))
+    );
 
   existing.push(sessionCookie);
   outgoing.cookie = existing.join("; ");

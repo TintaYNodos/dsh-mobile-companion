@@ -16,7 +16,9 @@ import {
   sendReadOnly,
   touchDevice,
 } from "./devices.mjs";
-import { hasAmbiguousFraming, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { hasAmbiguousFraming, hasProxyHeaders, isSameOriginRequest, readBody, sendJson, sendText } from "./http.mjs";
+import { log } from "./log.mjs";
+import { presentsPairCode } from "./device-claim.mjs";
 import { isPanelTabOpen } from "./panel.mjs";
 import { handlePairingRoutes, handlePendingApprovalGate, resolveDevice } from "./routes-pairing.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
@@ -29,25 +31,11 @@ import { contractSnapshot } from "./dsh-contract.mjs";
 import { handleHealthz } from "./healthz.mjs";
 
 /**
- * Cabeceras que delatan que la peticion llego a traves de un proxy o tunel
- * (Cloudflare, nginx, etc.). Cuando estan presentes, el `remoteAddress` es el
- * del proxy (loopback), no el del cliente: la pertenencia a loopback deja de
- * ser una identidad y NUNCA debe conceder privilegios locales (ver
- * `DSH_ALLOW_PROXY_ACCESS` en src/config.mjs). El flag solo permite pasar la
- * guarda de red; no eleva privilegios.
+ * `hasProxyHeaders`/`isLocalRequest` viven en http.mjs (5.3.7): el canje de
+ * dispositivo los necesita y http.mjs no puede importar este modulo.
+ *
+ * Loopback real: la conexion viene del propio equipo, no de un proxy delante.
  */
-const PROXY_SIGNAL_HEADERS = [
-  "cf-connecting-ip",
-  "cf-access-jwt-assertion",
-  "x-forwarded-for",
-  "x-real-ip",
-  "forwarded",
-];
-
-export const hasProxyHeaders = (req) =>
-  PROXY_SIGNAL_HEADERS.some((name) => String(req?.headers?.[name] ?? "").trim() !== "");
-
-/** Loopback real: la conexion viene del propio equipo, no de un proxy delante. */
 export const isTrustedLoopbackRequest = (req, remoteAddress) =>
   !hasProxyHeaders(req) && normalizeAddress(remoteAddress).startsWith("127.");
 
@@ -195,6 +183,17 @@ export async function dispatchRequest(req, res, context) {
       error: "Peticion a traves de un proxy rechazada",
       hint: "Si es intencionado (Cloudflare Tunnel + Access), arranca el puente con DSH_ALLOW_PROXY_ACCESS=1 y pon una capa de identidad delante.",
     });
+    return;
+  }
+  // 5.3.7: el canje por codigo de 4 digitos solo vale desde loopback real y sin
+  // proxy. Detras de un proxy/tunel el socket es 127.0.0.1 pero el cliente es
+  // remoto, y con `?code=NNNN` canjeaba un dispositivo (device-claim.mjs usaba
+  // isLoopback(socket)). Se rechaza el canje explicito con 403 aunque
+  // DSH_ALLOW_PROXY_ACCESS permita pasar la guarda de red; la cookie de canje
+  // (secreto aleatorio de la pestana que pidio acceso) sigue siendo valida.
+  if (proxyHeaders && presentsPairCode(req)) {
+    log("pair", `Canje por codigo rechazado a traves de un proxy desde ${remoteAddress}`);
+    sendJson(res, 403, { error: "El canje por codigo exige loopback local (sin proxy)" });
     return;
   }
   if (!isClientAuthorized(remoteAddress, bindHost, bindPrefix)) {

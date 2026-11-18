@@ -129,6 +129,43 @@ final class ApkDigestTest {
         expect(ApkDigest.DECISION_OK, ApkDigest.decision(SERVER_SHA, SERVER_SHA),
                 "decision: iguales -> ok");
 
+        // --- 5.3.7: la ruta WEB exige ancla; el Hub conserva el no-anchor -----
+        // Hasta 5.3.7 la instalación podía dispararse desde la página web con
+        // expectedSha="" y resolveExpected() devolvía null -> "no-anchor" ->
+        // instalaba sin verificar. La ruta web ahora degradea ese null a ""
+        // ("missing": no instala) y solo acepta digest del release o SHA de
+        // /status. La ruta nativa del Hub no cambia.
+        expect("", ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, null, ""),
+                "5.3.7 web sin ancla -> vacio (no instala)");
+        expect(ApkDigest.DECISION_MISSING,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, null, ""), SERVER_SHA),
+                "5.3.7 web sin ancla -> missing (rechaza y avisa)");
+        expect(ApkDigest.DECISION_OK,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, null, SERVER_SHA), SERVER_SHA),
+                "5.3.7 web con SHA de /status -> ok (instala)");
+        expect(ApkDigest.DECISION_MISMATCH,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, null, SERVER_SHA), OTHER_SHA),
+                "5.3.7 web con SHA de /status incorrecto -> mismatch (rechaza)");
+        expect(ApkDigest.DECISION_OK,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, GITHUB_SHA, ""), GITHUB_SHA),
+                "5.3.7 web con digest del release -> ok (instala)");
+        expect(ApkDigest.DECISION_MISSING,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_WEB, null, "no-es-un-sha"), SERVER_SHA),
+                "5.3.7 web con ancla corrupta -> missing (fail-closed)");
+        // El Hub nativo conserva el comportamiento anterior: un búnker antiguo
+        // sin apkSha256 sigue instalando (no se rompe la actualización del Hub).
+        expect(null, ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_HUB, null, ""),
+                "5.3.7 hub sin ancla -> null (no-anchor)");
+        expect(ApkDigest.DECISION_NO_ANCHOR,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_HUB, null, ""), SERVER_SHA),
+                "5.3.7 hub sin ancla -> no-anchor (instala como antes)");
+        expect(ApkDigest.DECISION_OK,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_HUB, null, SERVER_SHA), SERVER_SHA),
+                "5.3.7 hub con SHA recordado -> ok");
+        expect(ApkDigest.DECISION_MISMATCH,
+                ApkDigest.decision(ApkDigest.resolveExpectedForRoute(ApkDigest.ROUTE_HUB, null, SERVER_SHA), OTHER_SHA),
+                "5.3.7 hub con SHA recordado incorrecto -> mismatch");
+
         System.out.println("ApkDigest: " + checks + " comprobaciones, " + failures + " fallos.");
         if (failures > 0) {
             System.out.println("RESULTADO: FALLO");

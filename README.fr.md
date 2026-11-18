@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-373%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-pendiente-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -12,7 +12,20 @@ L'application mobile ne réimplémente pas l'interface : elle affiche la propre 
 
 Édition durcie par Ismael Muñoz Reyes pour Tinta y Nodos.
 
-Version actuelle : **5.2.10** (pont et APK, `versionCode` 54).
+Version actuelle : **5.4.0** (pont et APK, `versionCode` 66).
+
+**Nouveautés de la 5.4.0 :**
+
+- Commandes rapides et touches de code configurables par profil, compositeur plafonné à 35 % de
+  la hauteur visible et dock compact de 44 dp en paysage.
+- Écran « sans connexion » plein écran, dialogue QR avec saisie manuelle sélectionnable et Hub
+  défilable qui se ferme par glissement.
+- La copie hors ligne du chat est **désactivée par défaut** (à activer dans Réglages) ; l'app peut
+  lire le dernier chat enregistré avec le PC éteint.
+- Notes : index `synced_chats/notes/INDICE.md` pour les agents, renvoi corrigé, « Copier pour le
+  chat », limite de requêtes par client et réparation automatique d'un encodage cassé.
+- Multi-PC : le kill switch n'affecte **que le PC actif** ; l'ancre de l'APK est résolue depuis la
+  racine du dépôt et `/status` ne bloque plus.
 
 ---
 
@@ -103,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java    chiffrement Android Keystore des clés stockées
 │   └── …                     découverte, télémétrie, notes locales, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dix-sept suites de vérification (416 contrôles)
+│   ├── verify_*.mjs           dix-sept suites de vérification (373+ contrôles en CI)
 │   ├── _harness.mjs           client partagé
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversations persistées (.md et .json)
@@ -148,7 +161,7 @@ Node.js 22.15 ou plus récent, aucune dépendance npm.
 
 Deux méthodes équivalentes :
 
-- **Application native :** installez `DSH-Companion.apk` depuis la section *Releases*. Sélecteur multi-PC, reconnexion automatique, service de notification de premier plan, verrou biométrique. Environ 226 Ko sans aucune dépendance tierce : du Java pur et reproductible, une icône d'asset et le thème.
+- **Application native :** installez `DSH-Companion.apk` depuis la section *Releases*. Sélecteur multi-PC, reconnexion automatique, service de notification de premier plan, verrou biométrique. Aucune dépendance tierce : du Java pur et reproductible, une icône d'asset et le thème.
 - **Sans rien installer :** ouvrez `http://<VPN_IP>:57420` dans votre navigateur et choisissez « Ajouter à l'écran d'accueil ».
 
 ---
@@ -265,8 +278,8 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version **5.2.10**, `versionCode` 54, `minSdk` 26, `targetSdk` 35.
-- Ni AndroidX ni Kotlin : bytecode Java pur, environ 226 Ko.
+- `DSH-Companion.apk` — version **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
+- Ni AndroidX ni Kotlin : bytecode Java pur ; la taille de la 5.4.0 est publiée avec la release.
 - **Cleartext bloqué hors du réseau privé** : `CleartextPolicy` rejette toute requête qui n'est pas en HTTPS ou qui ne pointe pas vers le bunker configuré ou une adresse privée/loopback, et la configuration de sécurité réseau interdit le cleartext vers les services publics avec lesquels l'application communique (GitHub, pour les mises à jour). Cela est appliqué au-dessus de la WebView, car la configuration de sécurité réseau d'Android ne peut pas exprimer « plages d'IP privées uniquement ».
 - Accès aux fichiers locaux désactivé, contenu mixte bloqué, popups et débogage distant désactivés.
 - Accès au microphone restreint à l'origine exacte du bunker (schéma, hôte et port).
@@ -306,7 +319,7 @@ npm test
 ```
 
 
-Dix-sept suites, **416 contrôles** (344 en CI), couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
+Dix-sept suites : **373+ contrôles en CI** et **865+ contrôles Java**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
 
 La suite parle à un **pont en direct** (ce n'est pas une simulation) : démarrez d'abord le pont. L'exécution réelle du kill switch est destructrice — elle révoque des appareils et fait tourner la clé —, elle doit donc être activée explicitement avec `DSH_TEST_DESTRUCTIVE=1`.
 
@@ -398,7 +411,7 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 ## Stabilité
 
-**La 5.2.10 est la version stable actuelle de la série 5.2.** La branche `stable/5` conserve cet arbre ; la 5.1.x reste la ligne précédente.
+**La 5.4.0 est la version stable actuelle de la série 5.** La branche `stable/5` conserve cet arbre et ne reçoit que des correctifs de sécurité et de maintenance ; la 5.3.x reste la ligne précédente.
 
 ## Captures
 

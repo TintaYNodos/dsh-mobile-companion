@@ -4,10 +4,11 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.2.10 (current, `versionCode` 54) | Yes — security fixes only |
-| 5.2.8 and earlier | No (previous builds) |
+| 5.4.0 (current, `versionCode` 66) | Yes — security fixes only |
+| 5.3.7 and earlier | No (previous builds) |
 
-5.2.10 is the current stable version of the 5.2 series.
+5.4.0 is the current stable version of the 5 series. The tree receives security and maintenance
+fixes only; new features would ship as a new line.
 
 ## Verifying a build
 
@@ -18,6 +19,42 @@ apksigner verify --print-certs DSH-Companion.apk
 ```
 
 Release certificate SHA-256: `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`
+
+### APK update anchor
+
+The in-app updater does not trust the download by itself: it verifies the **SHA-256 anchor** before
+installing.
+
+- The anchor is resolved from the **repository root** (`config.root`), not from the process working
+  directory, so starting the bridge from another folder cannot silently disable it.
+- `apkAnchorStatus()` (in `/dsh-companion/status`) reports the anchor path and whether the APK is
+  anchored. If the served APK is missing, `apkSha256` is empty and `apkAnchorMissing` is `true`:
+  that download is **unanchored** and must not be treated as verified — install only from a release
+  that publishes its SHA-256, and compare it out of band.
+- The anchor comes from the GitHub release asset `digest` or from the `apkSha256` the bridge
+  publishes. A legacy bridge that publishes neither falls back to Android's own signature check
+  (same release key required) and is flagged as unanchored.
+- Installation still requires the user's explicit confirmation and Android's own signature check
+  (same release key since 5.1.7).
+
+## Transport: plain HTTP inside the private network
+
+The bridge speaks **cleartext HTTP** on purpose: it binds exclusively to the private VPN interface
+(ZeroTier, Tailscale, …) and the **encryption is the tunnel** (WireGuard-based in both cases). There
+is no TLS termination in the bridge, and adding one would not protect traffic inside an already
+encrypted tunnel.
+
+- **Never expose the bridge outside the VPN.** No router port forwarding, no public DNS, no public
+  tunnel. A published bridge is outside the threat model and outside support.
+- HTTP Basic transmits the access key in Base64 without transport encryption of its own. That is
+  acceptable **only** because the VPN encrypts transit end to end; on a public or shared network an
+  adversarial peer voids the perimeter.
+- The Android client enforces this from the other side: `CleartextPolicy` rejects any request that
+  is not HTTPS or pointed at the configured bunker or a private/loopback address, above the WebView,
+  because Android's network security config cannot express IP ranges.
+- `/healthz` and `/dsh-companion/status` are served over the same cleartext channel; they expose no
+  secrets (no access key, no cookies). Firewall guidance is in
+  [OPERACION.md](OPERACION.md#11-endurecimiento-del-entorno-requiere-administrador).
 
 ## Reporting a vulnerability
 
@@ -63,7 +100,7 @@ Out of scope:
 
 ## Security model in one paragraph
 
-Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device, closes the WebSocket tunnels and rotates the access key. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.
+Every request must present either the shared access key (HTTP Basic, constant time) or a device session cookie obtained through a one-time approval on the host. The device identity is the cookie token, not the source IP, and it expires after 30 days without use. The panel listens only on `127.0.0.1` and is entered with a single-use ticket. The kill switch revokes every device of the **active PC**, closes that PC's WebSocket tunnels and rotates its access key; each registered PC keeps its own registry and cookie. The Android client stores keys encrypted with the Android Keystore and refuses cleartext traffic to anything that is not the configured bunker or a private address.
 
 ## Local notes (privacy)
 
@@ -75,7 +112,10 @@ Notes are the only content created on the phone itself, so their protection is l
   first time it is read, and a file that cannot be decrypted is kept aside as `notes.json.corrupt`
   instead of being destroyed.
 - **FLAG_SECURE on the Notes screen.** Screenshots are blocked and the system does not draw note
-  thumbnails in the recent-apps switcher, so a borrowed or lost phone does not leak the notes.
+  thumbnails in the recent-apps switcher, so a borrowed or lost phone does not leak the notes. The
+  optional **screen security** switch (Settings → Security) extends `FLAG_SECURE` to the whole
+  activity, including the Harness WebView; if the user never touches it, the effective value
+  follows the **biometric lock**.
 - **"Solo en el teléfono" (local only).** A note marked this way is never sent: it is excluded from
   "Send all", it is not serialized in the request payload, and sharing it asks for confirmation.
 - **No Internet egress.** Notes need no account, no API key and no external service; the app does
@@ -107,10 +147,10 @@ registro ya no puede corromper el registro real del usuario. Los cuatro puntos a
 mantienen su mitigación; el detalle punto por punto y la evidencia están en
 [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md).
 
-## APK permissions (5.2.10 review)
+## APK permissions (5.4.0 review)
 
 Every permission declared in `android_src/AndroidManifest.xml` was checked against real code use in
-5.2.10. Nothing was removed that the client actually needs, and nothing is requested "just in case"
+5.4.0. Nothing was removed that the client actually needs, and nothing is requested "just in case"
 at install time.
 
 | Permission | Real use | Decision |
@@ -120,7 +160,7 @@ at install time.
 | `RECORD_AUDIO` | `CompanionChromeClient.onPermissionRequest` only for the **same-origin bunker** frame when the page asks for `RESOURCE_AUDIO_CAPTURE`; a cross-origin frame is denied. It powers the WebView's audio capture (voice input) without granting anything else. | Keep: removing it would silently break audio capture in the proxied GUI. It is never requested at startup; the system dialog appears only when the page asks. |
 | `POST_NOTIFICATIONS` | PC-event notifications. Requested once from `MainActivity` on Android 13+. | Keep. |
 | `VIBRATE` | Haptic feedback of the mobile key bar, approval results and the kill switch. | Keep. |
-| `REQUEST_INSTALL_PACKAGES` | In-app update: `UpdateInstaller` verifies the SHA-256 anchor when the release publishes one (GitHub asset `digest`) or when the bridge publishes `apkSha256` in `/status`. A legacy bridge that does not publish `apkSha256` falls back to Android's own signature check (same signing key required) and is flagged as unanchored. | Keep; installation still needs the user's confirmation. |
+| `REQUEST_INSTALL_PACKAGES` | In-app update: `UpdateInstaller` verifies the SHA-256 anchor, resolved from the **repository root**; GitHub asset `digest` and the bridge `apkSha256` are the trusted sources. If the anchor is missing or does not match, the APK is **not installed** (a GitHub release without `digest` and a mismatched download are both rejected); an unanchored bunker download is flagged so it is never presented as verified. Installation still needs the user's confirmation and Android's own signature check. | Keep. |
 | `USE_BIOMETRIC` + `USE_FINGERPRINT` | `BiometricGate` for critical approvals. `USE_FINGERPRINT` is the legacy alias required on API 26–27. | Keep for Android 8.0 compatibility. |
 | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC` | The PC-event watcher runs in a `dataSync` foreground service while notifications are enabled. | Keep. |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | `SettingsNotifications.requestBatteryExemption` is called **only** when the user turns on the "Permitir en segundo plano" switch after enabling notifications; it is never requested on launch. | Keep: the switch is opt-in and the request is tied to it. |

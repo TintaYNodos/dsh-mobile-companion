@@ -19,19 +19,16 @@
  * lineas y para poder probar esta frontera sin arrastrar todo el enrutado.
  */
 import { findPairedDevice, isDenied, pendingRequests, readClaimToken } from "./devices.mjs";
-import { sendJson } from "./http.mjs";
+import { isLocalRequest, sendJson } from "./http.mjs";
 import { log } from "./log.mjs";
 import { normalizeAddress } from "./network.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
 
 /**
- * H1: un privilegio de loopback (panel, aprobacion, retry, pair-events) solo se
- * concede si la conexion viene de verdad del propio equipo. Detras de un proxy
- * o tunel el socket tambien es 127.0.0.1, pero el cliente es remoto: ahi no hay
- * privilegios locales ni con DSH_ALLOW_PROXY_ACCESS=1.
+ * H1/5.3.7: `isLocalRequest` vive en http.mjs (lo comparte el canje de
+ * dispositivo). Se reexporta para no cambiar los importadores existentes.
  */
-export const isLocalRequest = (remoteAddress, proxyHeaders) =>
-  !proxyHeaders && normalizeAddress(remoteAddress).startsWith("127.");
+export { isLocalRequest };
 
 // H-08: clave de una peticion concreta (token de canje o IP + user-agent), nunca
 // la IP sola: un rechazo no debe bloquear a otros equipos detras del mismo NAT.

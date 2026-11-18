@@ -22,7 +22,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import http from "node:http";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { HOST, PORT } from "./_harness.mjs";
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const dshHome = String(process.env.DSH_HOME || "").trim() || path.join(os.homedir(), ".dsh");
 const registryPath = path.join(dshHome, "companion-devices.json");
@@ -247,6 +251,36 @@ try {
   remove(registryPath);
   const status = await call("/dsh-companion/status", { "user-agent": "prueba" });
   check("sin archivo el puente sigue respondiendo", status === 200, `status=${status}`);
+
+  // 5. Revocacion durable (5.3.7): si saveRegistry falla tras revokeAll, el
+  // registro no puede quedar vaciado SOLO en memoria ni devolver exito. RevokeAll
+  // debe devolver -1 (la ruta del kill switch responde 500, no OK) y restaurar
+  // devices/pending. Se prueba en un proceso aislado con DSH_HOME temporal y la
+  // ruta del registro ocupada por un directorio, asi que la escritura es imposible.
+  const durableHome = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-revoke-durable-"));
+  try {
+    const durable = spawnSync(process.execPath, ["--input-type=module", "-e",
+      "const fs = await import('node:fs'); const path = await import('node:path');" +
+      "const { loadRegistry } = await import('./src/registry.mjs');" +
+      "const { revokeAll } = await import('./src/devices.mjs');" +
+      "const file = path.join(process.env.DSH_HOME, 'companion-devices.json');" +
+      "const device = { id: 'dev-durable', address: '10.0.0.9', approvedAt: new Date().toISOString(), lastSeen: new Date().toISOString(), claimed: true };" +
+      "fs.writeFileSync(file, JSON.stringify({ devices: [device], pending: [], history: [], denied: [] }));" +
+      "loadRegistry();" +
+      "fs.rmSync(file); fs.mkdirSync(file);" +
+      "const removed = revokeAll();" +
+      "const after = loadRegistry();" +
+      "console.log(JSON.stringify({ removed, devices: after.devices.map((d) => d.id), pending: after.pending.length }));"],
+      { cwd: REPO_ROOT, env: { ...process.env, DSH_HOME: durableHome }, encoding: "utf8", timeout: 20_000, windowsHide: true });
+    let durableState = {};
+    try { durableState = JSON.parse(String(durable.stdout || "").trim().split(/\r?\n/).pop()); } catch {}
+    check("5.3.7 revokeAll con saveRegistry fallido: -1 (ruta 500) y registro integro en memoria",
+      durable.status === 0 && durableState.removed === -1 &&
+        Array.isArray(durableState.devices) && durableState.devices.includes("dev-durable"),
+      `exit=${durable.status} ${JSON.stringify(durableState)} ${String(durable.stderr || "").trim().slice(0, 80)}`);
+  } finally {
+    fs.rmSync(durableHome, { recursive: true, force: true });
+  }
 } finally {
   await restore();
 }

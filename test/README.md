@@ -1,8 +1,9 @@
 # Pruebas del puente y del cliente
 
-Documento de la versión bajo prueba: **5.2.10** (`versionCode` 54). El contrato de notas que
-describen estas suites (nota de solo título, idempotencia por `id`, bandeja `inbox.jsonl` y
-`GET /dsh-companion/notes`) es el de esta release.
+Documento de la versión bajo prueba: **5.4.0** (`versionCode` 66). El contrato de notas que
+describen estas suites (nota de solo título, idempotencia por `id`, bandeja `inbox.jsonl`, índice
+legible `synced_chats/notes/INDICE.md`, límite de peticiones por cliente y reparación de
+codificación) es el de esta release.
 
 Hay dos formas de ejecutar las pruebas, con propósitos distintos:
 
@@ -106,7 +107,7 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
 | `verify_access_key.mjs` | Clave de acceso, origen cruzado y pantalla de espera. | No (basta el doble) |
 | `verify_registry_safety.mjs` | Registro de dispositivos ilegible/ausente. | No |
 | `verify_bridge.mjs` | Proxy, sync, chats, cabeceras y frontera de origen. | No (basta el doble) |
-| [verify_notes.mjs](verify_notes.mjs) | Ruta de notas del teléfono: autorización, límites de cuerpo, nota de solo título, escritura Markdown con front matter (`id`, `dueDate`, `updatedAt`) en `synced_chats/notes/`, idempotencia por `id` con `ids.json`, bandeja `inbox.jsonl`, `GET /dsh-companion/notes`, traversal, unicidad y retención. | No (arranca su propio puente aislado) |
+| [verify_notes.mjs](verify_notes.mjs) | Ruta de notas del teléfono: autorización, límites de cuerpo, nota de solo título, escritura Markdown con front matter (`id`, `dueDate`, `updatedAt`) en `synced_chats/notes/`, idempotencia por `id` con `ids.json`, bandeja `inbox.jsonl`, índice legible `synced_chats/notes/INDICE.md`, `GET /dsh-companion/notes`, traversal, unicidad, retención, límite de peticiones y reparación de codificación rota. | No (arranca su propio puente aislado) |
 | [verify_battery_and_landscape.mjs](verify_battery_and_landscape.mjs) | CSS de paisaje, batería de `system-stats` y navegación de `offline.html`. | No |
 | `verify_subagente_a.mjs` | QR, temas, barra de teclas y rutas retiradas. | No |
 | `verify_panel.mjs` | Aprobación, cookie de dispositivo y revocación. | No (basta el doble) |
@@ -153,9 +154,9 @@ Nota (**H-17**): el runner arranca el puente con `DSH_SYNC_DIR`, `DSH_LOG_FILE` 
 ## Verificaciones adicionales (5.2.0)
 
 Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
-quedan **fuera** del conteo de las suites (17 suites / 416 comprobaciones en local y 344 en CI).
-No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus 42 comprobaciones se suman
-aparte y no alteran la comparabilidad con las releases de la serie 5.
+quedan **fuera** del conteo de las suites (17 suites; 373+ comprobaciones en CI y 865+
+comprobaciones Java puras). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus
+comprobaciones se suman aparte y no alteran la comparabilidad con las releases de la serie 5.
 
 | Archivo | Qué cubre | Necesita un puente real |
 | --- | --- | --- |

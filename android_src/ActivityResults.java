@@ -65,20 +65,26 @@ class ActivityResults {
         if (requestCode == REQUEST_INSTALL_PERMISSION) {
             // P19: reanuda la descarga con la misma procedencia (GitHub o
             // búnker) que se solicitó antes de pedir el permiso de instalación.
+            // 5.3.7: también se conserva el ORIGEN (web/Hub): reanudar una
+            // descarga web por la ruta nativa permitiría instalar sin ancla.
             String pendingUrl = a.prefs.getString("pending_apk_url", "");
             String pendingName = a.prefs.getString("pending_apk_name", "");
             String pendingTitle = a.prefs.getString("pending_apk_title", "");
+            String pendingRoute = a.prefs.getString("pending_apk_route", ApkDigest.ROUTE_HUB);
             a.prefs.edit()
                     .remove("pending_apk_url")
                     .remove("pending_apk_name")
                     .remove("pending_apk_title")
+                    .remove("pending_apk_route")
                     .apply();
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 if (a.getPackageManager().canRequestPackageInstalls()) {
                     UpdateInstaller.downloadAndInstallApk(a,
                             pendingUrl == null || pendingUrl.isEmpty() ? null : pendingUrl,
                             pendingName == null || pendingName.isEmpty() ? null : pendingName,
-                            pendingTitle == null || pendingTitle.isEmpty() ? null : pendingTitle);
+                            pendingTitle == null || pendingTitle.isEmpty() ? null : pendingTitle,
+                            "",
+                            pendingRoute == null ? ApkDigest.ROUTE_HUB : pendingRoute);
                 }
             }
             return;

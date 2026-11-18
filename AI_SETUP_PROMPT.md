@@ -8,7 +8,7 @@ It is deliberately strict: the assistant must run a real diagnostic, stop and ex
 missing (especially the private tunnel), and tell the user their exact phone URL. A silent
 "done" is a failure.
 
-Current stable version: **5.2.9** (`versionCode` 53); the notes features described below (area
+Current stable version: **5.4.0** (`versionCode` 66); the notes features described below (area
 profiles, due date, local-only notes, encrypted `notes.json`) belong to this release.
 
 Copy everything inside the block into the assistant's chat. A Spanish version follows after it.
@@ -31,7 +31,7 @@ Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/
 usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
 `mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
 
-La versión estable actual es la **5.2.9** (`versionCode` 53). El diagnóstico también deja un
+La versión estable actual es la **5.4.0** (`versionCode` 66). El diagnóstico también deja un
 **recibo verificable**: `doctor.ps1 -Report` escribe
 `doctor-report.json` sin BOM con `apkSha256`, `apkVersion`, `apkVersionCode`, la huella del
 certificado de release (`certSha256Release`) y un `receipt` sha256 sobre el JSON compacto sin el

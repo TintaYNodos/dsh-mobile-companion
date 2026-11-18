@@ -272,7 +272,7 @@ public class MainActivity extends Activity {
             // P18: MainActivity está exportada; solo la propia app (notificación
             // de actualización) puede pedir una instalación por extra.
             if (IntentGuard.isTrusted(this, getIntent())) {
-                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 800);
+                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApkFromHub(this), 800);
             } else {
                 android.util.Log.w("DshIntent", "trigger_update ignorado: intent sin firma de la app");
             }
@@ -292,7 +292,7 @@ public class MainActivity extends Activity {
         setIntent(intent);
         if (intent != null && intent.getBooleanExtra("trigger_update", false)) {
             if (IntentGuard.isTrusted(this, intent)) {
-                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApk(this), 600);
+                ui.postDelayed(() -> UpdateInstaller.downloadAndInstallApkFromHub(this), 600);
             } else {
                 android.util.Log.w("DshIntent", "trigger_update ignorado: intent sin firma de la app");
             }

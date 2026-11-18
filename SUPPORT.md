@@ -1,16 +1,16 @@
 # Política de soporte
 
-**Versión estable actual: 5.2.10** (puente y APK, versionCode 54). La línea estable recibe
-correcciones de seguridad y versiones de mantenimiento de la serie 5.2. **5.2.9 queda como la
-versión anterior** y ya no recibe cambios: si sigues en ella, actualiza a 5.2.10.
+**Versión estable actual: 5.4.0** (puente y APK, versionCode 66). La línea estable recibe
+correcciones de seguridad y versiones de mantenimiento de la serie 5. **La 5.3.7 y anteriores
+quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, actualiza a 5.4.0.
 
 ## Estado de las versiones
 
 | Versión | Estado | Qué recibe |
 | --- | --- | --- |
-| 5.2.10 (estable, versionCode 54) | **Soportada** | Correcciones de seguridad de la serie 5.2 |
-| 5.2.9 y anteriores de la serie 5.2 | Sin soporte | Nada; actualiza a la 5.2.10 |
-| 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.2.10 |
+| 5.4.0 (estable, versionCode 66) | **Soportada** | Correcciones de seguridad y mantenimiento de la serie 5 |
+| 5.3.7 y anteriores de la serie 5 (incluidas 5.2.x) | Sin soporte | Nada; actualiza a la 5.4.0 |
+| 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.4.0 |
 
 La versión se comprueba en la app (Ajustes) o en `/dsh-companion/status` (`version` y
 `apkVersionCode`). La huella del certificado de release y cómo verificar un APK están en
@@ -25,9 +25,18 @@ soporte de herramientas de terceros. Lo que se intenta resolver:
 - Emparejamiento del teléfono y panel de aprobación: `panel.bat`, roles, revocación.
 - Conexión del teléfono por la red privada y detección de la interfaz (ZeroTier, Tailscale, NetBird
   y las demás de [VPN_OPTIONS.md](VPN_OPTIONS.md)).
+- **Multi-PC**: registrar varias computadoras, cambiar la PC activa desde el Hub y ejecutar el kill
+  switch por computadora (solo afecta a la activa).
+- **Comandos rápidos y teclas configurables por perfil**, compositor con tope y dock compacto de
+  44 dp.
+- **Pantalla de «sin conexión»**, diálogo QR con salida manual y Hub desplazable con cierre por
+  arrastre.
+- **Copia del chat para uso sin conexión** (opt-in, cifrada en el teléfono) y **«Copiar para el
+  chat»**.
 - Notificaciones de fin de turno, prueba desde la PC y canales de notificación.
 - Notas locales: perfiles por área, fecha límite, cifrado local, marca «Solo en el teléfono»,
-  envío a la PC (idempotente por `id`) y bandeja «Notas recibidas» del panel.
+  envío a la PC (idempotente por `id`), índice `synced_chats/notes/INDICE.md` y bandeja «Notas
+  recibidas» del panel.
 - Salud del puente y contrato de DeepSeek Harness (`/healthz`).
 - Copias de seguridad del registro, la clave de acceso y el token del panel ([backup.bat](backup.bat),
   [restore.bat](restore.bat)).

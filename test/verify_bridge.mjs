@@ -12,8 +12,6 @@ import { QR_MAX_BYTES, generateQrSvg } from "../src/qr.mjs";
 import { apkAnchorStatus, apkSha256 } from "../src/static.mjs";
 import { REPO_ROOT, startBridge } from "./ci/start-bridge.mjs";
 
-
-
 const MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36";
 
 function request(path, { method = "GET", headers = {}, body = null, withAuth = true } = {}) {
@@ -357,6 +355,41 @@ const statusMax = statusSorted.at(-1) || 0;
 check("5.3.4 /status: 15 consultas consecutivas no superan 200 ms (sin PowerShell bloqueante)",
   statusTimes.length === 15 && statusP95 < 200 && statusMax < 200,
   `p50=${statusP50.toFixed(1)}ms p95=${statusP95.toFixed(1)}ms max=${statusMax.toFixed(1)}ms`);
+
+// 25. 5.3.7: el canje por codigo de 4 digitos exige loopback real y sin proxy.
+// Detras de Cloudflare Tunnel/nginx el socket tambien es 127.0.0.1, asi que con
+// `?code=NNNN` un cliente remoto canjeaba un dispositivo. Ahora se responde 403
+// si hay cabeceras de proxy y el mismo canje desde loopback real sigue pasando.
+const proxyGate = await startBridge({ env: { DSH_ALLOW_PROXY_ACCESS: "1" } });
+try {
+  const claimCode = (headers) => new Promise((resolve) => {
+    const probe = http.request({ hostname: "127.0.0.1", port: proxyGate.bridgePort, path: "/dsh-companion/pair-state?code=1234", headers, timeout: 6000, agent: false },
+      (res) => { res.resume(); resolve(res.statusCode); });
+    probe.on("error", () => resolve(0)).on("timeout", () => { probe.destroy(); resolve(0); });
+    probe.end();
+  });
+  const proxied = await claimCode({ "x-forwarded-for": "203.0.113.20", "user-agent": "QA proxy" });
+  const direct = await claimCode({ "user-agent": "QA proxy" });
+  check("5.3.7 canje por codigo con cabeceras de proxy rechazado (403)", proxied === 403, `status=${proxied}`);
+  check("5.3.7 canje por codigo desde loopback real no se bloquea", direct === 200, `status=${direct}`);
+} finally {
+  await proxyGate.stop();
+}
+
+// 26. 5.3.7: las cookies propias del puente (panel y canje) no viajan al backend.
+// Antes solo se filtraba la de dispositivo; el token de sesion del panel y el de
+// canje se reenviaban a DeepSeek Harness. Harness de cookies sobre el modulo puro.
+const cookieProbe = spawnSync(process.execPath, ["--input-type=module", "-e",
+  "const { injectSessionHeaders } = await import('./src/crypto.mjs');" +
+    "const cookie = 'dsh-auth-otra=1; dsh-companion-device=dev; dsh-panel=sesion; dsh-companion-claim=token; keep=1';" +
+    "console.log(injectSessionHeaders({ cookie }, '127.0.0.1:57420').cookie);"],
+  { cwd: REPO_ROOT, env: { ...process.env, DSH_BROWSER_SECRET: "c2VjcmV0by1kZS1wcnVlYmEtMzJieXRlcw" }, encoding: "utf8", timeout: 20_000, windowsHide: true });
+const outgoingCookie = String(cookieProbe.stdout || "").trim().split(/\r?\n/).pop() || "";
+check("5.3.7 cookies dsh-panel/dsh-companion-claim/dsh-companion-device no se reenvian al backend",
+  cookieProbe.status === 0 &&
+    !/dsh-panel=|dsh-companion-claim=|dsh-companion-device=/.test(outgoingCookie) &&
+    /keep=1/.test(outgoingCookie) && /dsh-auth-[A-Za-z0-9_-]+=v1\./.test(outgoingCookie),
+  outgoingCookie.slice(0, 90));
 
 const failed = results.filter((r) => !r.ok);
 const suffix = skipped.length ? ` (${skipped.length} omitida${skipped.length === 1 ? "" : "s"})` : "";

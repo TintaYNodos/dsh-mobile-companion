@@ -13,7 +13,8 @@ computadora y hasta dónde llega la evidencia**. Nace de una regla del proyecto:
 | **Documentado (sin ejecución)** | El agente no tiene shell ni acceso a archivos: el usuario ejecuta los comandos y le pega los resultados. |
 
 Entorno de la prueba: Windows con Windows PowerShell 5.1, Node 24.21.0 (el runtime que trae DSH),
-puente v5.2.0 y un túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
+puente de la serie 5 (la prueba original se hizo con la 5.2.0; el árbol actual es la 5.4.0) y un
+túnel ZeroTier. Lo probado se probó ahí; si tu entorno es otro, no des por
 probado lo que aquí figura como documentado.
 
 ## Matriz
@@ -115,9 +116,12 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 c476f212131de48e90855d7ada97ec543cb72d70523304ae86dae5d215a17eee `
+  --expect-apk-sha256 <SHA-256-DEL-APK-5.4.0> `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
+
+El SHA-256 de la 5.4.0 se toma del campo `apkSha256` de `RELEASES.json` una vez compilada la build
+(hasta entonces figura como `PENDIENTE`); no se inventa ni se copia de una versión anterior.
 
 Texto mínimo de handoff para un asistente sin shell:
 
@@ -137,8 +141,8 @@ ese caso se comportan como un agente con shell y aplican las advertencias de la 
 | Campo | Contenido |
 | --- | --- |
 | `apkSha256` | SHA-256 del APK que el puente sirve de verdad, calculado en vivo desde `/dsh-companion/status` |
-| `apkVersion` | Versión del APK anunciada por el puente (`5.2.10` en la release actual) |
-| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`53` en la release actual) |
+| `apkVersion` | Versión del APK anunciada por el puente (`5.4.0` en la release actual) |
+| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`66` en la release actual) |
 | `certSha256Release` | Huella documental del certificado del keystore de release (la de README y SECURITY.md) |
 | `receipt` | `algorithm` (`sha256`), `canonical` (`json-compact-sin-receipt`) y `sha256` del informe |
 

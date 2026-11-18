@@ -60,6 +60,16 @@
       "apkSha256": "c476f212131de48e90855d7ada97ec543cb72d70523304ae86dae5d215a17eee",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. Detalle en CHANGELOG.md y RELEASE_5.2.10.md."
+    },
+    {
+      "version": "5.4.0",
+      "versionCode": 66,
+      "channel": "stable",
+      "releasedAt": "2026-11-18",
+      "commit": "PENDIENTE",
+      "apkSha256": "PENDIENTE",
+      "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
+      "notes": "Version estable final de la serie 5 (versionCode 66): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con INDICE.md, reenvio corregido, Copiar para el chat, ancla del APK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PC con kill switch solo en la PC activa. Commit y apkSha256 PENDIENTES hasta compilar la build."
     }
   ]
 }

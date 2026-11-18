@@ -4,14 +4,14 @@ Esta lista sirve para comprobar la versión **estable** de DSH Mobile Companion 
 computadora**. Todo lo que aparece aquí se ve desde el teléfono en la red privada (ZeroTier,
 Tailscale u otra). No hace falta abrir el panel de la computadora ni tocar archivos.
 
-> Versión que compruebas: **5.2.9** (versionCode **53**).
+> Versión que compruebas: **5.4.0** (versionCode **66**).
 > Si el teléfono muestra otra versión, para: no estás probando la build publicada.
 
 ## Antes de empezar (una sola vez)
 
 1. Abre la app del túnel privado en el teléfono y confirma que está conectada.
 2. En el navegador del teléfono, entra a `http://<IP-PRIVADA>:57420/dsh-companion/status`.
-   Debe responder un texto JSON con `"version": "5.2.9"` y `"apkVersionCode": 53`.
+   Debe responder un texto JSON con `"version": "5.4.0"` y `"apkVersionCode": 66`.
    La IP privada es la que te dio el túnel; no la inventes.
 3. Guarda esa URL en favoritos: es tu comprobación rápida si algo falla.
 
@@ -45,7 +45,7 @@ Marca cada línea. Si una falla, anota el número del paso y lo que viste.
       accesible, crea una nota **solo con título**, pulsa *Enviar a la PC* y envíala dos veces. La
       segunda no debe crear un archivo nuevo: actualiza el mismo. Si la PC está apagada, la nota se
       queda en el teléfono.
-- [ ] **12. Ajustes del teléfono**: en Ajustes aparece la versión **5.2.9**, el estado de la
+- [ ] **12. Ajustes del teléfono**: en Ajustes aparece la versión **5.4.0**, el estado de la
       conexión y el botón de comprobar actualización sin errores.
 - [ ] **13. Sin batería de sobra**: si activaste los avisos, Android te pidió la exención de
       batería una sola vez (no en cada arranque).
@@ -77,8 +77,24 @@ Se hacen desde el teléfono, abriendo URLs de la red privada:
       apartado `contract` debe indicar qué piezas de Harness se comprobaron. Si alguna aparece
       `degraded`, la función asociada (avisos, aprobaciones) puede no responder: apúntalo.
 - [ ] **17. Descarga del APK**: en `http://<IP-PRIVADA>:57420/` -> *Actualizar*, la app debe
-      encontrar la versión 5.2.9 y su huella SHA-256. No instales nada que no venga de ahí o de
+      encontrar la versión 5.4.0 y su huella SHA-256. No instales nada que no venga de ahí o de
       GitHub con la huella correcta.
+
+## Novedades de la 5.4.0 (comprobación rápida)
+
+- [ ] **18. Comandos y teclas por perfil**: en Ajustes cambia de perfil; el dock muestra los
+      comandos y las teclas de ese perfil, y el signo `$` llega correcto al compositor.
+- [ ] **19. Compositor y dock**: en apaisado con el teclado abierto, el compositor no tapa el dock,
+      el borrador se desplaza en vez de crecer sin límite y el dock compacto se abre con el botón
+      de 44 dp.
+- [ ] **20. Copia sin conexión (apagada por defecto)**: en Ajustes el interruptor aparece
+      **apagado**; actívalo, abre un chat, usa *Guardar ahora* y lee el último chat con la PC
+      apagada.
+- [ ] **21. Multi-PC y kill switch por PC**: con dos PCs registradas, cambia la activa en el Hub;
+      el kill switch solo revoca los dispositivos de la activa y «Abrir panel» sigue funcionando.
+- [ ] **22. Sin conexión y QR**: pon el teléfono en modo avión: aparece la pantalla de «sin
+      conexión» con Reintentar y Ajustes (no la página de error del navegador). En el
+      emparejamiento sin lector de QR, la dirección se muestra como texto seleccionable.
 
 ## Lo que solo puede revisar quien tenga la computadora
 
@@ -90,7 +106,8 @@ Estas seis no se pueden comprobar desde el teléfono. Pídelas cuando estés del
   `SECURITY.md`).
 - **La nota enviada desde el teléfono**: con la PC encendida, tras usar *Enviar a la PC*, el
   archivo `.md` de la nota aparece en `synced_chats/notes/` dentro de la carpeta del puente, con
-  front matter que incluye `id`, `dueDate` y `updatedAt`, y sin `chatTarget`.
+  front matter que incluye `id`, `dueDate` y `updatedAt`, y sin `chatTarget`. El índice legible
+  `synced_chats/notes/INDICE.md` lista la nota con fecha, título, perfil/tipo, estado y archivo.
 - **La bandeja «Notas recibidas» del panel** (`127.0.0.1:57421`): muestra las últimas 10 notas en
   solo lectura; reenviar una nota actualiza su fila en vez de duplicarla, y
   `GET /dsh-companion/notes` devuelve la misma lista de metadatos sin los cuerpos.
@@ -101,5 +118,5 @@ Estas seis no se pueden comprobar desde el teléfono. Pídelas cuando estés del
 
 1. No desinstales la app ni borres datos: primero anota el paso que falló.
 2. Abre `http://<IP-PRIVADA>:57420/healthz` y copia el resultado.
-3. Pide el informe con la versión (`5.2.9`), el paso y el texto exacto del error.
+3. Pide el informe con la versión (`5.4.0`), el paso y el texto exacto del error.
 4. La guía de soporte remoto está en `OPERACION.md` (en el repositorio y el release).

@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-373%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-pendiente-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · **[Deutsch](README.de.md)**
 
@@ -12,7 +12,20 @@ Die mobile App implementiert die Oberfläche nicht neu: Sie rendert die eigene W
 
 Gehärtete Edition von Ismael Muñoz Reyes für Tinta y Nodos.
 
-Aktuelle Version: **5.2.10** (Bridge und APK, `versionCode` 54).
+Aktuelle Version: **5.4.0** (Bridge und APK, `versionCode` 66).
+
+**Neu in 5.4.0:**
+
+- Konfigurierbare Schnellbefehle und Code-Tasten pro Profil, ein auf 35 % der sichtbaren Höhe
+  begrenzter Composer und ein kompaktes 44-dp-Dock im Querformat.
+- Vollbildschirm „keine Verbindung“, QR-Dialog mit auswählbarer manueller Eingabe und
+  scrollbares Hub, das sich durch Ziehen schließt.
+- Die Offline-Chatkopie ist **standardmäßig deaktiviert** (in den Einstellungen aktivierbar); die
+  App kann den zuletzt gespeicherten Chat bei ausgeschaltetem PC lesen.
+- Notizen: `synced_chats/notes/INDICE.md`-Index für Agenten, korrigiertes erneutes Senden, „Für
+  den Chat kopieren“, Ratenlimit pro Client und automatische Reparatur defekter Textkodierung.
+- Multi-PC: Der Kill-Switch betrifft **nur den aktiven PC**; der APK-Anker wird von der
+  Repository-Wurzel aufgelöst und `/status` blockiert nicht mehr.
 
 ---
 
@@ -103,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
 │   └── …                     Erkennung, Telemetrie, lokale Notizen, WOL, Widget
 ├── test/
-│   ├── verify_*.mjs           siebzehn Verifikations-Suites (416 Prüfungen)
+│   ├── verify_*.mjs           siebzehn Verifikations-Suites (373+ Prüfungen in CI)
 │   ├── _harness.mjs           gemeinsamer Client
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              persistierte Konversationen (.md und .json)
@@ -148,7 +161,7 @@ Node.js 22.15 oder neuer, keine npm-Abhängigkeiten.
 
 Zwei gleichwertige Methoden:
 
-- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Rund 262 KB ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
+- **Native Anwendung:** Installieren Sie `DSH-Companion.apk` aus dem Bereich *Releases*. Multi-PC-Auswahl, automatische Wiederverbindung, Vordergrund-Benachrichtigungsdienst, biometrische Sperre. Ohne jegliche Drittanbieter-Abhängigkeiten: reines, reproduzierbares Java, ein Asset-Icon und das Theme.
 - **Ohne Installation:** Öffnen Sie `http://<VPN_IP>:57420` in Ihrem Browser und wählen Sie „Zum Startbildschirm hinzufügen“.
 
 ---
@@ -265,8 +278,8 @@ Der manuelle Zugriffsschlüssel bleibt als Rückfalllösung für den Zugriff mit
 
 **Native Anwendung (Android)**
 
-- `DSH-Companion.apk` — Version **5.2.10**, `versionCode` 54, `minSdk` 26, `targetSdk` 35.
-- Kein AndroidX und kein Kotlin: reiner Java-Bytecode, rund 262 KB.
+- `DSH-Companion.apk` — Version **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
+- Kein AndroidX und kein Kotlin: reiner Java-Bytecode; die Größe von 5.4.0 wird mit dem Release veröffentlicht.
 - **Cleartext außerhalb des privaten Netzwerks blockiert**: `CleartextPolicy` lehnt jede Anfrage ab, die nicht HTTPS ist oder nicht auf den konfigurierten Bunker oder eine private bzw. Loopback-Adresse zeigt, und die Netzwerksicherheitskonfiguration verbietet Cleartext zu den öffentlichen Diensten, mit denen die App kommuniziert (GitHub, für Update-Prüfungen). Dies wird oberhalb der WebView erzwungen, weil Androids Netzwerksicherheitskonfiguration „nur private IP-Bereiche“ nicht ausdrücken kann.
 - Lokaler Dateizugriff deaktiviert, gemischte Inhalte blockiert, Popups und Remote-Debugging deaktiviert.
 - Mikrofonzugriff auf die exakte Origin des Bunkers beschränkt (Schema, Host und Port).
@@ -306,7 +319,7 @@ npm test
 ```
 
 
-Siebzehn Suites, **416 Prüfungen** (344 in CI), die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, lokale Notizen, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+Siebzehn Suites: **373+ Prüfungen in CI** und **865+ Java-Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, lokale Notizen, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
 
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 
@@ -397,7 +410,7 @@ Dieses Design ist für den **persönlichen Gebrauch** gedacht: ein Betreiber, se
 
 ## Stabilität
 
-**5.2.10 ist die aktuelle stabile Version der Serie 5.2.** Der Zweig `stable/5` enthält diesen Baum; 5.1.x bleibt die vorherige Linie.
+**5.4.0 ist die aktuelle stabile Version der Serie 5.** Der Zweig `stable/5` enthält diesen Baum und erhält nur Sicherheits- und Wartungskorrekturen; die 5.3.x-Linie ist die vorherige.
 
 ## Bildschirmfotos
 

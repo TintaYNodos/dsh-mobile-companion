@@ -1,6 +1,6 @@
 # Operación y soporte remoto
 
-Guía para operar **DSH Mobile Companion 5.2.9** (versionCode 53) y dar soporte cuando la
+Guía para operar **DSH Mobile Companion 5.4.0** (versionCode 66) y dar soporte cuando la
 computadora no está delante. El uso normal ocurre dentro de la red privada (ZeroTier, Tailscale u
 otra): el teléfono abre `http://<IP-PRIVADA>:57420`. El panel de aprobación escucha **solo en
 `127.0.0.1:57421`** y el puente **nunca se expone a Internet**: no se abre un puerto en el router,
@@ -16,6 +16,7 @@ el teléfono), [SUPPORT.md](SUPPORT.md) (política de soporte y evidencia), [SEC
 | --- | --- | --- |
 | Ver salud y versión | Sí: `/healthz` y `/dsh-companion/status` | No |
 | Aprobar, nombrar o revocar dispositivos | No: el panel es solo local | Sí: `panel.bat` (o escritorio remoto) |
+| Cambiar la PC activa y ejecutar el kill switch por PC | Sí: Hub del teléfono | No (solo requiere que la PC esté encendida) |
 | Arrancar, reiniciar o detener el puente | No | Sí: `start.bat`, `stop.bat`, `install-autostart.bat` |
 | Revisar los registros | No | Sí: `bridge.log` |
 | Copiar o restaurar los datos de acceso | No | Sí: [backup.bat](backup.bat), [restore.bat](restore.bat) |
@@ -69,9 +70,30 @@ apruebes nunca un código que no esperabas**: el panel también permite revocar 
 el interruptor de seguridad.
 
 Revocación: el panel permite revocar un dispositivo o **Revocar todos**. En el teléfono, el
-interruptor de seguridad revoca todos los dispositivos, cierra los túneles WebSocket **y rota la
-clave de acceso**: después de usarlo todo lo emparejado debe aprobarse de nuevo. Úsalo solo si
-sospechas que un dispositivo se perdió; no es un botón de reinicio.
+interruptor de seguridad revoca los dispositivos de la **PC activa**, cierra sus túneles WebSocket
+**y rota su clave de acceso**: después de usarlo, todo lo emparejado con esa PC debe aprobarse de
+nuevo. Úsalo solo si sospechas que un dispositivo se perdió; no es un botón de reinicio. Con varias
+PC registradas, ejecútalo en cada una (sección 2b).
+
+## 2b. Varias computadoras (multi-PC)
+
+El teléfono puede guardar **varias computadoras** y cambiar entre ellas sin recompilar nada. Cada
+una es un perímetro independiente:
+
+- **Registro y credenciales por PC**: cada computadora tiene su propio puente, registro de
+  dispositivos, clave de acceso y cookie de sesión. El teléfono las guarda separadas y solo usa la
+  que está **activa**.
+- **Cambiar de PC**: en el Hub del teléfono, sección *Equipos*, elige la computadora; también se
+  añade una nueva por QR o a mano. El QR de una PC no sirve para otra.
+- **Puerto de destino por dispositivo**: en el panel se puede fijar un `targetPort` para que un
+  dispositivo use otra instancia de Harness del mismo equipo; no es una PC distinta.
+- **Kill switch por PC**: el interruptor de seguridad se envía solo al puente de la PC activa
+  (`/dsh-companion/kill-switch` de ese equipo). Revoca los dispositivos y la clave de esa PC; las
+  demás conservan sus sesiones. Si se pierde el teléfono, ejecútalo en **cada** computadora.
+- **No bloquea el reemparejamiento**: tras un kill switch, «Abrir panel» y el emparejamiento de la
+  misma PC siguen funcionando; solo hay que aprobar de nuevo.
+- **Firewall por PC**: cada computadora aplica su propia regla de firewall para su subred de VPN
+  (sección 11). El teléfono no puede abrir ni cerrar puertos de la computadora.
 
 ## 3. Arrancar, reiniciar y detener el puente (Windows)
 
@@ -170,7 +192,7 @@ sustituye a BitLocker en equipos compartidos.
 ## 7. Actualizar el APK
 
 1. En el teléfono, con la VPN activa, abre `http://<IP-PRIVADA>:57420/` y entra en *Actualizar*: la
-   página muestra la versión publicada (5.2.9, versionCode 53) y el SHA-256 del APK.
+   página muestra la versión publicada (5.4.0, versionCode 66) y el SHA-256 del APK.
 2. Descárgalo, comprueba que la huella coincide con la publicada (también está en la página de
    GitHub Releases y en el campo `apkSha256` de `/dsh-companion/status` una vez emparejado) y
    instálalo encima. Desde la 5.1.7 la firma es la misma y se instala encima sin desinstalar; si
@@ -239,24 +261,42 @@ la superficie si el equipo se mueve entre redes.
 ### Firewall: cerrar `node.exe` a un solo puerto y a la subred de la VPN
 
 El instalador de Node suele dejar reglas que permiten **todo** el tráfico entrante a `node.exe`.
-Sustitúyelas por una regla de puerto y subred (ajusta la IP del SDK y la subred de tu VPN):
+Sustitúyelas por una regla de puerto y subred (ajusta la IP del SDK y la subred de tu VPN). Repite
+el bloque en **cada PC** del despliegue multi-PC, con su propia subred:
 
 ```powershell
 # Ejecutar en PowerShell COMO ADMINISTRADOR
 $node = "C:\Users\<TU_USUARIO>\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\node\bin\node.exe"
 $vpn  = "10.0.0.0/24"   # la subred de tu VPN (ZeroTier/Tailscale)
 
-New-NetFirewallRule -DisplayName "DSH Companion 57420 (VPN)" -Direction Inbound -Action Allow `
-  -Protocol TCP -LocalPort 57420 -Program $node -Profile Public,Private -RemoteAddress $vpn
+# 1) Revisa el estado de entrada: lo correcto es DefaultInboundAction = Block.
+Get-NetFirewallProfile | Select-Object Name, DefaultInboundAction
 
-# Quita las reglas amplias del mismo node.exe (revisa antes con Get-NetFirewallRule)
+# 2) Quita las reglas amplias del mismo node.exe (revisa antes con Get-NetFirewallRule).
 Get-NetFirewallRule -Direction Inbound -Action Allow | Where-Object {
-  ($_ | Get-NetFirewallApplicationFilter).Program -like "*dsh-primary-runtime*"
-} | Where-Object { $_.DisplayName -eq "node.exe" } | Remove-NetFirewallRule
+  ($_ | Get-NetFirewallApplicationFilter).Program -like "*dsh-runtimes*"
+} | Remove-NetFirewallRule
+
+# 3) Una sola regla: puerto 57420, solo desde la subred de la VPN, sin borde.
+New-NetFirewallRule -DisplayName "DSH Companion 57420 (VPN)" -Direction Inbound -Action Allow `
+  -Protocol TCP -LocalPort 57420 -Program $node -Profile Private,Public -RemoteAddress $vpn `
+  -EdgeTraversalPolicy Block
 ```
 
-Comprobación: `Get-NetFirewallRule | ? DisplayName -like "*DSH Companion*"` debe mostrar solo la
-regla de 57420; el teléfono sigue entrando por la VPN y el panel 57421 no necesita regla (loopback).
+Comprobación: `Get-NetFirewallRule | ? DisplayName -like "*DSH Companion*"` debe mostrar **solo**
+la regla de 57420, y `Get-NetFirewallRule -Direction Inbound -Action Allow | ? DisplayName -eq
+"node.exe"` no debe devolver reglas amplias. El teléfono sigue entrando por la VPN y el panel 57421
+no necesita regla (loopback).
+
+Notas de endurecimiento:
+
+- **No añadas una regla de bloqueo para `node.exe`**: en Windows una regla de bloqueo explícita
+  gana a la de permiso y dejaría el puente inaccesible. El aislamiento se consigue con el
+  `DefaultInboundAction: Block` del perfil y **sin** reglas amplias de permiso.
+- Si el equipo se conecta a redes públicas, restringe además la regla a la interfaz de la VPN
+  (`-InterfaceAlias "ZeroTier One [...]"` o el nombre de tu adaptador de Tailscale).
+- El panel (`57421`) no se publica nunca: escucha solo en loopback y no lleva regla de firewall.
+- El puente no abre puertos en el router ni acepta tráfico de fuera de la red privada.
 
 ### Secretos en disco
 

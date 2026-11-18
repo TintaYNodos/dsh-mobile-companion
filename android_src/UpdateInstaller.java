@@ -42,10 +42,10 @@ class UpdateInstaller {
     }
 
     /**
-     * P19: decide si el APK descargado puede instalarse. Si GitHub publica un
-     * digest, debe coincidir; si el release no lo trae, se avisa y NO se
-     * instala. Las descargas desde el búnker (APK local recién compilado) no
-     * tienen un digest de GitHub que aplicar.
+     * P19/5.3.7: decide si el APK descargado puede instalarse. Si GitHub publica
+     * un digest, debe coincidir; si el release no lo trae, se avisa y NO se
+     * instala. La ruta web exige ancla y la rechaza si falta; solo la ruta
+     * nativa del Hub conserva la instalación sin ancla de un búnker antiguo.
      */
     static void handleDigestDecision(MainActivity a, File targetFile, String decision,
                                      String expected, String actual) {
@@ -56,8 +56,9 @@ class UpdateInstaller {
             return;
         }
         if (ApkDigest.DECISION_NO_ANCHOR.equals(decision)) {
-            // Descarga desde el propio búnker: no hay digest remoto de GitHub.
-            android.util.Log.i("DshUpdate", "instalando APK del búnker sin digest de GitHub");
+            // Solo puede llegar por la ruta nativa del Hub: búnker antiguo que
+            // aún no publica apkSha256. La ruta web nunca llega aquí (rechaza).
+            android.util.Log.i("DshUpdate", "instalando APK del búnker sin ancla desde el Hub");
             UpdateInstaller.installDownloadedApk(a, targetFile);
             return;
         }
@@ -73,12 +74,14 @@ class UpdateInstaller {
         String message;
         if (ApkDigest.DECISION_MISSING.equals(decision)) {
             title = "Sin verificación de integridad";
-            message = "El release de GitHub no publica el SHA-256 del APK (campo digest), "
-                    + "así que no se puede verificar la descarga. Por seguridad no se instalará. "
-                    + "Instálala manualmente desde la página del release cuando incluya el digest.";
+            message = "No hay un SHA-256 publicado con el que verificar el APK "
+                    + "(ni el release de GitHub ni /dsh-companion/status lo publican). "
+                    + "Por seguridad no se instalará. Actualiza la copia del puente o "
+                    + "instálala manualmente desde el release que incluya el digest.";
         } else {
             title = "APK no verificado";
-            message = "El SHA-256 del APK descargado no coincide con el publicado en GitHub. "
+            message = "El SHA-256 del APK descargado no coincide con el ancla publicada "
+                    + "(digest del release de GitHub o sha256 de /status). "
                     + "La descarga pudo alterarse o corromperse; no se instalará.\n\n"
                     + "Esperado: " + (expected == null ? "?" : expected) + "\n"
                     + "Obtenido: " + (actual == null || actual.isEmpty() ? "?" : actual);
@@ -146,20 +149,33 @@ class UpdateInstaller {
         return parts;
     }
 
+    /**
+     * 5.3.7: ruta WEB (CompanionBridge.installUpdate y el DownloadListener del
+     * WebView). Exige un ancla verificable: digest del release o SHA-256 que el
+     * puente publica en /status; si no hay ninguna, se rechaza con aviso.
+     */
     static void downloadAndInstallApk(MainActivity a) {
-        UpdateInstaller.downloadAndInstallApk(a, null, null, null);
-    }
-
-    static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText) {
-        downloadAndInstallApk(a, customUrl, customFilename, titleText, "");
+        UpdateInstaller.downloadAndInstallApk(a, null, null, null, "", ApkDigest.ROUTE_WEB);
     }
 
     /**
-     * Variante con SHA-256 esperado. Cuando la descarga viene del buner no hay
-     * digest de GitHub: antes se instalaba sin verificar. Ahora el puente publica
-     * apkSha256 en /status y el telefono comprueba que coincide.
+     * 5.3.7: ruta nativa (Hub y aviso propio de actualización). Es la única que
+     * puede usar el SHA recordado de /status y la que conserva la instalación
+     * sin ancla de un búnker antiguo, para no romper la actualización desde el Hub.
+     */
+    static void downloadAndInstallApkFromHub(MainActivity a) {
+        UpdateInstaller.downloadAndInstallApk(a, null, null, null, "", ApkDigest.ROUTE_HUB);
+    }
+
+    /**
+     * Variante con SHA-256 esperado (ruta nativa del Hub).
      */
     static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText, String expectedSha) {
+        downloadAndInstallApk(a, customUrl, customFilename, titleText, expectedSha, ApkDigest.ROUTE_HUB);
+    }
+
+    static void downloadAndInstallApk(MainActivity a, String customUrl, String customFilename, String titleText,
+                                      String expectedSha, String route) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             if (!a.getPackageManager().canRequestPackageInstalls()) {
                 // P19: recuerda la procedencia para que, al volver del permiso,
@@ -170,6 +186,10 @@ class UpdateInstaller {
                         .putString("pending_apk_name", customFilename == null ? "" : customFilename)
                         .putString("pending_apk_title", titleText == null ? "" : titleText)
                         .putString("pending_apk_expected_sha", expectedSha == null ? "" : expectedSha.trim().toLowerCase(java.util.Locale.ROOT))
+                        // 5.3.7: al reanudar tras conceder el permiso hay que
+                        // conservar el origen para no degradar una descarga web
+                        // a la ruta nativa (o al revés).
+                        .putString("pending_apk_route", route)
                         .apply();
                 Toast.makeText(a, "Permite a DSH Companion instalar actualizaciones", Toast.LENGTH_LONG).show();
                 try {
@@ -309,14 +329,22 @@ class UpdateInstaller {
                 }
 
                 final String actualDigest = ApkDigest.hex(sha256.digest());
-                // D1: expectedDigestFor() devuelve null para las URLs del buner
-                // (no hay ancla de GitHub). Llamar a .isEmpty() sobre ese null
-                // lanzaba NullPointerException, se mostraba "Error al descargar"
-                // y la actualizacion del buner nunca se instalaba. El SHA-256 que
-                // publica el servidor (bunkerSha) es el ancla de esa ruta; la de
-                // GitHub sigue siendo su digest.
-                final String expectedDigest = ApkDigest.resolveExpected(
-                        UpdateRelease.expectedDigestFor(a, apkUrl), bunkerSha);
+                // D1/5.3.7: expectedDigestFor() devuelve null para las URLs del
+                // búnker (no hay ancla de GitHub); resolveExpected (antes se
+                // llamaba a .isEmpty() sobre ese null y lanzaba NPE) usa el SHA
+                // que publica el servidor.
+                //
+                // La ruta WEB exige ancla verificable: digest del release o SHA
+                // de /status recordado por PcStatusPoller. Sin ninguna de las dos
+                // resolveExpectedForRoute devuelve "" y la decisión es "missing"
+                // (no se instala). El SHA pendiente de otra instalación no vale
+                // como ancla web. La ruta nativa del Hub conserva el SHA
+                // recordado y, sin ancla, el antiguo "no-anchor" (se instala).
+                final String anchorSha = ApkDigest.isWebRoute(route)
+                        ? a.prefs.getString("server_apk_sha256", "")
+                        : bunkerSha;
+                final String expectedDigest = ApkDigest.resolveExpectedForRoute(route,
+                        UpdateRelease.expectedDigestFor(a, apkUrl), anchorSha);
                 final String digestDecision = ApkDigest.decision(expectedDigest, actualDigest);
 
                 a.ui.post(() -> {

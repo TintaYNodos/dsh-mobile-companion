@@ -147,7 +147,7 @@ final class OfflineChatStore {
     /** true solo si el interruptor de la copia sin conexión está activo. */
     static boolean isEnabled(Context context) {
         if (context == null) return false;
-        try { return prefs(context).getBoolean(PrefKeys.KEY_OFFLINE_COPY, true); }
+        try { return prefs(context).getBoolean(PrefKeys.KEY_OFFLINE_COPY, false); }
         catch (Throwable ignored) { return false; }
     }
 

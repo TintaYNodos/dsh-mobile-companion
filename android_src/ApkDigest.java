@@ -19,8 +19,11 @@ import java.util.Locale;
  *  - Descarga desde un asset de GitHub: el digest es obligatorio. Si el release
  *    no lo publica se avisa y NO se instala.
  *  - Descarga desde el búnker (/DSH-Companion.apk, que sirve el APK recién
- *    compilado del proyecto): no hay digest de GitHub que aplicar; se instala
- *    como antes.
+ *    compilado del proyecto): el ancla es el SHA-256 que el puente publica en
+ *    /status (apkSha256).
+ *  - 5.3.7: la ruta WEB (CompanionBridge.installUpdate y el DownloadListener del
+ *    WebView) EXIGE un ancla verificable y rechaza la instalación si no la hay;
+ *    solo la ruta nativa del Hub conserva el antiguo "sin ancla se instala".
  *
  * Esta clase es Java puro (sin android.*) para poder probarla en el escritorio.
  */
@@ -30,6 +33,14 @@ final class ApkDigest {
     static final String DECISION_MISSING = "missing";
     static final String DECISION_MISMATCH = "mismatch";
     static final String DECISION_NO_ANCHOR = "no-anchor";
+
+    /** Origen de una instalación: página web del WebView o UI nativa (Hub). */
+    static final String ROUTE_WEB = "web";
+    static final String ROUTE_HUB = "hub";
+
+    static boolean isWebRoute(String route) {
+        return ApkDigest.ROUTE_WEB.equals(route);
+    }
 
     private ApkDigest() {}
 
@@ -124,9 +135,10 @@ final class ApkDigest {
      *        publica digest, hex de 64 si lo publica.
      * @param bunkerSha SHA-256 que el buner publica en /status (apkSha256) y que
      *        se guarda como pending_apk_expected_sha.
-     * @return null si no hay ningun ancla (buner antiguo sin SHA publicado: se
-     *         instala como antes); "" si hay ancla declarada pero no verificable
-     *         (se rechaza); hex de 64 si el ancla es verificable.
+     * @return null si no hay ningun ancla (buner antiguo sin SHA publicado: lo
+     *         permite la ruta nativa del Hub; la web lo rechaza, ver
+     *         {@link #resolveExpectedForRoute}); "" si hay ancla declarada pero no
+     *         verificable (se rechaza); hex de 64 si el ancla es verificable.
      */
     static String resolveExpected(String githubDigest, String bunkerSha) {
         if (githubDigest != null) {
@@ -140,6 +152,22 @@ final class ApkDigest {
         // corrupto, normalize devuelve "" y decision() lo trata como no
         // verificable (fail-closed).
         return ApkDigest.normalize(bunker);
+    }
+
+    /**
+     * 5.3.7: ancla efectiva según el origen de la instalación.
+     *
+     * La ruta WEB (el JavaScript de la página, que puede ser contenido ajeno al
+     * APK) no puede instalar sin ancla: si {@link #resolveExpected} devuelve
+     * null (búnker antiguo sin apkSha256) se degrada a "" para que
+     * {@link #decision} devuelva "missing" y el instalador rechace con aviso.
+     * La ruta nativa del Hub conserva el null ("no-anchor": se instala como
+     * antes) para no romper la actualización desde el Hub en un puente antiguo.
+     */
+    static String resolveExpectedForRoute(String route, String githubDigest, String anchorSha) {
+        String expected = ApkDigest.resolveExpected(githubDigest, anchorSha);
+        if (ApkDigest.isWebRoute(route) && expected == null) return "";
+        return expected;
     }
 
     /** "ok" | "missing" | "mismatch" | "no-anchor". */

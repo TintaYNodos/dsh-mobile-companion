@@ -118,8 +118,12 @@ public final class KeyStoreVault {
                     + Base64.encodeToString(iv, Base64.NO_WRAP)
                     + ":"
                     + Base64.encodeToString(encrypted, Base64.NO_WRAP);
-        } catch (Exception ignored) {
-            return value;
+        } catch (Exception failure) {
+            // Fail-closed: si el AndroidKeyStore no esta disponible NO se guarda
+            // el valor en claro. Se descarta y el llamador pedira la credencial
+            // otra vez; queda una linea de log sin contenido.
+            android.util.Log.w("DshKeyStore", "Cifrado no disponible: se descarta el valor");
+            return "";
         }
     }
 

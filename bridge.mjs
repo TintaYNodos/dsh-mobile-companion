@@ -15,10 +15,10 @@ import { findVpnAddress, isClientAuthorized, resolveTargetPort } from "./src/net
 import { hasValidAccessKey, loadSecret, resolveAccessKey } from "./src/crypto.mjs";
 import { deviceLabel, deviceSummary, findPairedDevice, isViewer, runWithRequestContext } from "./src/devices.mjs";
 import { focusPanelWindow, isPanelTabOpen, notifyPanelClients, panelUrl, startPanel } from "./src/panel.mjs";
-import { isSameOriginRequest, sendText } from "./src/http.mjs";
+import { hasProxyHeaders, isSameOriginRequest, sendText } from "./src/http.mjs";
 import { startContractWatch } from "./src/dsh-contract.mjs";
 import { handleWsProxy } from "./src/proxy.mjs";
-import { buildAllowedSets, dispatchRequest, hasProxyHeaders } from "./src/routes.mjs";
+import { buildAllowedSets, dispatchRequest } from "./src/routes.mjs";
 
 /**
  * P25: bridge.log lo escribe la redireccion de run-hidden.vbs y crecia sin

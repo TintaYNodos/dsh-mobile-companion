@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.2.10-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-262%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-373%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/APK-pendiente-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -12,7 +12,20 @@ ZeroTier または Tailscale のプライベートネットワーク経由で De
 
 Tinta y Nodos 向けに Ismael Muñoz Reyes が強化したエディションです。
 
-現在のバージョン：**5.2.10**（ブリッジと APK、`versionCode` 54）。
+現在のバージョン：**5.4.0**（ブリッジと APK、`versionCode` 66）。
+
+**5.4.0 の新機能：**
+
+- プロファイルごとに設定できるクイックコマンドとコードキー、表示高の 35 % に制限された
+  コンポーザー、横向き時の 44 dp のコンパクトドック。
+- 全画面の「接続なし」画面、手動入力に切り替えられる QR ダイアログ、ドラッグで閉じる
+  スクロール可能な Hub。
+- オフラインのチャットコピーは**既定で無効**（設定で有効化）。PC の電源が切れていても最後に
+  保存したチャットを読めます。
+- ノート：エージェント向けの `synced_chats/notes/INDICE.md` インデックス、再送信の修正、
+  「チャット用にコピー」、クライアントごとのレート制限、壊れた文字コードの自動修復。
+- マルチ PC：キルスイッチは**アクティブな PC のみ**に作用します。APK のアンカーはリポジトリ
+  ルートから解決され、`/status` はブロックしなくなりました。
 
 ---
 
@@ -103,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java     保存キーの Android Keystore 暗号化
 │   └── …                     ディスカバリ、テレメトリ、ローカルノート、WOL、ウィジェット
 ├── test/
-│   ├── verify_*.mjs           17 個の検証スイート（416 チェック）
+│   ├── verify_*.mjs           17 個の検証スイート（CI で 373+ チェック）
 │   ├── _harness.mjs           共有クライアント
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              永続化された会話（.md および .json）
@@ -148,7 +161,7 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 2 つの同等な方法があります：
 
-- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係がゼロで、約 262 KB：純粋で再現可能な Java、アセットアイコン、テーマのみです。
+- **ネイティブアプリ：** *Releases* セクションから `DSH-Companion.apk` をインストールします。マルチ PC セレクター、自動再接続、フォアグラウンド通知サービス、生体認証ロックを備えています。サードパーティの依存関係はゼロ：純粋で再現可能な Java、アセットアイコン、テーマのみです。
 - **何もインストールしない方法：** ブラウザで `http://<VPN_IP>:57420` を開き、「ホーム画面に追加」を選択します。
 
 ---
@@ -265,8 +278,8 @@ Node.js 22.15 以降が必要です。npm の依存関係はありません。
 
 **ネイティブアプリ（Android）**
 
-- `DSH-Companion.apk` — バージョン **5.2.10**、`versionCode` 54、`minSdk` 26、`targetSdk` 35。
-- AndroidX も Kotlin も不使用：純粋な Java バイトコードで約 262 KB。
+- `DSH-Companion.apk` — バージョン **5.4.0**、`versionCode` 66、`minSdk` 26、`targetSdk` 35。
+- AndroidX も Kotlin も不使用：純粋な Java バイトコード。5.4.0 のサイズはリリース時に公開されます。
 - **プライベートネットワーク外のクリアテキストをブロック**：`CleartextPolicy` は HTTPS でないリクエスト、または設定済みバンカーやプライベート/ループバックアドレスを指していないリクエストを拒否します。また、ネットワークセキュリティ設定はアプリが通信する公開サービス（GitHub、更新の確認）へのクリアテキストを禁止します。これは WebView の上層で強制されます。Android のネットワークセキュリティ設定では「プライベート IP 範囲のみ」を表現できないためです。
 - ローカルファイルアクセスを無効化、混在コンテンツをブロック、ポップアップとリモートデバッグを無効化。
 - マイクへのアクセスはバンカーの正確なオリジン（スキーム、ホスト、ポート）に限定。
@@ -306,7 +319,7 @@ npm test
 ```
 
 
-17 個のスイート、**328 のチェック**（201 は CI で実行）。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、ローカルノート、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
+17 個のスイート：**CI で 373+ チェック**、**865+ の Java チェック**。ディスカバリ、モバイル注入、`?dshc=off`、クロスオリジン拒否、リクエストスマグリング対策、ボディ上限、コンテンツのサニタイズ、WebSocket ハンドシェイクの完全性、レジストリ破損時の安全性、アクセス制御、ローカルノート、デバイスレジストリの TTL、パネルのフロー、キルスイッチをカバーします。
 
 スイートは**稼働中のブリッジ**と通信します（モックではありません）。先にブリッジを起動してください。実際のキルスイッチの実行は破壊的で、デバイスを失効させキーをローテーションするため、`DSH_TEST_DESTRUCTIVE=1` によるオプトインになっています。
 
@@ -394,7 +407,7 @@ PC のパネルには**「Notas recibidas」**（受信したノート）の受�
 
 ## 安定性
 
-**5.2.10 はシリーズ 5.2 の現在の安定版です。** `stable/5` ブランチがこのツリーを保持し、5.1.x は前のラインです。
+**5.4.0 はシリーズ 5 の現在の安定版です。** `stable/5` ブランチがこのツリーを保持し、セキュリティとメンテナンスの修正のみを受け取ります。5.3.x は前のラインです。
 
 ## スクリーンショット
 

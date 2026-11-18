@@ -372,10 +372,16 @@ export function removeDevice(id) {
 export function revokeAll() {
   const current = loadRegistry();
   const removed = current.devices.length;
+  // 5.3.7: si saveRegistry falla no se deja el registro vaciado solo en memoria
+  // (la lectura cacheada seguiria vacia con el archivo intacto) ni se responde
+  // exito: se restaura y -1 hace que la ruta responda 500 en vez de OK.
+  const devices = current.devices;
+  const pending = current.pending;
   current.devices = [];
   current.pending = [];
   const persisted = saveRegistry();
   if (persisted) recordEvent("revoke-all", `${removed} dispositivo${removed === 1 ? "" : "s"}`);
+  else { current.devices = devices; current.pending = pending; }
   return persisted ? removed : -1;
 }
 

@@ -4,6 +4,7 @@
  * See LICENSE file in repository root for full terms.
  */
 import { config } from "./config.mjs";
+import { normalizeAddress } from "./network.mjs";
 
 const HOP_BY_HOP = new Set([
   "connection",
@@ -19,6 +20,35 @@ const HOP_BY_HOP = new Set([
 ]);
 
 const FORWARDED = new Set(["forwarded", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto", "x-real-ip"]);
+
+/**
+ * Cabeceras que delatan que la peticion llego a traves de un proxy o tunel
+ * (Cloudflare, nginx, etc.). Cuando estan presentes, el `remoteAddress` es el
+ * del proxy (loopback), no el del cliente: la pertenencia a loopback deja de
+ * ser una identidad y NUNCA debe conceder privilegios locales (ver
+ * `DSH_ALLOW_PROXY_ACCESS` en src/config.mjs). El flag solo permite pasar la
+ * guarda de red; no eleva privilegios.
+ */
+const PROXY_SIGNAL_HEADERS = [
+  "cf-connecting-ip",
+  "cf-access-jwt-assertion",
+  "x-forwarded-for",
+  "x-real-ip",
+  "forwarded",
+];
+
+export const hasProxyHeaders = (req) =>
+  PROXY_SIGNAL_HEADERS.some((name) => String(req?.headers?.[name] ?? "").trim() !== "");
+
+/**
+ * H1/5.3.7: un privilegio de loopback (panel, canje por codigo, aprobacion,
+ * retry, pair-events) solo se concede si la conexion viene de verdad del propio
+ * equipo. Detras de un proxy o tunel el socket tambien es 127.0.0.1, pero el
+ * cliente es remoto: ahi no hay privilegios locales ni con
+ * DSH_ALLOW_PROXY_ACCESS=1.
+ */
+export const isLocalRequest = (remoteAddress, proxyHeaders) =>
+  !proxyHeaders && normalizeAddress(remoteAddress).startsWith("127.");
 
 /**
  * Cabeceras que autentican al cliente ante el puente y que NUNCA deben llegar

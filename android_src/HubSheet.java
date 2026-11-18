@@ -321,7 +321,7 @@ class HubSheet {
                         .setMessage("¿Deseas descargar y reinstalar el archivo APK actual?")
                         .setPositiveButton("Reinstalar", (d, w) -> {
                             HubSheet.dismissHub(a);
-                            UpdateInstaller.downloadAndInstallApk(a);
+                            UpdateInstaller.downloadAndInstallApkFromHub(a);
                         })
                         .setNegativeButton("Cancelar", null)
                         .create();

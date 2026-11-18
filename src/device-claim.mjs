@@ -6,6 +6,7 @@
 import crypto from "node:crypto";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { config } from "./config.mjs";
+import { hasProxyHeaders, isLocalRequest } from "./http.mjs";
 import { log } from "./log.mjs";
 import { loadRegistry, saveRegistry } from "./registry.mjs";
 
@@ -107,6 +108,15 @@ const pairCodeFromRequest = (req) => {
   const fromHeader = String(req.headers?.["x-dsh-pair-code"] || "").trim();
   return /^\d{4}$/.test(fromHeader) ? fromHeader : "";
 };
+
+/**
+ * 5.3.7: la peticion presenta el codigo de 4 digitos del canje explicito
+ * (`?code=1234` o cabecera `x-dsh-pair-code`). Ese canje solo vale desde
+ * loopback real y sin proxy; routes.mjs lo rechaza con 403 cuando llega por un
+ * proxy/tunel (con el socket en 127.0.0.1), pero el codigo es corto y no debe
+ * usarse como credencial remota.
+ */
+export const presentsPairCode = (req) => Boolean(pairCodeFromRequest(req));
 
 export const deviceCookieMaxAge = () => config.deviceTtlDays * 24 * 3600;
 
@@ -253,18 +263,29 @@ export function requestAccess(remoteAddress, userAgent) {
  *     (`dsh-companion-claim`), aunque haya cambiado de direccion IP;
  *  2. el codigo de 4 digitos que el usuario ve en pantalla, presentado
  *     explicitamente (`?code=1234` o cabecera `x-dsh-pair-code`), solo desde
- *     loopback (es un codigo corto y el panel vive en esa misma maquina);
+ *     loopback REAL y sin cabeceras de proxy (es un codigo corto y el panel
+ *     vive en esa misma maquina);
  *  3. compatibilidad para la propia computadora sin cookie (pruebas locales y
  *     navegador del propio equipo): coincidencia de direccion, pero solo si es
- *     loopback. Un cliente de la red privada sin cookie no puede canjear nada.
+ *     loopback real y sin proxy. Un cliente de la red privada sin cookie no
+ *     puede canjear nada.
+ *
+ * 5.3.7: antes se usaba `isLoopback(socket)`. Detras de un proxy/tunel el socket
+ * tambien es 127.0.0.1, asi que un cliente remoto con `?code=NNNN` canjeaba un
+ * dispositivo. Ahora el codigo y el emparejamiento por direccion exigen
+ * loopback real (sin proxy) y routes.mjs rechaza ese canje con 403 cuando
+ * llegan cabeceras de proxy.
  */
 export function claimApprovedDevice(remoteAddress) {
   const current = loadRegistry();
   const address = normalize(remoteAddress);
   if (!address) return null;
-  const local = isLoopback(address);
   const context = currentContext();
   const req = context?.req || null;
+  // 5.3.7: sin proxy Y con socket en loopback. El contexto de la peticion trae
+  // las cabeceras reales; sin contexto (llamadas internas) no hay privilegio.
+  const proxyHeaders = req ? hasProxyHeaders(req) : true;
+  const local = isLocalRequest(address, proxyHeaders);
   const presentedToken = readClaimCookie(req);
   const presentedCode = local ? pairCodeFromRequest(req) : "";
 

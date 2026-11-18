@@ -3,6 +3,115 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
+## 5.4.0 — `versionCode` 66 (versión estable final de la serie 5)
+
+Cierre de la serie 5. La 5.4.0 consolida todo lo publicado desde la 5.2.9: las correcciones de la
+5.2.10 (documentadas más abajo) y el trabajo de producto de la línea 5.3 (comandos por perfil, dock
+compacto, lectura sin conexión, multi-PC). A partir de aquí la serie queda estable: solo correcciones
+de seguridad y mantenimiento.
+
+### Añadido — comandos y teclas configurables por perfil
+
+- **Catálogo por perfil**: cada perfil (General, Escritor, Programador, Docente, Periodista,
+  Jurídico y Diseño) trae sus comandos rápidos y sus teclas de código, y en Ajustes se eligen los
+  que se muestran en el dock. La elección se conserva por perfil y se aplica al compositor.
+- **Teclas de código por perfil**: símbolos y atajos propios de cada área (llaves para código,
+  comillas y guiones para texto, etc.) sobre el compositor mientras se escribe.
+
+### Añadido — compositor y dock compacto
+
+- **Compositor con tope**: el borrador ya no crece sin límite. El área de texto se limita al **35 %
+  del alto visible** y a 160 px en vertical (72 px en apaisado) y el resto se desplaza dentro; antes
+  el dock y la tarjeta del compositor quedaban recortados por el scrollport.
+- **Dock compacto de 44 dp**: los chips del dock miden 44 × 44 dp como objetivo táctil y en
+  apaisado con teclado se usa una sola fila compacta; si no cabe sobre el compositor, aparece un
+  botón de 44 dp para abrirla y se puede ocultar. El compositor cede espacio, no se tapa.
+- **Densidad medida**: la geometría y el contraste del dock se corrigieron midiendo el alto real de
+  la franja visible (35 % del alto, 160/72 px) en lugar de estimarlo.
+
+### Añadido — teléfono
+
+- **Pantalla de «sin conexión»**: cuando el frame principal no carga, una capa a pantalla completa
+  sustituye a la página de error de Chromium (`net::ERR_*`), con botón para reintentar y otro para
+  abrir Ajustes. Solo se muestra ante un fallo del frame principal y se retira al recuperar la
+  conexión.
+- **Diálogo QR sin callejón**: si no hay lector de QR instalado, el diálogo explica el motivo y
+  muestra la última dirección como texto **seleccionable** (se puede copiar a mano o con el botón),
+  en vez de dejar al usuario sin salida.
+- **Hub desplazable con cierre por arrastre**: el panel inferior (estado, equipos, sistema y
+  mantenimiento) hace scroll cuando el contenido no cabe, tiene botón de cerrar y se cierra
+  arrastrándolo hacia abajo.
+- **Copia del chat para uso sin conexión, DESACTIVADA por defecto**: el teléfono puede guardar el
+  último chat (formato legible y cifrado con el `AndroidKeyStore`) y leerlo con la PC apagada, pero
+  ahora es **opt-in**: se activa en Ajustes y, al desactivarla o usar el kill switch, la copia local
+  se borra. Antes la copia se hacía sin pedir permiso.
+- **«Copiar para el chat»**: deja en el portapapeles una referencia de una línea
+  (`@companion/synced_chats/notes/<archivo>.md`) para pegar en cualquier chat de Harness y que el
+  agente lea la nota en la PC. El nombre del archivo se guarda en un índice local por `id`, cifrado
+  con `KeyStoreVault`, para poder copiar la referencia aunque la app se haya reiniciado. Las notas
+  «Solo en el teléfono» no salen nunca.
+- **Reenvío corregido**: guardar la nota sin cambios (abrir y cerrar el editor, o el autoguardado)
+  ya no pierde la marca `synced`; la nota enviada no vuelve a la cola de pendientes y «Enviar
+  todas» no la POSTea de nuevo a la PC.
+
+### Añadido — notas en la PC
+
+- **Índice legible `synced_chats/notes/INDICE.md`**: el puente mantiene, junto a las notas
+  recibidas, un índice en Markdown con fecha, título, perfil/tipo, estado y archivo de cada nota,
+  pensado para que un agente sepa qué leer sin abrir todas. Se rehace al guardar, al podar y al
+  arrancar, y la poda lo excluye.
+
+### Cambiado — multi-PC y kill switch por PC
+
+- **Cada computadora es su propio perímetro**: el teléfono guarda varias PCs (registro, clave y
+  cookie propios) y permite cambiar la activa desde el Hub.
+- **El kill switch afecta solo a la PC activa**: revoca sus dispositivos, cierra sus túneles y rota
+  su clave; las demás PCs conservan sus sesiones. Si se pierde el teléfono hay que ejecutarlo en
+  cada PC.
+- Usar el kill switch de una PC **ya no bloquea** «Abrir panel» ni el reemparejamiento de esa misma
+  PC.
+
+### Cambiado — puente
+
+- **`/status` no bloqueante**: la telemetría se sirve desde una instantánea cacheada (2 s) y se
+  refresca en segundo plano; la petición ya no lanza PowerShell de forma síncrona (hasta 2 s).
+- **Ancla del APK desde la raíz**: el ancla SHA-256 se resuelve contra la raíz del repositorio
+  (`config.root`), no contra el directorio de trabajo del proceso. `apkAnchorStatus` distingue
+  «anclado» de «sin ancla» y publica `apkAnchorMissing`; una descarga sin ancla queda marcada como
+  no verificada en vez de presentarse como comprobada.
+
+### Seguridad
+
+- **Rate limit de notas**: cubo de fichas por IP + credencial (resumen SHA-256, nunca la clave) para
+  `POST`/`GET /dsh-companion/notes`: 30 de ráfaga y 0,5/s sostenidos al escribir; 120 de ráfaga y
+  2/s al leer. Al agotarse responde `429` con `Retry-After`. La ráfaga de un teléfono ya no agota el
+  cupo de otro equipo ni permite 40 POST seguidos.
+- **Endurecimiento de codificación**: el puente repara el mojibake inequívoco (UTF-8 leído como
+  Latin-1/cp1252) antes de guardar una nota; si el texto sigue pareciendo roto o mezcla Unicode
+  real, lo **rechaza con 400** en vez de escribir basura. La reparación nunca se aplica dos veces.
+- **Copia offline apagada por defecto** y borrada al desactivarla o al ejecutar el kill switch.
+
+### Corregido
+
+- El signo `$` del catálogo de comandos rompía la inyección del cliente (`$'` en
+  `String.replace`); el patrón se escapa y el catálogo vuelve a mostrarse completo.
+
+### Compatibilidad
+
+- Se instala **encima de la 5.3.7** (`versionCode` 65) sin desinstalar: la firma no cambia desde la
+  5.1.7. El APK 5.4.0 es `versionCode` 66 y el puente y el APK deben actualizarse juntos.
+- Sin dependencias npm nuevas (cero dependencias) y sin cambios en el formato de datos: las notas,
+  los chats sincronizados y el registro de dispositivos se conservan.
+- La 5.4.0 es la versión estable de cierre de la serie 5; las publicaciones posteriores de la línea
+  son solo de seguridad y mantenimiento. Una función nueva o una adaptación a un Harness
+  incompatible saldría como línea nueva.
+
+### Notas de la build
+
+- El commit de origen y el SHA-256 del APK se registran en `RELEASES.json` al compilar el sello de
+  la 5.4.0; hasta entonces ambos campos figuran como `PENDIENTE`. El tamaño del APK se publica con
+  la build.
+
 ## 5.2.10 — `versionCode` 54
 
 Corrección de la línea 5.2 tras la auditoría técnica de la 5.2.9. **Sin funciones nuevas**: cierra

@@ -209,10 +209,17 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     var rowH = rowRect ? rowRect.height : 28;
     var style = window.getComputedStyle(card);
     var padTop = parseFloat(style.paddingTop) || 0;
+    var padBottom = parseFloat(style.paddingBottom) || 0;
     var gap = parseFloat(style.rowGap || style.gap) || 0;
-    var rootPad = 0;
-    try { rootPad = parseFloat(window.getComputedStyle(card.parentElement).paddingBottom) || 0; } catch (e) {}
-    var avail = Math.floor(band - (reserve || 0) - rootPad - padTop - gap - rowH - 2);
+    // El asiento también aporta relleno (arriba y abajo): si solo se restaba su
+    // padding-bottom, la pila se pasaba ~12 px en apaisado mínimo y el borde
+    // superior del compositor quedaba recortado por el scroller.
+    var seatPad = 0;
+    if (seat) {
+      var seatStyle = window.getComputedStyle(seat);
+      seatPad = (parseFloat(seatStyle.paddingTop) || 0) + (parseFloat(seatStyle.paddingBottom) || 0);
+    }
+    var avail = Math.floor(band - (reserve || 0) - seatPad - padTop - padBottom - gap - rowH - 2);
     if (avail < 24) avail = 24;
     if (avail > 96) avail = 96;
     dockCompactScroll = scroll;
@@ -238,15 +245,18 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     dockCompactScroll = null;
   }
 
-  /** Alto de la unica fila compacta del dock en apaisado. */
-  var COMPACT_DOCK_HEIGHT = 34;
+  /** Alto de la unica fila compacta del dock en apaisado (chips de 48 dp + 2). */
+  var COMPACT_DOCK_HEIGHT = 50;
 
   /**
    * Franja minima que necesita el compositor compacto: una linea de escritura
-   * (24 px), la fila de botones (28 px) y el relleno, mas un margen para que no
-   * roce el borde del scroller.
+   * (24 px), la fila de botones (28 px), los rellenos de tarjeta y asiento y el
+   * margen del borde superior.
    */
-  var COMPACT_COMPOSER_MIN = 72;
+  var COMPACT_COMPOSER_MIN = 86;
+
+  /** Alto del boton que abre el dock cuando la fila no cabe (defecto 4: 48 dp). */
+  var COMPACT_LATCH_HEIGHT = 48;
 
   /** Telefono en apaisado: el alto vertical util es escaso. */
   function isShortLandscape() {
@@ -325,10 +335,12 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
   }
 
   /**
-   * Reserva la franja del dock en vez de superponerla: sube el asiento del
-   * compositor (pegado al fondo en DSH) el alto del dock y deja ese mismo hueco
-   * como padding-bottom del scroller, para que la ultima linea del chat pueda
-   * desplazarse por encima del dock. Devuelve false si DSH no ofrece asiento.
+   * Reserva la franja del dock con UN SOLO mecanismo: el padding-bottom del
+   * scroller. Antes tambien se subia el campo bottom del asiento sticky, y las dos
+   * reservas se sumaban: el compositor quedaba 38 px por encima del dock y en el
+   * hueco se veia el texto del chat (defecto 1). Con el padding solo, el asiento
+   * (ultimo hijo del scroller) queda pegado al borde superior del dock y el
+   * contenido puede desplazarse por encima. Devuelve false si no hay scroller.
    */
   function applyDockReserve(pixels) {
     var editor = findEditor();
@@ -337,24 +349,27 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
       return false;
     }
     var seat = findComposerSeat(editor);
-    if (!seat) {
+    var scroller = seat ? findChatScroller(seat) : null;
+    if (!seat && !scroller) {
       restoreDockReserve();
       return false;
     }
-    var scroller = findChatScroller(seat);
     if (seat !== dockReserveSeat || scroller !== dockReserveScroller) {
       restoreDockReserve();
       dockReserveSeat = seat;
       dockReserveScroller = scroller;
-      dockReserveSeatBottom = seat.style.bottom || '';
+      dockReserveSeatBottom = seat ? (seat.style.bottom || '') : '';
       dockReserveScrollerPadding = scroller ? (scroller.style.paddingBottom || '') : '';
       dockReserveScrollerScrollPadding = scroller ? (scroller.style.scrollPaddingBottom || '') : '';
     }
     var size = Math.max(0, Math.round(pixels)) + 'px';
-    seat.style.bottom = size;
     if (scroller) {
       scroller.style.paddingBottom = size;
       scroller.style.scrollPaddingBottom = size;
+    } else {
+      // Sin scroller no hay contenido que apartar: el unico mecanismo posible
+      // es subir el asiento, nunca los dos a la vez.
+      seat.style.bottom = size;
     }
     dockReserveActive = true;
     return true;

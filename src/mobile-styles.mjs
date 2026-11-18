@@ -4,24 +4,22 @@
  * See LICENSE file in repository root for full terms.
  */
 export const MOBILE_STYLES = `
-/*
- * Regla de esta hoja: NO se redefine la geometría de los componentes de DSH.
- *
- * DSH coloca sus menús, listas y paneles con CSS Anchor Positioning y CSS
- * Modules (por ejemplo ModelSelect.module.css declara
- * "position: fixed; position-anchor: ...; bottom: calc(anchor(top) + 8px)").
- * Cualquier "position/inset/overflow" con !important sobre un comodín de clase
- * parcial (del estilo "toda clase que contenga menu") anula ese cálculo y deja
- * el menú clavado en la parte superior de la pantalla, descolgado de su botón.
- * Aquí solo se corrige lo que es propio del móvil: área táctil, desbordes y las
- * vistas propias del Companion (temas Ink y modo libro).
- */
+/* Regla de esta hoja: NO se redefine la geometría de los componentes de DSH
+   (CSS Anchor Positioning y CSS Modules; un comodín de clase anula su cálculo
+   y descolga menús). Solo se corrige lo propio del móvil: área táctil,
+   desbordes, el dock de comandos y las vistas del Companion. */
 :root {
   --dshc-safe-top: env(safe-area-inset-top, 0px);
   --dshc-safe-right: env(safe-area-inset-right, 0px);
   --dshc-safe-bottom: env(safe-area-inset-bottom, 0px);
   --dshc-safe-left: env(safe-area-inset-left, 0px);
+  /* Defecto 5: contorno >= 3:1 y relleno >= 1,5:1 sobre #1b1b1f. */
+  --dshc-chip-bg: rgba(148, 158, 172, 0.34); --dshc-chip-border: rgba(203, 213, 225, 0.90);
+  --dshc-chip-text: var(--dsw-alias-label-primary, #e6edf3); --dshc-separator: rgba(203, 213, 225, 0.45);
 }
+
+/* Tema claro: los mismos ratios, compuestos sobre blanco. */
+body:not([data-ds-dark-theme]) { --dshc-chip-bg: rgba(70, 80, 95, 0.28); --dshc-chip-border: rgba(60, 70, 85, 0.78); --dshc-chip-text: #1f2328; --dshc-separator: rgba(60, 70, 85, 0.42); }
 
 /* "clip" recorta el desborde lateral sin crear un contenedor de scroll: con
    "hidden" se rompen position:sticky y la compensación de scroll de anchor(). */
@@ -62,8 +60,7 @@ article img,
   height: auto;
 }
 
-/* Objetivo táctil mínimo en filas de menú desplegable. No mueve el menú: solo
-   garantiza 44px de alto por fila, que es el mínimo recomendado con el dedo. */
+/* Objetivo táctil mínimo en filas de menú desplegable. */
 @media (pointer: coarse) {
   [role="menuitem"],
   [role="menuitemcheckbox"],
@@ -71,6 +68,35 @@ article img,
   [role="option"] {
     min-height: 44px;
   }
+}
+
+/* --- Dock del compositor: comandos y teclas ------------------------------
+   Defecto 4: chip/tecla de 48 dp de alto y 48 dp de ancho. Defecto 5:
+   contorno y relleno con contraste suficiente sin tocar el color del texto.
+   Defecto 3: filas con scroll horizontal y degradado que lo anuncia. */
+.dsh-chip { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 48px; min-height: 48px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--dshc-chip-border); background: var(--dshc-chip-bg); color: var(--dshc-chip-text); font-size: 12.5px; font-weight: 600; line-height: 1.15; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.dsh-row[data-overflow="1"] { -webkit-mask-image: linear-gradient(to right, #000 0 calc(100% - 18px), transparent 100%); mask-image: linear-gradient(to right, #000 0 calc(100% - 18px), transparent 100%); }
+
+/* --- Hoja inferior del chip "+" -----------------------------------------
+   Defecto 2: ancho útil completo, cabecera fija, cuerpo con scroll propio y
+   "Cerrar" fijo, siempre dentro del viewport. Cada fila mide 48 dp. */
+.dsh-sheet-overlay { background: rgba(0, 0, 0, 0.42); }
+.dsh-sheet { display: flex; flex-direction: column; box-sizing: border-box; width: 100%; max-width: 100%; max-height: min(88vh, 520px); padding: 0; border-radius: 16px 16px 0 0; background: var(--dsw-alias-bg-surface, #1b1b1f); color: var(--dsw-alias-label-primary, #e6edf3); }
+.dsh-sheet-title { flex: 0 0 auto; padding: 12px 14px 8px; border-bottom: 1px solid var(--dshc-separator); font-size: 15px; font-weight: 700; }
+.dsh-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 0 14px 18px; scrollbar-width: thin; }
+.dsh-sheet-body[data-overflow="1"] { -webkit-mask-image: linear-gradient(to bottom, #000 0 calc(100% - 20px), transparent 100%); mask-image: linear-gradient(to bottom, #000 0 calc(100% - 20px), transparent 100%); }
+.dsh-sheet-group { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--dsw-alias-label-secondary, #8c959f); }
+.dsh-sheet-item { display: block; box-sizing: border-box; width: 100%; min-height: 48px; margin: 4px 0; padding: 10px 12px; border: 1px solid var(--dshc-chip-border); border-radius: 10px; background: var(--dshc-chip-bg); color: inherit; font-size: 13px; line-height: 1.35; text-align: left; touch-action: manipulation; }
+.dsh-sheet-item:focus-visible { outline: 2px solid var(--dsw-alias-accent, #388bfd); outline-offset: 2px; }
+.dsh-sheet-close { flex: 0 0 auto; width: auto; margin: 8px 14px calc(10px + env(safe-area-inset-bottom, 0px)); }
+
+/* Apaisado con poco alto: la hoja usa la franja útil y el cierre sigue fijo. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .dsh-sheet { max-height: calc(100% - 4px); border-radius: 12px 12px 0 0; }
+  .dsh-sheet-title { padding: 6px 12px 4px; font-size: 13px; }
+  .dsh-sheet-body { padding: 0 12px 14px; }
+  .dsh-sheet-item { margin: 3px 0; padding: 6px 10px; font-size: 12.5px; }
+  .dsh-sheet-close { margin: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)); }
 }
 
 body:not([data-ds-dark-theme]),
@@ -91,9 +117,8 @@ body[data-ds-dark-theme] {
   color: var(--dsw-alias-label-primary, #e6edf3);
 }
 
-/* Modo Tablet, Plegables y Pantallas Grandes (>= 600px y >= 768px).
-   Solo se limita el ancho del contenido; el compositor de DSH se mide solo y
-   no se redimensiona desde aquí. */
+/* Modo Tablet, Plegables y Pantallas Grandes: solo se limita el ancho del
+   contenido; el compositor de DSH se mide solo y no se redimensiona aquí. */
 @media (min-width: 600px) {
   [class*="chat"], [class*="conversation"], article, .message {
     max-width: min(880px, 92vw) !important;
@@ -109,35 +134,16 @@ body[data-ds-dark-theme] {
 }
 
 /* Modo Apaisado / Horizontal en Smartphones con Altura Reducida.
-   El compositor, el sidebar y el panel derecho se dimensionan para vertical y
-   en 360dp de alto dejan el textarea tapado (HOJA_ERRORES_CAPTURAS.md:65-110).
-   Aquí se contiene el overscroll y se aplica el Plan 2 de esa hoja SOLO bajo
-   esta media query: portrait no se toca. */
+   Implementa el Plan 2 de HOJA_ERRORES_CAPTURAS.md bajo esta media query:
+   sidebar como drawer, panel derecho modal, compositor compacto y menú con
+   max-height corto. Se omiten los selectores genéricos 'aside': son demasiado
+   amplios y fijarían como modal un panel que no es el de herramientas. */
 @media (orientation: landscape) and (max-height: 520px) {
   :where([class*="_groups"], [class*="_paneBody"]) {
     overscroll-behavior: contain;
   }
 
-  /* ==================================================================
-     H-14 · Bloque delimitado: adaptación de landscape en teléfono.
-     Implementa el Plan 2 de HOJA_ERRORES_CAPTURAS.md (líneas 161-214):
-     sidebar como drawer, panel derecho modal, compositor compacto y menú
-     trigger con max-height corto.
-
-     Del propuesto se omiten a propósito los selectores genéricos 'aside' y
-     'aside:last-of-type': son demasiado amplios y podrían fijar como modal un
-     panel de DSH que no es el de herramientas (el propio encabezado de esta
-     hoja advierte de no redefinir geometría por comodines de clase). Se usan
-     solo ganchos de clase/atributo específicos.
-
-     NO VERIFICABLE sin dispositivo: hay que probarlo en un teléfono real en
-     horizontal con el teclado abierto (capturas 02-07 de la hoja). Si DSH
-     cambia sus nombres de clase, estos overrides dejan de aplicar y no rompen
-     nada.
-     ================================================================== */
-
-  /* Sidebar izquierdo: drawer emergente, nunca columna fija que estrangule
-     el chat (capturas 04 y 05). */
+  /* Sidebar izquierdo: drawer emergente, nunca columna fija. */
   [class*="_sidebar_"], [data-sidebar] {
     position: fixed !important;
     top: 0 !important;
@@ -152,8 +158,7 @@ body[data-ds-dark-theme] {
     left: 0 !important;
   }
 
-  /* Panel derecho de herramientas: modal superpuesto en vez de tercera
-     columna cortada por el borde (captura 06). */
+  /* Panel derecho de herramientas: modal superpuesto. */
   [class*="_right_panel_"], [class*="_tool_panel_"] {
     position: fixed !important;
     top: 0 !important;
@@ -165,11 +170,9 @@ body[data-ds-dark-theme] {
   }
 
   /* Compositor en apaisado con teclado (lo marca el cliente al detectarlo).
-     La franja util baja a ~70-100 px y el asiento del compositor es sticky al
-     fondo: si la pila mide mas que el scroller se recorta por ARRIBA y el
-     campo de texto (lo primero de la tarjeta) desaparece aunque la fila de
-     botones se siga viendo. Se compacta a una linea de escritura + botones y
-     se oculta la fila de estadisticas de DSH, que es lo unico prescindible. */
+     La franja útil baja a ~70-100 px y el asiento del compositor es sticky al
+     fondo: se compacta a una línea de escritura + botones y se oculta la fila
+     de estadísticas de DSH, que es lo único prescindible. */
   html[data-dshc-keyboard="1"] [data-composer-dock] {
     display: none !important;
   }
@@ -187,9 +190,8 @@ body[data-ds-dark-theme] {
     min-height: 28px !important;
     transform: none !important;
   }
-  /* El scrollport del borrador es el unico tope: ~una linea visible y el resto
-     se desplaza dentro (DSH revela el caret). Asi el texto no empuja la
-     tarjeta fuera de la franja; el cliente afina el alto segun el hueco real. */
+  /* El scrollport del borrador es el único tope: ~una línea visible y el resto
+     se desplaza dentro (DSH revela el caret). El cliente afina el alto. */
   html[data-dshc-keyboard="1"] [data-input-scroll] {
     max-height: 30px !important;
   }
@@ -204,8 +206,8 @@ body[data-ds-dark-theme] {
     max-width: 36px !important;
   }
 
-  /* Menú trigger / slash: no debe invadir cabecera y pestañas (captura 02);
-     con scroll interno si hay más opciones de las que caben. */
+  /* Menú trigger / slash: no debe invadir cabecera y pestañas; con scroll
+     interno si hay más opciones de las que caben. */
   [data-trigger-menu], [class*="pc3rQa_menu"] {
     max-height: 120px !important;
     overflow-y: auto !important;
@@ -381,14 +383,4 @@ body[data-ds-theme="ink-paper"] *,
 html.ink-paper * {
   border-color: #E5E2DC;
 }
-
-/* Hoja inferior del chip "+" (comandos y teclas que no caben): filas de 48 dp
-   con descripción en el aria-label y scroll propio. En apaisado con teclado
-   nunca supera el 72% del alto visible, así que el campo no queda tapado. */
-.dsh-sheet-overlay { background: rgba(0, 0, 0, 0.42); }
-.dsh-sheet { max-height: min(72vh, 520px); overflow-y: auto; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px)) 14px; border-radius: 16px 16px 0 0; background: var(--dsw-alias-bg-surface, #1b1b1f); color: var(--dsw-alias-label-primary, #e6edf3); }
-.dsh-sheet-title { font-size: 15px; font-weight: 700; }
-.dsh-sheet-group { margin: 10px 0 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--dsw-alias-label-secondary, #8c959f); }
-.dsh-sheet-item { display: block; box-sizing: border-box; width: 100%; min-height: 48px; margin: 4px 0; padding: 10px 12px; border: 1px solid rgba(128, 128, 128, 0.4); border-radius: 10px; background: rgba(128, 128, 128, 0.12); color: inherit; font-size: 13px; line-height: 1.35; text-align: left; touch-action: manipulation; }
-.dsh-sheet-item:focus-visible { outline: 2px solid var(--dsw-alias-accent, #388bfd); outline-offset: 2px; }
 `.trim();

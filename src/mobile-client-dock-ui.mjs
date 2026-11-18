@@ -32,20 +32,20 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     }
     var card = composerCardRect(editor);
     var vh = viewportHeight();
-    var dockHeight = dock.offsetHeight || 92;
-    var gap = 6;
+    var dockHeight = dock.offsetHeight || 120;
+    var gap = 8;
 
     var below = Math.round(card.bottom + gap);
     if (below + dockHeight <= vh - 4) {
       dock.style.top = below + 'px';
       dock.style.borderRadius = '0 0 14px 14px';
-      dock.style.borderTop = '1px solid rgba(128,128,128,0.35)';
+      dock.style.borderTop = '1px solid var(--dshc-separator)';
       dock.style.borderBottom = 'none';
     } else {
       var above = Math.round(card.top - dockHeight - gap);
       dock.style.top = Math.max(4, above) + 'px';
       dock.style.borderRadius = '14px 14px 0 0';
-      dock.style.borderBottom = '1px solid rgba(128,128,128,0.35)';
+      dock.style.borderBottom = '1px solid var(--dshc-separator)';
     }
     dock.style.bottom = 'auto';
 
@@ -78,26 +78,44 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     } catch(e) {}
   }
 
+  /** Chip del dock. Alto, ancho y contraste vienen de la hoja (.dsh-chip:
+   * 48 dp y colores con ratio verificado); aquí solo el matiz de cada modo. */
   function compactButton(label, extraCss, onClick, ariaLabel) {
     var btn = document.createElement('button');
     btn.type = 'button';
+    btn.className = 'dsh-chip';
     btn.textContent = label;
     if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
-    btn.style.cssText = 'flex:0 0 auto;min-height:30px;padding:0 10px;border-radius:8px;border:1px solid rgba(128,128,128,0.40);background:rgba(128,128,128,0.14);color:inherit;font-size:12px;font-weight:600;line-height:1.15;white-space:nowrap;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;' + (extraCss || '');
+    btn.style.cssText = 'flex:0 0 auto;' + (extraCss || '');
     preventFocusLoss(btn);
     btn.onclick = onClick;
     return btn;
+  }
+
+  /** Marca una fila con scroll horizontal para que el CSS enseñe el degradado
+   * del borde derecho (defecto 3): sin él, un chip cortado parece un fallo. */
+  function dshMarkRowOverflow(el) {
+    if (!el) return;
+    if (el.scrollWidth > el.clientWidth + 1) el.setAttribute('data-overflow', '1');
+    else el.removeAttribute('data-overflow');
+  }
+
+  function dshMarkAllRowOverflow() {
+    ['dsh-dock-compact', 'dsh-quick-actions', 'dsh-code-keys'].forEach(function(id) {
+      dshMarkRowOverflow(document.getElementById(id));
+    });
   }
 
   /** Fila unica del apaisado: comandos y teclas en un scroll horizontal. */
   function buildCompactRow() {
     var row = document.createElement('div');
     row.id = 'dsh-dock-compact';
+    row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Comandos y teclas');
-    row.style.cssText = 'display:none;align-items:center;gap:4px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;';
+    row.style.cssText = 'display:none;align-items:center;gap:8px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 10px;';
 
-    row.appendChild(compactButton('⌨', 'min-width:32px;padding:0 8px;', function(e) {
+    row.appendChild(compactButton('Ocultar', 'min-width:48px;padding:0 10px;', function(e) {
       e.preventDefault();
       e.stopPropagation();
       haptic('tick');
@@ -107,12 +125,12 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
 
     var quick = document.createElement('div');
     quick.id = 'dsh-compact-quick';
-    quick.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
+    quick.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;';
     row.appendChild(quick);
 
     var keys = document.createElement('div');
     keys.id = 'dsh-compact-keys';
-    keys.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
+    keys.style.cssText = 'display:flex;align-items:center;gap:8px;flex:0 0 auto;';
     row.appendChild(keys);
 
     return row;
@@ -126,9 +144,11 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     latch = document.createElement('button');
     latch.id = 'dsh-dock-latch';
     latch.type = 'button';
-    latch.textContent = '⌨ Comandos';
+    latch.className = 'dsh-chip';
+    // Defecto 6: ni glifos de teclado ni sólo iconos; texto claro y corto.
+    latch.textContent = 'Más';
     latch.setAttribute('aria-label', 'Abrir comandos y teclas');
-    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;align-items:center;min-height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(128,128,128,0.45);background:#1b1b1f;color:#e6edf3;font-size:12px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,0.45);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;min-height:48px;padding:0 16px;border-radius:24px;box-shadow:0 2px 10px rgba(0,0,0,0.45);';
     preventFocusLoss(latch);
     latch.onclick = function(e) {
       e.preventDefault();
@@ -150,8 +170,8 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     if (!latch) return;
     var card = composerCardFor(editor);
     var cardRect = card ? card.getBoundingClientRect() : editor.getBoundingClientRect();
-    var top = Math.round(cardRect.top - 34);
-    var limit = visibleBottomEdge() - 38;
+    var top = Math.round(cardRect.top - COMPACT_LATCH_HEIGHT - 6);
+    var limit = visibleBottomEdge() - COMPACT_LATCH_HEIGHT - 6;
     if (top > limit) top = limit;
     if (top < 4) top = 4;
     latch.style.top = top + 'px';
@@ -205,13 +225,14 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
       dock.style.flexDirection = 'column';
       dock.style.alignItems = 'stretch';
-      dock.style.gap = '5px';
+      dock.style.gap = '8px';
       dock.style.height = 'auto';
-      dock.style.padding = '5px 10px 6px 10px';
+      dock.style.padding = '8px 10px 10px 10px';
       dock.style.left = '0';
       dock.style.right = '0';
       setDockDisplay(dock, true);
       if (!positionClassicDock(dock, editor)) paintDockSurface(dock, editor);
+      dshMarkAllRowOverflow();
       return;
     }
 
@@ -234,15 +255,19 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var rowRoom = band >= COMPACT_DOCK_HEIGHT + COMPACT_COMPOSER_MIN;
     var mode = rowRoom && dockCompactOpen !== false ? 'row'
       : dockCompactOpen === true ? 'overlay' : 'latch';
+    // En 'latch' el boton ocupa la franja por encima del compositor: el
+    // borrador se recorta para dejarle sitio y no tapar el campo.
+    var latchReserve = mode === 'latch' ? COMPACT_LATCH_HEIGHT + 6 : 0;
     var reserve = mode === 'row' ? COMPACT_DOCK_HEIGHT + inset : inset;
     if (reserve > 0) applyDockReserve(reserve);
     else restoreDockReserve();
-    fitComposerScroll(editor, seat, band, mode === 'row' ? COMPACT_DOCK_HEIGHT : 0);
+    fitComposerScroll(editor, seat, band, mode === 'row' ? COMPACT_DOCK_HEIGHT : latchReserve);
 
     if (mode === 'latch') {
       setDockDisplay(dock, false);
       if (compactRow) compactRow.style.display = 'none';
       positionDockLatch(latch, editor);
+      dshMarkAllRowOverflow();
       return;
     }
     if (latch) latch.style.display = 'none';
@@ -254,38 +279,44 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     dock.style.left = '0';
     dock.style.right = '0';
     dock.style.borderRadius = '0';
-    dock.style.borderTop = '1px solid rgba(128,128,128,0.35)';
+    dock.style.borderTop = '1px solid var(--dshc-separator)';
     dock.style.borderBottom = 'none';
     if (mode === 'row') {
       dock.style.top = 'auto';
       dock.style.bottom = inset + 'px';
       dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
     } else {
-      // Apaisado muy justo: la fila se superpone a la fila de botones de DSH,
-      // justo debajo de la linea de texto; el campo sigue visible y editable.
+      // Apaisado muy justo: la fila compacta se abre superpuesta POR ENCIMA de
+      // la fila de botones de DSH. Con chips de 48 dp ya no cabe en los 28 px de
+      // esa fila: se ancla su borde inferior justo sobre ella para no recortar
+      // el chip y dejar el campo lo más visible posible.
       var rowRect = composerRowRect(editor);
       var editorRect = editor.getBoundingClientRect();
+      var rowTop = rowRect ? rowRect.top : editorRect.bottom + 4;
       dock.style.bottom = 'auto';
-      dock.style.top = Math.max(4, Math.round((rowRect ? rowRect.top : editorRect.bottom + 4) - 2)) + 'px';
-      dock.style.height = Math.round((rowRect ? rowRect.height : 28) + 2) + 'px';
+      dock.style.top = Math.max(4, Math.round(rowTop - COMPACT_DOCK_HEIGHT - 2)) + 'px';
+      dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
     }
     setDockDisplay(dock, true);
     paintDockSurface(dock, editor);
+    dshMarkAllRowOverflow();
   }
 
   function buildQuickActionsRow() {
     var row = document.createElement('div');
     row.id = 'dsh-quick-actions';
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;';
+    row.className = 'dsh-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:18px;';
     return row;
   }
 
   function buildCodeKeysRow() {
     var row = document.createElement('div');
     row.id = 'dsh-code-keys';
+    row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Teclas de programacion');
-    row.style.cssText = 'display:flex;align-items:stretch;gap:6px;width:100%;user-select:none;-webkit-user-select:none;';
+    row.style.cssText = 'display:flex;align-items:stretch;gap:8px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;user-select:none;-webkit-user-select:none;padding-right:18px;';
     return row;
   }
 
@@ -310,7 +341,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     dock.id = 'dsh-composer-dock';
     dock.setAttribute('data-visible', '0');
     dock.setAttribute('aria-hidden', 'true');
-    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:5px;width:100%;box-sizing:border-box;padding:5px 10px 6px 10px;border-top:1px solid rgba(128,128,128,0.35);';
+    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:8px;width:100%;box-sizing:border-box;padding:8px 10px 10px 10px;border-top:1px solid var(--dshc-separator);';
 
     dock.appendChild(buildQuickActionsRow());
     dock.appendChild(buildCodeKeysRow());

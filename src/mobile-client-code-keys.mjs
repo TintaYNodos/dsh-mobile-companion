@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  * See LICENSE file in repository root for full terms.
  */
-
 /**
- * Catalogo aprobado de comandos rapidos y teclas de codigo: seleccion de los
- * 4 chips del dock (el resto detras de "+"), hoja inferior agrupada con
- * descripcion y toque para insertar, y manejo de teclas. El perfil y los ids
- * activos llegan de Ajustes por __DSH_SET_DOCK_PREFS__; sin APK se usan los
- * valores por defecto.
+ * Catalogo de comandos rapidos y teclas: los 4 chips del dock, el resto
+ * (siempre) detras de "+" y la hoja agrupada con descripcion y toque para
+ * insertar. El perfil y los ids activos llegan de Ajustes por
+ * __DSH_SET_DOCK_PREFS__; sin APK se usan los valores por defecto.
  */
 export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y prompt con imperativo, alcance,
   // formato y limite explicito. Notas va siempre y no se desactiva.
@@ -46,8 +44,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   }
 
   // Orden pedido: activos, luego Continuar y al final Notas (fija). Se pintan
-  // 4 y el resto va a la hoja inferior del chip "+"; Notas no cuenta. Con
-  // perfil "auto" y la lista por defecto de escritura manda el uso real.
+  // 4; Notas no cuenta y no entra en la hoja porque nunca se oculta.
   function dshQuickChips() {
     var active = dshNormalizeActive(dockPrefs.activos);
     if (dockPrefs.perfil === 'auto' && active.join(',') === QUICK_DEFAULT_ESCRITURA.join(',')) {
@@ -55,7 +52,13 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
     }
     var ordered = active.filter(function(id) { return id !== 'continuar'; });
     if (active.indexOf('continuar') >= 0) ordered.push('continuar');
-    return { visible: ordered.slice(0, 4), overflow: ordered.slice(4) };
+    var visible = ordered.slice(0, 4);
+    // Defecto 7: "+" SIEMPRE, tambien con 4 comandos o menos, para descubrir el
+    // resto del catalogo aunque no haya desbordamiento de los activos.
+    var overflow = QUICK_COMMANDS.map(function(cmd) { return cmd.id; }).filter(function(id) {
+      return id !== 'notas' && visible.indexOf(id) < 0;
+    });
+    return { visible: visible, overflow: overflow };
   }
 
   // Perfil efectivo: con "auto" manda el grupo mas usado; sin uso, escritura.
@@ -99,9 +102,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
     { id: 'alt', label: 'Alt', kind: 'event', event: 'Alt', desc: 'Envía Alt sin cerrar el teclado.' },
     { id: 'comments', label: '//', kind: 'text', text: '// ', desc: 'Comentario de línea.' },
     { id: 'arrow.fn', label: '=>', kind: 'text', text: ' => ', desc: 'Flecha de función.' },
-    // El signo dolar va con fromCharCode: este catalogo viaja dentro del
-    // reemplazo de String.replace que arma el HTML (mobile.mjs) y un literal
-    // del signo seguido de comilla simple truncaria todo el script inyectado.
+    // El signo dolar va con fromCharCode: un literal rompe String.replace (mobile.mjs).
     { id: 'dollar', label: String.fromCharCode(36), kind: 'text', text: String.fromCharCode(36), desc: 'Signo de dólar.' },
     { id: 'hash', label: '#', kind: 'text', text: '#', desc: 'Numeral.' },
     { id: 'amp', label: '&', kind: 'text', text: '&', desc: 'Ampersand.' },
@@ -246,7 +247,6 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   function dshChipButton(label, aria, extraCss, onClick) {
     return compactButton(label, extraCss, function(e) { e.preventDefault(); e.stopPropagation(); onClick(); }, aria);
   }
-
   function dshInsertQuick(cmd) {
     haptic('confirm');
     dshUsageBump(cmd.grupo);
@@ -256,17 +256,16 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   function dshRenderQuickChips(container, compact) {
     var chips = dshQuickChips();
     var notas = QUICK_BY_ID.notas;
-    var css = compact ? 'font-size:11.5px;padding:0 9px;' : 'border-radius:15px;padding:0 12px;';
+    var css = compact ? 'font-size:11.5px;padding:0 8px;' : 'border-radius:15px;padding:0 9px;';
     container.textContent = '';
     chips.visible.forEach(function(id) {
       var cmd = QUICK_BY_ID[id];
       container.appendChild(dshChipButton(cmd.label, cmd.label + ': ' + cmd.desc, css, function() { dshInsertQuick(cmd); }));
     });
-    if (chips.overflow.length) {
-      container.appendChild(dshChipButton('+', 'Más comandos', 'min-width:34px;padding:0 9px;font-weight:700;', function() {
-        dshOpenSheet('comandos', chips.overflow);
-      }));
-    }
+    // Defecto 7: el "+" se ofrece siempre (aunque solo haya 4 activos).
+    container.appendChild(dshChipButton('+', 'Más comandos', 'min-width:48px;padding:0 10px;font-weight:700;', function() {
+      dshOpenSheet('comandos', chips.overflow);
+    }));
     container.appendChild(dshChipButton(notas.label, notas.label + ': ' + notas.desc, css, function() {
       dshInsertQuick(notas);
     }));
@@ -274,7 +273,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
 
   function dshRenderKeyChips(container, compact) {
     var chips = dshKeyChips();
-    var css = (compact ? 'min-width:34px;padding:0 8px;' : 'flex:1 1 0;min-width:0;min-height:32px;')
+    var css = (compact ? 'padding:0 10px;' : 'flex:1 1 auto;')
       + 'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;';
     container.textContent = '';
     chips.visible.forEach(function(id) {
@@ -283,18 +282,13 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
         handleCodeKey(id);
       }));
     });
-    if (chips.overflow.length) {
-      container.appendChild(dshChipButton('+', 'Más teclas', 'min-width:34px;padding:0 8px;font-weight:700;', function() {
-        dshOpenSheet('teclas', chips.overflow);
-      }));
-    }
+    // Defecto 6/7: texto claro en la etiqueta accesible y "+" siempre presente.
+    container.appendChild(dshChipButton('+', 'Más teclas', 'min-width:48px;padding:0 10px;font-weight:700;', function() {
+      dshOpenSheet('teclas', chips.overflow);
+    }));
   }
-
   var dshChipsSignature = '';
-  /**
-   * Repinta los chips solo si cambio el perfil, los activos o el perfil
-   * efectivo; las filas nuevas (dock recreado por DSH) tambien se repintan.
-   */
+  // Repinta solo si cambio perfil/activos o si DSH recreo las filas.
   function dshRefreshDockChips() {
     var rows = [['dsh-quick-actions', false], ['dsh-code-keys', false], ['dsh-compact-quick', true], ['dsh-compact-keys', true]];
     var signature = [dockPrefs.perfil, dshEffectiveProfile(), dshNormalizeActive(dockPrefs.activos).join(',')].join('|');
@@ -311,8 +305,8 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
       if (row[0].indexOf('quick') >= 0) dshRenderQuickChips(container, row[1]);
       else dshRenderKeyChips(container, row[1]);
     });
+    dshMarkAllRowOverflow();
   }
-
   var dshSheetNode = null;
   function dshCloseSheet() {
     try { if (dshSheetNode) dshSheetNode.remove(); } catch(e) {}
@@ -320,10 +314,8 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   }
   function dshSheetItem(label, desc, action) {
     var item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'dsh-sheet-item';
-    item.textContent = label + ' — ' + desc;
-    item.setAttribute('aria-label', label + '. ' + desc);
+    item.type = 'button'; item.className = 'dsh-sheet-item';
+    item.textContent = label + ' — ' + desc; item.setAttribute('aria-label', label + '. ' + desc);
     preventFocusLoss(item);
     item.onclick = function(e) { e.preventDefault(); e.stopPropagation(); action(); };
     return item;
@@ -331,17 +323,21 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
   function dshSheetGroup(sheet, title, entries, onPick) {
     if (!entries.length) return;
     var heading = document.createElement('div');
-    heading.className = 'dsh-sheet-group';
-    heading.textContent = title;
+    heading.className = 'dsh-sheet-group'; heading.textContent = title;
     sheet.appendChild(heading);
-    entries.forEach(function(entry) {
-      sheet.appendChild(dshSheetItem(entry.label, entry.desc, function() { onPick(entry); }));
-    });
+    entries.forEach(function(entry) { sheet.appendChild(dshSheetItem(entry.label, entry.desc, function() { onPick(entry); })); });
+  }
+  /** Degradado inferior de la hoja cuando su cuerpo tiene mas filas que alto. */
+  function dshMarkSheetScroll(body) {
+    if (!body) return;
+    if (body.scrollHeight > body.clientHeight + 1) body.setAttribute('data-overflow', '1');
+    else body.removeAttribute('data-overflow');
   }
   /**
    * Hoja inferior del chip "+": comandos agrupados Escribir/Codigo/Trabajo o
-   * las teclas que no caben. Cada fila mide 48 dp y su aria-label lleva la
-   * descripcion. No se lleva el foco al dialogo: el teclado no se cierra.
+   * las teclas que no caben. Cabecera y "Cerrar" fijos; el cuerpo tiene scroll
+   * propio (defecto 2) y cada fila mide 48 dp. El foco no se lleva al dialogo:
+   * asi el teclado no se cierra.
    */
   function dshOpenSheet(kind, ids) {
     dshCloseSheet();
@@ -359,6 +355,9 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
     title.className = 'dsh-sheet-title';
     title.textContent = kind === 'teclas' ? 'Más teclas' : 'Más comandos';
     sheet.appendChild(title);
+    var body = document.createElement('div');
+    body.className = 'dsh-sheet-body';
+    sheet.appendChild(body);
     overlay.appendChild(sheet);
     dshSheetNode = overlay;
     if (kind === 'teclas') {
@@ -366,7 +365,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
         var entries = CODE_KEY_CATALOG.filter(function(entry) {
           return ids.indexOf(entry.id) >= 0 && entry.kind === category;
         });
-        dshSheetGroup(sheet, KEY_KIND_LABELS[category], entries, function(entry) {
+        dshSheetGroup(body, KEY_KIND_LABELS[category], entries, function(entry) {
           dshCloseSheet();
           handleCodeKey(entry.id);
         });
@@ -376,7 +375,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
         var entries = ids.map(function(id) { return QUICK_BY_ID[id]; }).filter(function(entry) {
           return entry && entry.grupo === grupo;
         });
-        dshSheetGroup(sheet, QUICK_GROUPS[grupo], entries, function(entry) {
+        dshSheetGroup(body, QUICK_GROUPS[grupo], entries, function(entry) {
           dshCloseSheet();
           dshInsertQuick(entry);
         });
@@ -384,7 +383,7 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
     }
     var close = document.createElement('button');
     close.type = 'button';
-    close.className = 'dsh-sheet-item';
+    close.className = 'dsh-sheet-item dsh-sheet-close';
     close.textContent = 'Cerrar';
     close.setAttribute('aria-label', 'Cerrar la hoja');
     close.onclick = function(e) { e.preventDefault(); e.stopPropagation(); dshCloseSheet(); };
@@ -394,6 +393,6 @@ export const MOBILE_CLIENT_CODE_KEYS = `  // Catalogo unico: id estable, grupo y
       if (e.key === 'Escape') { e.preventDefault(); dshCloseSheet(); }
     });
     (document.body || document.documentElement).appendChild(overlay);
+    dshMarkSheetScroll(body);
   }
-
 `;

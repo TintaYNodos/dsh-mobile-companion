@@ -185,6 +185,32 @@ export const MOBILE_CLIENT_EDITOR = `  /**
   document.addEventListener('selectionchange', scheduleTypedTextCheck);
   window.addEventListener('keyup', scheduleTypedTextCheck, true);
 
+  /** Scrollport del borrador: DSH lo marca con data-input-scroll. */
+  function findComposerScrollport() {
+    try { return document.querySelector('[data-input-scroll]'); } catch (e) { return null; }
+  }
+
+  /**
+   * Tope del area de texto: 35 % del alto visible y nunca mas de 160 px en
+   * vertical ni 72 px en apaisado. Sin tope el borrador crecia sin limite,
+   * subia por encima del dock de comandos y lo tapaba (capturas 1080x2400).
+   */
+  function composerMaxHeight() {
+    var vh = viewportHeight();
+    var landscape = window.innerWidth > window.innerHeight && vh <= 520;
+    return Math.max(24, Math.min(Math.round(vh * 0.35), landscape ? 72 : 160));
+  }
+
+  /** Aplica el tope al scrollport (el resto del borrador se desplaza dentro). */
+  function setComposerScrollCap(px) {
+    var scroll = findComposerScrollport();
+    if (!scroll) return 0;
+    var value = Math.max(24, Math.round(px));
+    dockCompactScroll = scroll;
+    scroll.style.setProperty('max-height', value + 'px', 'important');
+    return value;
+  }
+
   function composerTargetFor(event) {
     if (isComposerTarget(event.target)) return event.target;
     var active = document.activeElement;
@@ -248,5 +274,93 @@ export const MOBILE_CLIENT_EDITOR = `  /**
       }
     }
   }, true);
+
+  /**
+   * Recorta el borrador para que la tarjeta deje sitio al dock encima. Se mide
+   * la tarjeta REAL (data-composer-card), no la union con ancestros: con la
+   * union, el dock quedaba 1-2 px sobre el borde de la tarjeta. Devuelve esa
+   * tarjeta ya medida despues del recorte.
+   */
+  function fitClassicComposer(editor, dockHeight, gap) {
+    var card = composerCardFor(editor);
+    if (!card) return null;
+    var scroll = findComposerScrollport();
+    var cardRect = card.getBoundingClientRect();
+    if (scroll) {
+      var fixed = Math.max(0, cardRect.height - scroll.getBoundingClientRect().height);
+      // Lo que puede medir el borrador sin que la tarjeta suba por encima del
+      // dock: el campo hace scroll en vez de empujar el dock fuera.
+      var above = Math.floor(cardRect.bottom - 4 - dockHeight - gap - fixed);
+      setComposerScrollCap(Math.min(composerMaxHeight(), above));
+    }
+    return card.getBoundingClientRect();
+  }
+
+  /**
+   * Modo vertical y pantallas altas: dos filas junto a la tarjeta, debajo si
+   * caben y si no encima. Antes de colocar se recorta el borrador (35 % / 160
+   * px) y, si aun asi el dock no cabe entero, hace scroll interno: la segunda
+   * fila sigue siendo alcanzable y nunca queda recortada por el borde inferior.
+   * No se oculta el dock por solape: el compositor cede, no el dock.
+   */
+  function positionClassicDock(dock, editor) {
+    var rect = editor.getBoundingClientRect();
+    if (!rect || !rect.height) { setDockDisplay(dock, false); return true; }
+    // Tope base SIEMPRE (tambien si el dock cabe debajo): el borrador no puede
+    // crecer mas del 35 % del alto visible ni de 160 px.
+    setComposerScrollCap(composerMaxHeight());
+    var gap = 8;
+    var vh = visibleBottomEdge();
+    var bottomLimit = vh - 4;
+    // Se mide el alto NATURAL: si el tick anterior dejo el dock con scroll
+    // interno, su alto recortado no sirve para recolocarlo.
+    dock.style.maxHeight = '';
+    dock.style.overflowY = 'visible';
+    var dockHeight = dock.offsetHeight || 120;
+    var card = composerCardFor(editor);
+    var cardRect = card ? card.getBoundingClientRect() : composerCardRect(editor);
+    var below = Math.round(cardRect.bottom + gap);
+    if (below + dockHeight > bottomLimit) {
+      var measured = fitClassicComposer(editor, dockHeight, gap);
+      if (measured) cardRect = measured;
+      below = Math.round(cardRect.bottom + gap);
+    }
+    var belowFits = below + dockHeight <= bottomLimit;
+    var top;
+    if (belowFits) {
+      top = below;
+      dock.style.borderRadius = '0 0 14px 14px';
+      dock.style.borderTop = '1px solid var(--dshc-separator)';
+      dock.style.borderBottom = 'none';
+    } else {
+      top = Math.max(4, Math.round(cardRect.top - dockHeight - gap));
+      dock.style.borderRadius = '14px 14px 0 0';
+      dock.style.borderTop = 'none';
+      dock.style.borderBottom = '1px solid var(--dshc-separator)';
+    }
+    var room = belowFits ? bottomLimit - top : Math.max(0, Math.round(cardRect.top - gap - 4));
+    var scrollable = dockHeight > room + 0.5;
+    dock.style.maxHeight = scrollable ? Math.max(48, room) + 'px' : '';
+    dock.style.overflowY = scrollable ? 'auto' : 'visible';
+    dock.style.overflowX = scrollable ? 'hidden' : '';
+    dock.style.top = top + 'px';
+    dock.style.bottom = 'auto';
+    // Red de seguridad: si el borrador aun cruzara el borde inferior del dock,
+    // se recorta por la diferencia y se recoloca en el mismo frame.
+    var sp = findComposerScrollport();
+    if (sp) {
+      var visibleTop = sp.getBoundingClientRect().top;
+      var dockBottom = top + Math.min(dockHeight, room);
+      if (visibleTop < dockBottom + gap - 0.5) {
+        var newCap = sp.getBoundingClientRect().height - Math.ceil(dockBottom + gap - visibleTop);
+        if (newCap >= 24 && card) {
+          setComposerScrollCap(newCap);
+          cardRect = card.getBoundingClientRect();
+          dock.style.top = Math.max(4, Math.round(cardRect.top - dockHeight - gap)) + 'px';
+        }
+      }
+    }
+    return false;
+  }
 
 `;

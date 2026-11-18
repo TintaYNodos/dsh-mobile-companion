@@ -19,42 +19,10 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       dock.style.display = visible ? 'flex' : 'none';
       if (visible) dock.removeAttribute('aria-hidden');
       else dock.setAttribute('aria-hidden', 'true');
+      // Al reaparecer, las filas vuelven al principio: el primer chip no queda
+      // cortado a la mitad (defecto: se veia «Escena» a medias al reabrir).
+      if (visible) dshResetRowScroll();
     }
-  }
-
-  /** Modo de siempre (vertical y pantallas altas): dos filas pegadas a la
-   * tarjeta, por abajo o por arriba; true si hubo que ocultarlo. */
-  function positionClassicDock(dock, editor) {
-    var rect = editor.getBoundingClientRect();
-    if (!rect || !rect.height) {
-      setDockDisplay(dock, false);
-      return true;
-    }
-    var card = composerCardRect(editor);
-    var vh = viewportHeight();
-    var dockHeight = dock.offsetHeight || 120;
-    var gap = 8;
-
-    var below = Math.round(card.bottom + gap);
-    if (below + dockHeight <= vh - 4) {
-      dock.style.top = below + 'px';
-      dock.style.borderRadius = '0 0 14px 14px';
-      dock.style.borderTop = '1px solid var(--dshc-separator)';
-      dock.style.borderBottom = 'none';
-    } else {
-      var above = Math.round(card.top - dockHeight - gap);
-      dock.style.top = Math.max(4, above) + 'px';
-      dock.style.borderRadius = '14px 14px 0 0';
-      dock.style.borderBottom = '1px solid var(--dshc-separator)';
-    }
-    dock.style.bottom = 'auto';
-
-    var topPx = parseFloat(dock.style.top) || 0;
-    if (topPx < rect.bottom + 2 && topPx + dockHeight > rect.top - 2) {
-      setDockDisplay(dock, false);
-      return true;
-    }
-    return false;
   }
 
   /**
@@ -92,17 +60,42 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     return btn;
   }
 
-  /** Marca una fila con scroll horizontal para que el CSS enseñe el degradado
-   * del borde derecho (defecto 3): sin él, un chip cortado parece un fallo. */
+  /** Estado de scroll de una fila: data-overflow (hay mas contenido),
+   * data-overflow-start / data-overflow-end para el degradado de cada extremo.
+   * Al desplazar se recalcula: el chip cortado siempre tiene contexto visual y
+   * al volver al inicio no queda un degradado izquierdo fijo. */
+  function dshRowScrollState(el) {
+    var max = el.scrollWidth - el.clientWidth;
+    if (max > 1) el.setAttribute('data-overflow', '1');
+    else el.removeAttribute('data-overflow');
+    if (max > 1 && el.scrollLeft > 1) el.setAttribute('data-overflow-start', '1');
+    else el.removeAttribute('data-overflow-start');
+    if (max > 1 && el.scrollLeft < max - 1) el.setAttribute('data-overflow-end', '1');
+    else el.removeAttribute('data-overflow-end');
+  }
+
   function dshMarkRowOverflow(el) {
     if (!el) return;
-    if (el.scrollWidth > el.clientWidth + 1) el.setAttribute('data-overflow', '1');
-    else el.removeAttribute('data-overflow');
+    if (el.__dshRowScroll !== true) {
+      el.__dshRowScroll = true;
+      el.addEventListener('scroll', function() { dshRowScrollState(el); }, { passive: true });
+    }
+    dshRowScrollState(el);
   }
 
   function dshMarkAllRowOverflow() {
     ['dsh-dock-compact', 'dsh-quick-actions', 'dsh-code-keys'].forEach(function(id) {
       dshMarkRowOverflow(document.getElementById(id));
+    });
+  }
+
+  /** Devuelve las filas al inicio (sin primer chip cortado). */
+  function dshResetRowScroll() {
+    ['dsh-dock-compact', 'dsh-quick-actions', 'dsh-code-keys'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.scrollLeft = 0;
+      dshMarkRowOverflow(el);
     });
   }
 
@@ -216,9 +209,10 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
 
     if (!tightLandscape) {
       // Comportamiento de siempre (vertical y pantallas altas): sin reservar.
+      // El tope del borrador se reaplica al colocar el dock; no se devuelve el
+      // scroll de DSH aqui o el texto se iria al principio en cada tick.
       dockCompactOpen = null;
       restoreDockReserve();
-      restoreComposerScroll();
       if (compactRow) compactRow.style.display = 'none';
       if (latch) latch.style.display = 'none';
       if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
@@ -281,6 +275,10 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     dock.style.borderRadius = '0';
     dock.style.borderTop = '1px solid var(--dshc-separator)';
     dock.style.borderBottom = 'none';
+    // Sin restos del modo vertical (tope/scroll del bloque clasico).
+    dock.style.maxHeight = '';
+    dock.style.overflowY = '';
+    dock.style.overflowX = '';
     if (mode === 'row') {
       dock.style.top = 'auto';
       dock.style.bottom = inset + 'px';
@@ -332,6 +330,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var dock = document.getElementById('dsh-composer-dock');
     if (dock && dock.isConnected !== false) {
       if (!document.getElementById('dsh-dock-compact')) dock.appendChild(buildCompactRow());
+      observeEditorForDock();
       updateComposerDockVisibility();
       return;
     }
@@ -354,27 +353,42 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
 
   var dockObserver = null;
   var dockObserverTarget = null;
+  var dockObserverCard = null;
 
   /**
-   * El compositor crece al escribir (hasta 36 px por linea nueva). Sin observar
-   * su tamano, el bloque se quedaba quieto y el editor lo alcanzaba durante
-   * unos 300 ms. ResizeObserver lo sube en cuanto el editor cambia.
+   * El compositor crece al escribir. El ResizeObserver del editor Y de la
+   * tarjeta recoloca el dock con el alto real en cada cambio; el tope del
+   * borrador lo aplica el cliente, asi que el dock no se mueve solo.
    */
   function observeEditorForDock() {
     if (typeof ResizeObserver === 'undefined') return;
     var editor = findEditor();
-    if (!editor || editor === dockObserverTarget) return;
+    if (!editor) return;
+    var card = composerCardFor(editor);
+    if (editor === dockObserverTarget && card === dockObserverCard && dockObserver) return;
     if (dockObserver) dockObserver.disconnect();
     dockObserverTarget = editor;
+    dockObserverCard = card;
     dockObserver = new ResizeObserver(function() {
       // Sincrono y no via requestAnimationFrame: el callback del observer corre
       // tras el layout y ANTES del paint, asi el dock se recoloca en el mismo
-      // frame y no se ve ni un frame con el editor encima. El dock es
-      // position:fixed, no altera el tamano del editor, no hay realimentacion.
+      // frame. El dock es position:fixed, no altera el tamano del editor.
       updateComposerDockVisibility();
     });
     dockObserver.observe(editor);
+    if (card) dockObserver.observe(card);
   }
+
+  // Recoloca tambien en cada input (el ResizeObserver puede llegar un frame
+  // despues si el texto solo desplaza el contenido dentro del scrollport).
+  var dockInputTimer = 0;
+  document.addEventListener('input', function(event) {
+    if (!isComposerTarget(event.target) || dockInputTimer) return;
+    dockInputTimer = setTimeout(function() {
+      dockInputTimer = 0;
+      updateComposerDockVisibility();
+    }, 0);
+  }, true);
 
   // Ganchos para pruebas automatizadas.
   window.__DSH_ENSURE_DOCK__ = ensureComposerDock;

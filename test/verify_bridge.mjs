@@ -1,11 +1,15 @@
 import http from "node:http";
 import net from "node:net";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { HOST, PORT, authHeader } from "./_harness.mjs";
 import { buildAllowedSets } from "../src/routes.mjs";
 import { isSameOriginRequest } from "../src/http.mjs";
 import { QR_MAX_BYTES, generateQrSvg } from "../src/qr.mjs";
+import { apkAnchorStatus, apkSha256 } from "../src/static.mjs";
 import { REPO_ROOT, startBridge } from "./ci/start-bridge.mjs";
 
 
@@ -298,6 +302,61 @@ try {
 } finally {
   await own.stop();
 }
+
+// 23. 5.3.4: ancla del APK. El SHA-256 debe calcularse sobre config.root y no
+// depender del CWD del proceso; si falta el archivo, /status debe avisar con
+// apkAnchorMissing=true en vez de que el telefono caiga en `no-anchor` y instale
+// sin verificar.
+const sha256Of = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+const realApk = path.join(REPO_ROOT, "DSH-Companion.apk");
+const realApkSha = sha256Of(realApk);
+const originalCwd = process.cwd();
+let cwdApkSha = "";
+try {
+  process.chdir(os.tmpdir());
+  cwdApkSha = apkSha256();
+} finally {
+  process.chdir(originalCwd);
+}
+check("5.3.4 ancla APK: apkSha256() no depende del CWD (mismo SHA con CWD distinto)",
+  cwdApkSha.length === 64 && cwdApkSha === realApkSha,
+  `sha=${cwdApkSha.slice(0, 12)}… real=${realApkSha.slice(0, 12)}… cwd=${os.tmpdir()}`);
+check("5.3.4 ancla APK: /status publica el SHA del APK real y apkAnchorMissing=false",
+  statusJson.apkSha256 === realApkSha && statusJson.apkAnchorMissing === false,
+  `sha=${String(statusJson.apkSha256).slice(0, 12)}… missing=${statusJson.apkAnchorMissing}`);
+
+const anchorRoot = fs.mkdtempSync(path.join(os.tmpdir(), "dsh-apk-anchor-"));
+try {
+  const missing = apkAnchorStatus(anchorRoot);
+  check("5.3.4 ancla APK: sin el archivo apkSha256 queda vacio y apkAnchorMissing=true",
+    missing.apkSha256 === "" && missing.apkAnchorMissing === true, JSON.stringify(missing));
+  const fakeApk = path.join(anchorRoot, "DSH-Companion.apk");
+  fs.writeFileSync(fakeApk, "apk-de-prueba");
+  const present = apkAnchorStatus(anchorRoot);
+  check("5.3.4 ancla APK: con el archivo en la raiz indicada el SHA es el del archivo servido",
+    present.apkSha256 === sha256Of(fakeApk) && present.apkAnchorMissing === false,
+    `sha=${present.apkSha256.slice(0, 12)}…`);
+} finally {
+  fs.rmSync(anchorRoot, { recursive: true, force: true });
+}
+
+// 24. 5.3.4: /status ya no bloquea con PowerShell sincrono. Antes la primera
+// consulta pagaba ~2 s (spawnSync de bateria); ahora hay cache y refresco en
+// segundo plano. Se mide la misma ruta repetida en el puente aislado.
+const statusTimes = [];
+for (let index = 0; index < 15; index += 1) {
+  const started = performance.now();
+  const measured = await request("/dsh-companion/status");
+  statusTimes.push(performance.now() - started);
+  if (measured.status !== 200) break;
+}
+const statusSorted = [...statusTimes].sort((a, b) => a - b);
+const statusP50 = statusSorted[Math.floor(statusSorted.length / 2)] || 0;
+const statusP95 = statusSorted[Math.min(statusSorted.length - 1, Math.floor(statusSorted.length * 0.95))] || 0;
+const statusMax = statusSorted.at(-1) || 0;
+check("5.3.4 /status: 15 consultas consecutivas no superan 200 ms (sin PowerShell bloqueante)",
+  statusTimes.length === 15 && statusP95 < 200 && statusMax < 200,
+  `p50=${statusP50.toFixed(1)}ms p95=${statusP95.toFixed(1)}ms max=${statusMax.toFixed(1)}ms`);
 
 const failed = results.filter((r) => !r.ok);
 const suffix = skipped.length ? ` (${skipped.length} omitida${skipped.length === 1 ? "" : "s"})` : "";

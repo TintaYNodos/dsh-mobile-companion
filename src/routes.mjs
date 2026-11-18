@@ -21,9 +21,9 @@ import { isPanelTabOpen } from "./panel.mjs";
 import { handlePairingRoutes, handlePendingApprovalGate, resolveDevice } from "./routes-pairing.mjs";
 import { handleHttpProxy } from "./proxy.mjs";
 import { handleDataRoutes } from "./routes-data.mjs";
-import { hasStaticRoute, serveStatic, apkSha256 } from "./static.mjs";
+import { hasStaticRoute, serveStatic, apkAnchorStatus } from "./static.mjs";
 import { consumeAllowance } from "./ratelimit.mjs";
-import { collectSystemStats, telemetryHistory } from "./system-stats.mjs";
+import { collectSystemStats, systemStatsSnapshot, telemetryHistory } from "./system-stats.mjs";
 import { emitTestEvent, handlePcEvents, startPcWatcher } from "./pc-events.mjs";
 import { contractSnapshot } from "./dsh-contract.mjs";
 import { handleHealthz } from "./healthz.mjs";
@@ -69,7 +69,7 @@ export const buildStatusPayload = async (options = {}) => {
     version: config.version,
     apkVersion: config.apkVersion || config.version,
     apkVersionCode: config.apkVersionCode || 14,
-    apkSha256: apkSha256(),
+    ...apkAnchorStatus(), // 5.3.4: ruta anclada a config.root; true = sin ancla, no instalar.
     previousApkVersion: config.previousApkVersion || "3.9.2",
     previousApkVersionCode: config.previousApkVersionCode || 13,
     status: "online",
@@ -79,7 +79,7 @@ export const buildStatusPayload = async (options = {}) => {
     // P16: el telefono no necesita la lista de pendientes (ids, codigos, IPs y
     // user-agents de otros equipos). Solo se entrega al panel local.
     ...(includePendingList ? { pendingList: pending } : {}),
-    systemStats: collectSystemStats(),
+    systemStats: systemStatsSnapshot(), // 5.3.4: cache 2 s, refresco en segundo plano (no bloquea /status)
     // 5.2.0: estado del contrato interno con Harness. El cliente autorizado ve
     // que piezas se comprobaron y cuales estan degradadas; nunca hay secretos.
     contract: contractSnapshot(),

@@ -31,6 +31,16 @@ const positiveInt = (value, fallback, name) => {
   return fallback;
 };
 
+/** Igual que positiveInt pero admite decimales (fichas de recarga por segundo). */
+const positiveNumber = (value, fallback, name) => {
+  const raw = String(value ?? "").trim();
+  if (raw === "") return fallback;
+  const parsed = Number.parseFloat(raw);
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  envWarnings.push(`${name}="${raw}" no es un numero positivo; se usa el valor por defecto ${fallback}`);
+  return fallback;
+};
+
 const text = (value) => String(value ?? "").trim();
 
 /** Overrides de rutas (H-17): por defecto, las del repositorio. */
@@ -57,11 +67,11 @@ if (accessDisableRaw !== "" && accessDisableRaw !== "0" && accessDisableRaw !== 
 
 export const config = Object.freeze({
   root: ROOT,
-  version: "5.3.4",
-  apkVersion: "5.3.4",
-  apkVersionCode: 62,
-  previousApkVersion: "5.3.3",
-  previousApkVersionCode: 61,
+  version: "5.3.5",
+  apkVersion: "5.3.5",
+  apkVersionCode: 63,
+  previousApkVersion: "5.3.4",
+  previousApkVersionCode: 62,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710, "DSH_TARGET_PORT"),
@@ -84,6 +94,15 @@ export const config = Object.freeze({
   // loopback. Solo se permite si el operador lo pide explicitamente y pone
   // una capa de identidad delante (Cloudflare Access).
   allowProxyAccess: text(process.env.DSH_ALLOW_PROXY_ACCESS) === "1",
+
+  // 5.3.4: limite de /dsh-companion/notes (cubo de fichas por IP + credencial).
+  // POST: rafaga de 30 y recarga 0,5/s (30/min sostenidos); GET: 120 y 2/s.
+  notesRate: Object.freeze({
+    writeCapacity: positiveInt(process.env.DSH_NOTES_POST_BURST, 30, "DSH_NOTES_POST_BURST"),
+    writeRefillPerSecond: positiveNumber(process.env.DSH_NOTES_POST_REFILL, 0.5, "DSH_NOTES_POST_REFILL"),
+    readCapacity: positiveInt(process.env.DSH_NOTES_GET_BURST, 120, "DSH_NOTES_GET_BURST"),
+    readRefillPerSecond: positiveNumber(process.env.DSH_NOTES_GET_REFILL, 2, "DSH_NOTES_GET_REFILL"),
+  }),
 
   // H-17: directorio de sincronizacion y archivo de log configurables para que
   // la suite (y cualquier despliegue) no escriba en el arbol del repositorio.

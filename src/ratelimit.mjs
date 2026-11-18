@@ -27,6 +27,14 @@ const sweep = (now) => {
  * bucles de reintento y abuso trivial sin necesitar estado persistente.
  */
 export function consumeAllowance(key, { capacity = 30, refillPerSecond = 0.5 } = {}) {
+  return consumeAllowanceDetailed(key, { capacity, refillPerSecond }).allowed;
+}
+
+/**
+ * Igual que consumeAllowance pero devuelve tambien `retryAfterSeconds` (para la
+ * cabecera Retry-After) cuando la peticion se rechaza.
+ */
+export function consumeAllowanceDetailed(key, { capacity = 30, refillPerSecond = 0.5 } = {}) {
   const now = Date.now();
   sweep(now);
 
@@ -39,5 +47,6 @@ export function consumeAllowance(key, { capacity = 30, refillPerSecond = 0.5 } =
   if (allowed) bucket.tokens -= 1;
 
   buckets.set(key, bucket);
-  return allowed;
+  const retryAfterSeconds = allowed ? 0 : Math.max(1, Math.ceil((1 - bucket.tokens) / Math.max(refillPerSecond, 0.001)));
+  return { allowed, retryAfterSeconds };
 }

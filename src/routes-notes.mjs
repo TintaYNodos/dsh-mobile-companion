@@ -26,6 +26,7 @@
  *                              o la clave de acceso los lee; un `viewer` recibe
  *                              403 de solo lectura y sin credencial tambien 403.
  */
+import { createHash } from "node:crypto";
 import { hasValidAccessKey } from "./crypto.mjs";
 import { isViewer, logReadOnlyRejection, sendReadOnly, touchDevice } from "./devices.mjs";
 import { isJsonRequest, readBody, sendJson } from "./http.mjs";
@@ -33,8 +34,40 @@ import { sanitizeLogMessage } from "./log.mjs";
 import { NOTES_MAX_BYTES, listInboxNotes, saveNote } from "./notes-store.mjs";
 import { validateNotePayload } from "./notes-format.mjs";
 import { resolveDevice } from "./routes-pairing.mjs";
+import { config } from "./config.mjs";
+import { consumeAllowanceDetailed } from "./ratelimit.mjs";
 
 const NOTES_PATH = "/dsh-companion/notes";
+
+/**
+ * Clave del cubo de fichas (5.3.4): IP + credencial. Asi una rafaga de un
+ * telefono no agota el cupo de otro equipo/token, pero SI se frena el mismo
+ * cliente en bucle (antes 40 POST seguidos entraban todos). La credencial se
+ * resume con sha256: el material de la clave nunca se guarda en el mapa.
+ */
+const notesRateKey = (req, remoteAddress, noteDevice, isRead) => {
+  const authorization = String(req.headers.authorization || "");
+  const token = noteDevice?.id
+    ? `device:${noteDevice.id}`
+    : authorization
+      ? `key:${createHash("sha256").update(authorization).digest("hex").slice(0, 16)}`
+      : "anon";
+  return `notes:${isRead ? "read" : "write"}:${String(remoteAddress || "desconocida")}:${token}`;
+};
+
+/** Consume una ficha; si el cubo esta agotado responde 429 con Retry-After. */
+const rejectIfRateLimited = (req, res, { remoteAddress, noteDevice, isRead }) => {
+  const { allowed, retryAfterSeconds } = consumeAllowanceDetailed(
+    notesRateKey(req, remoteAddress, noteDevice, isRead),
+    isRead
+      ? { capacity: config.notesRate.readCapacity, refillPerSecond: config.notesRate.readRefillPerSecond }
+      : { capacity: config.notesRate.writeCapacity, refillPerSecond: config.notesRate.writeRefillPerSecond }
+  );
+  if (allowed) return false;
+  req.resume();
+  sendJson(res, 429, { error: "Demasiadas peticiones de notas" }, { "Retry-After": String(retryAfterSeconds) });
+  return true;
+};
 
 /** Atiende POST /dsh-companion/notes una vez autenticada la peticion. */
 const handleCreateNote = async (req, res) => {
@@ -136,6 +169,7 @@ export async function handleNotesRoutes(req, res, { pathname, remoteAddress }) {
       sendReadOnly(res);
       return true;
     }
+    if (rejectIfRateLimited(req, res, { remoteAddress, noteDevice, isRead })) return true;
     if (noteDevice) touchDevice(noteDevice);
     handleListNotes(res);
     return true;
@@ -152,6 +186,7 @@ export async function handleNotesRoutes(req, res, { pathname, remoteAddress }) {
     sendJson(res, 403, { error: "Acceso no autorizado" });
     return true;
   }
+  if (rejectIfRateLimited(req, res, { remoteAddress, noteDevice, isRead })) return true;
   if (!isJsonRequest(req)) {
     sendJson(res, 415, { error: "Se requiere Content-Type application/json" });
     req.resume();

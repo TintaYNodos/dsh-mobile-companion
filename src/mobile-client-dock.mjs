@@ -221,7 +221,9 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     }
     var avail = Math.floor(band - (reserve || 0) - seatPad - padTop - padBottom - gap - rowH - 2);
     if (avail < 24) avail = 24;
-    if (avail > 96) avail = 96;
+    // Tope duro: 35 % del alto visible y 160/72 px (defecto: crecia sin tope).
+    var cap = composerMaxHeight();
+    if (avail > cap) avail = cap;
     dockCompactScroll = scroll;
     scroll.style.setProperty('max-height', avail + 'px', 'important');
     // Red de seguridad: si aun asi el borde del campo quedara bajo el borde de

@@ -25,6 +25,7 @@ import {
   runEncodingChecks, runInboxCapCheck, runNotesIndexChecks, runReadLimitChecks, runRetentionChecks, setNotesSyncDir, sleep,
 } from "./notes-harness.mjs";
 import { runChaosKillChecks, runConcurrencyChecks, runStoreCrashChecks } from "./notes-crash-harness.mjs";
+import { runRateLimitChecks } from "./notes-ratelimit-harness.mjs";
 
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -32,7 +33,8 @@ const check = (name, ok, detail = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  ->  " + detail : ""}`);
 };
 
-const bridge = await startBridge();
+// 5.3.4: cupo alto para las rafagas H-20; el limite por defecto se prueba en su propio puente al final.
+const bridge = await startBridge({ env: { DSH_NOTES_POST_BURST: "1000", DSH_NOTES_POST_REFILL: "200", DSH_NOTES_GET_BURST: "1000", DSH_NOTES_GET_REFILL: "200" } });
 // H-17: el indice y la bandeja que se inspeccionan son los del synced_chats
 // TEMPORAL de este puente, no los del repositorio.
 setNotesSyncDir(bridge.syncDir);
@@ -350,8 +352,7 @@ try {
   check("GET ignora la linea corrupta y la que no trae file",
     tolerantNotes.length === notes.length && !tolerantNotes.some((note) => note.title === "linea cortada" || note.title === "sin archivo"));
   check("GET sigue devolviendo la nota rica tras las lineas corruptas", tolerantNotes.some((note) => note.file === richFile));
-  // 13b. La bandeja se acota tambien SIN syncs de chats: basta escribir una nota
-  // con la bandeja por encima del tope (poda rapida de routes-notes.mjs).
+  // 13b. La bandeja se acota tambien SIN syncs de chats: un POST con la bandeja por encima del tope la poda.
   await runInboxCapCheck(check, client, richFile);
   // 13c. Regresiones H-13/H-18/H-19/H-20: lectura de 205 notas, cortes de
   // escritura y rafagas/podas concurrentes (helpers aparte por el tope de 400).
@@ -371,7 +372,7 @@ try {
   // 15. Retencion: topes por archivos/MB sobre synced_chats/notes/ y poda de la
   // bandeja (500 lineas, sin huerfanas); ids.json protegido. Helper en
   // test/notes-harness.mjs para no pasar el tope de 400 lineas.
-  runRetentionChecks(check, retention);
+  runRetentionChecks(check, retention); await runRateLimitChecks(check);
 } catch (error) {
   check(`error inesperado durante la prueba: ${error.message}`, false);
 } finally {

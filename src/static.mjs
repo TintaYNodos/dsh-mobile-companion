@@ -8,27 +8,42 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { config } from "./config.mjs";
 
+/** Nombre del APK servido; `serveStatic` lo resuelve contra `config.root`. */
+export const APK_FILE = "DSH-Companion.apk";
+
 /**
- * SHA-256 del APK que este puente sirve en /DSH-Companion.apk.
+ * SHA-256 del APK que este puente sirve en /DSH-Companion.apk, mas el aviso de
+ * que no hay ancla.
  *
  * El telefono lo usa como ancla al actualizar desde la propia PC: esa ruta no
- * tiene digest de GitHub. Se cachea por mtime y tamano para no leer el archivo
- * en cada /status.
+ * tiene digest de GitHub. La ruta se resuelve SIEMPRE contra `config.root`
+ * (igual que `serveStatic`), nunca contra el CWD del proceso: si el puente
+ * arrancaba desde otro directorio, `statSync("DSH-Companion.apk")` fallaba y
+ * /status publicaba `apkSha256: ""`, con lo que el telefono caia en `no-anchor`
+ * e instalaba sin verificar. Se cachea por ruta+mtime+tamano.
+ *
+ * @param {string} [rootDir] raiz a inspeccionar (por defecto `config.root`).
+ * @returns {{ apkSha256: string, apkAnchorMissing: boolean }} `apkAnchorMissing`
+ *          es true cuando el archivo no esta: el cliente NO debe instalar sin ancla.
  */
 let apkDigestCache = { key: "", value: "" };
 
-export const apkSha256 = () => {
+export const apkAnchorStatus = (rootDir = config.root) => {
+  const filePath = path.join(rootDir, APK_FILE);
   try {
-    const info = fs.statSync("DSH-Companion.apk");
-    const key = String(info.size) + ":" + String(info.mtimeMs);
-    if (apkDigestCache.key === key) return apkDigestCache.value;
-    const hash = createHash("sha256").update(fs.readFileSync("DSH-Companion.apk")).digest("hex");
+    const info = fs.statSync(filePath);
+    const key = `${filePath}:${info.size}:${info.mtimeMs}`;
+    if (apkDigestCache.key === key) return { apkSha256: apkDigestCache.value, apkAnchorMissing: false };
+    const hash = createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
     apkDigestCache = { key, value: hash };
-    return hash;
+    return { apkSha256: hash, apkAnchorMissing: false };
   } catch {
-    return "";
+    return { apkSha256: "", apkAnchorMissing: true };
   }
 };
+
+/** SHA-256 del APK del puente; "" si el archivo no existe (sin ancla). */
+export const apkSha256 = (rootDir = config.root) => apkAnchorStatus(rootDir).apkSha256;
 
 const ASSETS = new Map([
   ["/simulator", { file: "simulator/simulator.html", type: "text/html; charset=utf-8", cache: "no-store" }],

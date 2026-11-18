@@ -179,6 +179,8 @@ export async function startBridge(options = {}) {
     DSH_SYNC_DIR: syncDir,
     DSH_LOG_FILE: logFile,
     DSH_STOP_FLAG: stopFlag,
+    // Overrides de la prueba (p. ej. limites de /notes): siempre al final.
+    ...(options.env || {}),
   };
   if (keyMode === "file") delete childEnv.DSH_ACCESS_KEY;
   delete childEnv.DSH_COMPANION_TOKEN;

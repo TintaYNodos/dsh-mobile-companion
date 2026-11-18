@@ -47,14 +47,15 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
   }
 
   /** Chip del dock. Alto, ancho y contraste vienen de la hoja (.dsh-chip:
-   * 48 dp y colores con ratio verificado); aquí solo el matiz de cada modo. */
+   * 44 dp y colores con ratio verificado); aqui solo el matiz de cada modo. */
   function compactButton(label, extraCss, onClick, ariaLabel) {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'dsh-chip';
     btn.textContent = label;
     if (ariaLabel) btn.setAttribute('aria-label', ariaLabel);
-    btn.style.cssText = 'flex:0 0 auto;' + (extraCss || '');
+    // La densidad se añade al final para pisar el tamaño heredado de cada uso.
+    btn.style.cssText = 'flex:0 0 auto;' + (extraCss || '') + 'min-width:44px;font-size:11px;';
     preventFocusLoss(btn);
     btn.onclick = onClick;
     return btn;
@@ -106,9 +107,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Comandos y teclas');
-    row.style.cssText = 'display:none;align-items:center;gap:6px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 8px;';
+    row.style.cssText = 'display:none;align-items:center;gap:5px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 8px;';
 
-    row.appendChild(compactButton('Ocultar', 'min-width:48px;padding:0 8px;', function(e) {
+    row.appendChild(compactButton('Ocultar', 'min-width:44px;padding:0 8px;', function(e) {
       e.preventDefault();
       e.stopPropagation();
       haptic('tick');
@@ -118,12 +119,12 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
 
     var quick = document.createElement('div');
     quick.id = 'dsh-compact-quick';
-    quick.style.cssText = 'display:flex;align-items:center;gap:6px;flex:0 0 auto;';
+    quick.style.cssText = 'display:flex;align-items:center;gap:5px;flex:0 0 auto;';
     row.appendChild(quick);
 
     var keys = document.createElement('div');
     keys.id = 'dsh-compact-keys';
-    keys.style.cssText = 'display:flex;align-items:center;gap:6px;flex:0 0 auto;';
+    keys.style.cssText = 'display:flex;align-items:center;gap:5px;flex:0 0 auto;';
     row.appendChild(keys);
 
     return row;
@@ -141,7 +142,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     // Defecto 6: ni glifos de teclado ni sólo iconos; texto claro y corto.
     latch.textContent = 'Más';
     latch.setAttribute('aria-label', 'Abrir comandos y teclas');
-    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;min-height:48px;padding:0 16px;border-radius:24px;box-shadow:0 2px 10px rgba(0,0,0,0.45);';
+    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;min-height:44px;padding:0 14px;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,0.45);';
     preventFocusLoss(latch);
     latch.onclick = function(e) {
       e.preventDefault();
@@ -176,6 +177,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
   function updateComposerDockVisibility() {
     var dock = document.getElementById('dsh-composer-dock');
     if (!dock) return;
+    if (dshFilePickerOpen) return dshHideDockForFilePicker();
 
     // Perfil/ids activos: repinta los chips si cambiaron (o si DSH recreo el dock).
     dshRefreshDockChips();
@@ -219,9 +221,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
       dock.style.flexDirection = 'column';
       dock.style.alignItems = 'stretch';
-      dock.style.gap = '6px';
+      dock.style.gap = '5px';
       dock.style.height = 'auto';
-      dock.style.padding = '6px 8px 8px 8px';
+      dock.style.padding = '5px 8px 7px 8px';
       dock.style.left = '0';
       dock.style.right = '0';
       setDockDisplay(dock, true);
@@ -285,7 +287,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
     } else {
       // Apaisado muy justo: la fila compacta se abre superpuesta POR ENCIMA de
-      // la fila de botones de DSH. Con chips de 48 dp ya no cabe en los 28 px de
+      // la fila de botones de DSH. Con chips de 44 dp ya no cabe en los 28 px de
       // esa fila: se ancla su borde inferior justo sobre ella para no recortar
       // el chip y dejar el campo lo más visible posible.
       var rowRect = composerRowRect(editor);
@@ -304,7 +306,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var row = document.createElement('div');
     row.id = 'dsh-quick-actions';
     row.className = 'dsh-row';
-    row.style.cssText = 'display:flex;align-items:center;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:14px;';
+    row.style.cssText = 'display:flex;align-items:center;gap:5px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-right:14px;';
     return row;
   }
 
@@ -314,7 +316,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Teclas de programacion');
-    row.style.cssText = 'display:flex;align-items:stretch;gap:6px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;user-select:none;-webkit-user-select:none;padding-right:14px;';
+    row.style.cssText = 'display:flex;align-items:stretch;gap:5px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;user-select:none;-webkit-user-select:none;padding-right:14px;';
     return row;
   }
 
@@ -340,7 +342,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     dock.id = 'dsh-composer-dock';
     dock.setAttribute('data-visible', '0');
     dock.setAttribute('aria-hidden', 'true');
-    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:6px;width:100%;box-sizing:border-box;padding:6px 8px 8px 8px;border-top:1px solid var(--dshc-separator);';
+    dock.style.cssText = 'position:fixed;left:0;right:0;top:0;bottom:auto;z-index:70;display:none;flex-direction:column;gap:5px;width:100%;box-sizing:border-box;padding:5px 8px 7px 8px;border-top:1px solid var(--dshc-separator);';
 
     dock.appendChild(buildQuickActionsRow());
     dock.appendChild(buildCodeKeysRow());

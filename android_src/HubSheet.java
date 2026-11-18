@@ -11,6 +11,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -68,6 +69,31 @@ class HubSheet {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f);
         container.addView(scroll, scrollParams);
 
+        // Hoja inferior: arrastrar tirador o cabecera la cierra; el cuerpo no
+        // inicia el gesto (conserva el scroll). Umbral: 120 dp o 25 % del alto.
+        final int dismissAfter = Math.min(ThemePalette.dp(a, 120), Math.round(screen.heightPixels * 0.25f));
+        final float[] dragStart = {0f};
+        final View.OnTouchListener dragSheet = (v, event) -> {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) { dragStart[0] = event.getRawY(); v.getParent().requestDisallowInterceptTouchEvent(true); }
+            else if (action == MotionEvent.ACTION_MOVE) {
+                float moved = event.getRawY() - dragStart[0];
+                if (moved > ThemePalette.dp(a, 6)) {
+                    container.setTranslationY(moved);
+                    container.setAlpha(1f - Math.min(0.4f, moved / Math.max(1f, screen.heightPixels * 2f)));
+                }
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                float travelled = container.getTranslationY();
+                if (travelled >= dismissAfter) {
+                    container.animate().translationY(screen.heightPixels).alpha(0f).setDuration(180).withEndAction(() -> dialog.dismiss()).start();
+                } else if (travelled > 0f) {
+                    container.animate().translationY(0f).alpha(1f).setDuration(160).start();
+                }
+            }
+            return true;
+        };
+        sheet.getChildAt(0).setOnTouchListener(dragSheet);
+        sheet.getChildAt(1).setOnTouchListener(dragSheet);
         dialog.setView(container, 0, 0, 0, 0);
         HubSheet.applySafeArea(a, container, sheet);
         dialog.setOnShowListener(d -> {
@@ -129,13 +155,19 @@ class HubSheet {
         });
         sheet.setBackground(background);
 
+        // El tirador visible mide 4 dp, pero se envuelve en una franja de 28 dp
+        // para que el arrastre de hoja inferior tenga un objetivo tactil real.
+        LinearLayout handleArea = new LinearLayout(a);
+        handleArea.setGravity(Gravity.CENTER_HORIZONTAL);
+        handleArea.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ThemePalette.dp(a, 28)));
         View handle = new View(a);
         LinearLayout.LayoutParams handleParams = new LinearLayout.LayoutParams(ThemePalette.dp(a, 36), ThemePalette.dp(a, 4));
-        handleParams.gravity = Gravity.CENTER_HORIZONTAL;
-        handleParams.bottomMargin = ThemePalette.dp(a, 14);
+        handleParams.bottomMargin = ThemePalette.dp(a, 6);
         handle.setLayoutParams(handleParams);
         handle.setBackground(ThemePalette.rounded(a, ThemePalette.color(a, Color.parseColor("#30363D"), Color.parseColor("#D0D7DE")), Color.TRANSPARENT, 2f));
-        sheet.addView(handle);
+        handleArea.addView(handle);
+        sheet.addView(handleArea);
 
         LinearLayout headerRow = new LinearLayout(a);
         headerRow.setOrientation(LinearLayout.HORIZONTAL);

@@ -63,7 +63,17 @@ class CompanionChromeClient extends WebChromeClient {
     @Override
     public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
         if (a.fileCallback != null) a.fileCallback.onReceiveValue(null);
-        a.fileCallback = callback;
+        // Con el teclado abierto el dock fijo tapaba la capa del selector. Se
+        // oculta antes de lanzarlo y se restaura cuando el resultado vuelve
+        // (archivo elegido o cancelado), incluso si el lanzamiento falla.
+        final ValueCallback<Uri[]> pending = callback;
+        a.fileCallback = value -> {
+            view.evaluateJavascript(
+                    "window.__DSH_SET_FILE_PICKER__ && window.__DSH_SET_FILE_PICKER__(false);", null);
+            pending.onReceiveValue(value);
+        };
+        view.evaluateJavascript(
+                "window.__DSH_SET_FILE_PICKER__ && window.__DSH_SET_FILE_PICKER__(true);", null);
 
         Intent intent = params.createIntent();
         try {
@@ -72,7 +82,14 @@ class CompanionChromeClient extends WebChromeClient {
             Intent fallback = new Intent(Intent.ACTION_GET_CONTENT);
             fallback.addCategory(Intent.CATEGORY_OPENABLE);
             fallback.setType("*/*");
-            a.startActivityForResult(Intent.createChooser(fallback, "Seleccionar archivo"), REQUEST_FILE);
+            try {
+                a.startActivityForResult(Intent.createChooser(fallback, "Seleccionar archivo"), REQUEST_FILE);
+            } catch (Throwable unavailable) {
+                view.evaluateJavascript(
+                        "window.__DSH_SET_FILE_PICKER__ && window.__DSH_SET_FILE_PICKER__(false);", null);
+                a.fileCallback = null;
+                pending.onReceiveValue(null);
+            }
         }
         return true;
     }

@@ -52,6 +52,24 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     updateComposerDockVisibility();
   };
 
+  // Selector nativo de archivos: con el teclado abierto el dock fijo tapaba su
+  // capa. Se oculta desde onShowFileChooser y vuelve en el callback del resultado.
+  var dshFilePickerOpen = false;
+  function dshHideDockForFilePicker() {
+    var dock = document.getElementById('dsh-composer-dock');
+    if (!dock) return;
+    setDockDisplay(dock, false);
+    ['dsh-dock-latch', 'dsh-dock-compact'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+  window.__DSH_SET_FILE_PICKER__ = function(open) {
+    dshFilePickerOpen = Boolean(open);
+    updateComposerDockVisibility();
+    return dshFilePickerOpen;
+  };
+
   function viewportHeight() {
     var vv = window.visualViewport;
     return Math.round(vv ? vv.height : window.innerHeight);
@@ -247,8 +265,8 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     dockCompactScroll = null;
   }
 
-  /** Alto de la unica fila compacta del dock en apaisado (chips de 48 dp + 2). */
-  var COMPACT_DOCK_HEIGHT = 50;
+  /** Alto de la unica fila compacta del dock en apaisado (chips de 44 + borde). */
+  var COMPACT_DOCK_HEIGHT = 46;
 
   /**
    * Franja minima que necesita el compositor compacto: una linea de escritura
@@ -257,8 +275,8 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
    */
   var COMPACT_COMPOSER_MIN = 86;
 
-  /** Alto del boton que abre el dock cuando la fila no cabe (defecto 4: 48 dp). */
-  var COMPACT_LATCH_HEIGHT = 48;
+  /** Alto del boton que abre el dock cuando la fila no cabe (44 dp tactiles). */
+  var COMPACT_LATCH_HEIGHT = 44;
 
   /** Telefono en apaisado: el alto vertical util es escaso. */
   function isShortLandscape() {

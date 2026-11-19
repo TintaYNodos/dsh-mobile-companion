@@ -122,7 +122,7 @@ node tools/verify-receipt.mjs doctor-report.json `
 
 El SHA-256 de la 5.4.0 (`b0da9570…fabc1ca`) se toma del campo `apkSha256` de `RELEASES.json` una
 vez compilada la build; no se inventa ni se copia de una versión anterior. La verificación de esa
-build dio 405 comprobaciones en CI y 915 comprobaciones Java ejecutadas en local.
+build dio 409 comprobaciones en CI y 915 comprobaciones Java ejecutadas en local.
 
 Texto mínimo de handoff para un asistente sin shell:
 

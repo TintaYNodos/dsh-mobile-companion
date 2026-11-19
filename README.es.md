@@ -108,7 +108,7 @@ companion/
 │   ├── KeyStoreVault.java    cifrado con Android Keystore para las claves guardadas
 │   └── …                     descubrimiento, telemetría, notas locales, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dieciocho suites de verificación (405+ comprobaciones en CI)
+│   ├── verify_*.mjs           dieciocho suites de verificación (409+ comprobaciones en CI)
 │   ├── _harness.mjs           cliente compartido
 │   └── run-all.mjs            `npm test`
 ├── tools/
@@ -362,7 +362,7 @@ npm test
 ```
 
 
-Dieciocho suites: **405+ comprobaciones en CI** y **915+ comprobaciones Java**, que cubren descubrimiento, inyección móvil, `?dshc=off`, rechazo de origen cruzado, defensas contra contrabando de peticiones, límites de cuerpo, saneamiento de contenido, integridad del handshake WebSocket, seguridad ante corrupción del registro, control de acceso, notas locales, TTL del registro de dispositivos, flujo del panel e interruptor de seguridad.
+Dieciocho suites: **409+ comprobaciones en CI** y **915+ comprobaciones Java**, que cubren descubrimiento, inyección móvil, `?dshc=off`, rechazo de origen cruzado, defensas contra contrabando de peticiones, límites de cuerpo, saneamiento de contenido, integridad del handshake WebSocket, seguridad ante corrupción del registro, control de acceso, notas locales, TTL del registro de dispositivos, flujo del panel e interruptor de seguridad.
 
 La suite habla con un **puente en vivo** (no es un mock): inicia el puente primero. La ejecución real del interruptor de seguridad es destructiva —revoca dispositivos y rota la clave—, así que se activa de forma opcional con `DSH_TEST_DESTRUCTIVE=1`.
 

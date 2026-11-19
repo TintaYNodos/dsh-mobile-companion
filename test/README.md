@@ -155,7 +155,7 @@ Nota (**H-17**): el runner arranca el puente con `DSH_SYNC_DIR`, `DSH_LOG_FILE` 
 ## Verificaciones adicionales (5.2.0)
 
 Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
-quedan **fuera** del conteo de las suites (18 suites; 405+ comprobaciones en CI y 915+
+quedan **fuera** del conteo de las suites (18 suites; 409+ comprobaciones en CI y 915+
 comprobaciones Java puras). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus
 comprobaciones se suman aparte y no alteran la comparabilidad con las releases de la serie 5.
 

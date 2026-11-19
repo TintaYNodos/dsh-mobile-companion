@@ -83,7 +83,7 @@ por computadora.
 
 ## Verificación
 
-- **18 suites**, **405 comprobaciones en CI** (13 suites + 3 omitidas con motivo) y **915
+- **18 suites**, **409 comprobaciones en CI** (13 suites + 3 omitidas con motivo) y **915
   comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
   notas, reenvío, copia para el chat, comandos, versiones y lector offline).
 - `node tools/audit-repo.mjs`: sin hallazgos.
@@ -108,5 +108,5 @@ por computadora.
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
   `certSha256`.
-- Verificación sobre el binario publicado: **405 comprobaciones en CI** y **915 comprobaciones Java
+- Verificación sobre el binario publicado: **409 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.

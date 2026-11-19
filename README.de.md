@@ -116,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java    Android-Keystore-Verschlüsselung für gespeicherte Schlüssel
 │   └── …                     Erkennung, Telemetrie, lokale Notizen, WOL, Widget
 ├── test/
-│   ├── verify_*.mjs           achtzehn Verifikations-Suites (405+ Prüfungen in CI)
+│   ├── verify_*.mjs           achtzehn Verifikations-Suites (409+ Prüfungen in CI)
 │   ├── _harness.mjs           gemeinsamer Client
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              persistierte Konversationen (.md und .json)
@@ -319,7 +319,7 @@ npm test
 ```
 
 
-Achtzehn Suites: **405+ Prüfungen in CI** und **915+ Java-Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, lokale Notizen, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
+Achtzehn Suites: **409+ Prüfungen in CI** und **915+ Java-Prüfungen**, die Erkennung, mobile Injektion, `?dshc=off`, Cross-Origin-Ablehnung, Abwehr von Request-Smuggling, Body-Limits, Inhaltssanierung, Handshake-Integrität von WebSockets, Sicherheit bei Registerkorruption, Zugriffskontrolle, lokale Notizen, TTL des Geräteregisters, Panel-Ablauf und den Kill-Switch abdecken.
 
 Die Suite spricht mit einer **laufenden Bridge** (es ist keine Attrappe): Starten Sie zuerst die Bridge. Der echte Kill-Switch-Lauf ist destruktiv — er widerruft Geräte und rotiert den Schlüssel —, daher muss er mit `DSH_TEST_DESTRUCTIVE=1` ausdrücklich aktiviert werden.
 

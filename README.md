@@ -108,7 +108,7 @@ companion/
 │   ├── KeyStoreVault.java    Android Keystore encryption for stored keys
 │   └── …                     discovery, telemetry, local notes, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           eighteen verification suites (405+ checks in CI)
+│   ├── verify_*.mjs           eighteen verification suites (409+ checks in CI)
 │   ├── _harness.mjs           shared client
 │   └── run-all.mjs            `npm test`
 ├── tools/
@@ -365,7 +365,7 @@ npm test
 ```
 
 
-Eighteen suites: **405+ checks in CI** and **915+ Java checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, local notes, device registry TTL, panel flow and the kill switch.
+Eighteen suites: **409+ checks in CI** and **915+ Java checks**, covering discovery, mobile injection, `?dshc=off`, cross-origin rejection, request smuggling defences, body limits, content sanitization, WebSocket handshake integrity, registry corruption safety, access control, local notes, device registry TTL, panel flow and the kill switch.
 
 The suite talks to a **live bridge** (it is not a mock): start the bridge first. The real kill-switch run is destructive — it revokes devices and rotates the key — so it is opt-in with `DSH_TEST_DESTRUCTIVE=1`.
 

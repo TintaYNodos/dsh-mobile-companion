@@ -116,7 +116,7 @@ companion/
 │   ├── KeyStoreVault.java    chiffrement Android Keystore des clés stockées
 │   └── …                     découverte, télémétrie, notes locales, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dix-huit suites de vérification (405+ contrôles en CI)
+│   ├── verify_*.mjs           dix-huit suites de vérification (409+ contrôles en CI)
 │   ├── _harness.mjs           client partagé
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversations persistées (.md et .json)
@@ -319,7 +319,7 @@ npm test
 ```
 
 
-Dix-huit suites : **405+ contrôles en CI** et **915+ contrôles Java**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
+Dix-huit suites : **409+ contrôles en CI** et **915+ contrôles Java**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
 
 La suite parle à un **pont en direct** (ce n'est pas une simulation) : démarrez d'abord le pont. L'exécution réelle du kill switch est destructrice — elle révoque des appareils et fait tourner la clé —, elle doit donc être activée explicitement avec `DSH_TEST_DESTRUCTIVE=1`.
 

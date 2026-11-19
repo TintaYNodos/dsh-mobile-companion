@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-405%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/282%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/181%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · **[日本語](README.ja.md)** · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -409,12 +409,6 @@ PC のパネルには**「Notas recibidas」**（受信したノート）の受�
 
 **5.4.0 はシリーズ 5 の現在の安定版です。** `stable/5` ブランチがこのツリーを保持し、セキュリティとメンテナンスの修正のみを受け取ります。5.3.x は前のラインです。
 
-## スクリーンショット
-
-| アプリ | ペアリングパネル | オフラインリーダー |
-| --- | --- | --- |
-| ![アプリ](docs/images/app.png) | ![ペアリングパネル](docs/images/panel.png) | ![オフラインリーダー](docs/images/offline.png) |
-
 ## コミュニティプロジェクトに関するお知らせ
 
 > **お知らせ：** DSH Mobile Companion は、プライベートネットワーク（ZeroTier / Tailscale）経由で DeepSeek Harness への安全なリモートアクセスを容易にするためにコミュニティによって開発されたコンパニオン・モバイルクライアントです。DeepSeek の公式製品ではなく、DeepSeek との提携、後援、推奨関係もありません。記載されているすべての商標およびロゴは、それぞれの所有者に帰属します。
@@ -438,6 +432,16 @@ PC のパネルには**「Notas recibidas」**（受信したノート）の受�
 New-Item -ItemType Directory -Force .dsh\skills | Out-Null
 cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
 ```
+
+## スクリーンショット
+
+デモ用のスクリーンショットで、データはすべて架空のものです。実際のセッションや実機の画面ではありません。
+
+| 縦向き（360×800） | 横向き（800×360） |
+| --- | --- |
+| ![コマンドドック付きの縦向きチャット表示](docs/images/screens/01-dock-vertical-360x800.png) | ![キーボードを開いた横向き表示とコンパクトなドック](docs/images/screens/02-dock-apaisado-teclado-800x360.png) |
+| ![クイックコマンド付きのコマンドシート](docs/images/screens/03-hoja-comandos-360x800.png) | ![横向きのコマンドシート](docs/images/screens/05-hoja-comandos-800x360.png) |
+| ![フィルターとサンプルノート付きのノートパネル](docs/images/screens/04-panel-notas-360x800.png) | ![横向きのノートパネル](docs/images/screens/06-panel-notas-800x360.png) |
 
 ## プロジェクト文書
 

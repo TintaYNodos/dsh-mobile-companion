@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-405%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/282%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/181%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -413,12 +413,6 @@ Cette conception est destinée à un **usage personnel** : un opérateur, ses ap
 
 **La 5.4.0 est la version stable actuelle de la série 5.** La branche `stable/5` conserve cet arbre et ne reçoit que des correctifs de sécurité et de maintenance ; la 5.3.x reste la ligne précédente.
 
-## Captures
-
-| Application | Panneau d'appairage | Lecteur hors ligne |
-| --- | --- | --- |
-| ![Application](docs/images/app.png) | ![Panneau d'appairage](docs/images/panel.png) | ![Lecteur hors ligne](docs/images/offline.png) |
-
 ## Avis de projet communautaire
 
 > **Avis :** DSH Mobile Companion est un client mobile compagnon développé par la communauté pour faciliter l'accès distant sécurisé à DeepSeek Harness via des réseaux privés (ZeroTier / Tailscale). Ce n'est pas un produit officiel de DeepSeek, et il n'est ni affilié à DeepSeek, ni sponsorisé, ni approuvé par DeepSeek. Toutes les marques et logos cités appartiennent à leurs propriétaires respectifs.
@@ -442,6 +436,16 @@ La procédure complète est un skill dans [skills/mobile-companion-setup](skills
 New-Item -ItemType Directory -Force .dsh\skills | Out-Null
 cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
 ```
+
+## Captures d'écran
+
+Captures de démonstration avec des données fictives : elles ne montrent ni une session réelle ni un appareil réel.
+
+| Portrait (360×800) | Paysage (800×360) |
+| --- | --- |
+| ![Vue verticale du chat avec le dock de commandes](docs/images/screens/01-dock-vertical-360x800.png) | ![Vue paysage avec le clavier ouvert et le dock compact](docs/images/screens/02-dock-apaisado-teclado-800x360.png) |
+| ![Feuille de commandes avec des commandes rapides](docs/images/screens/03-hoja-comandos-360x800.png) | ![Feuille de commandes en paysage](docs/images/screens/05-hoja-comandos-800x360.png) |
+| ![Panneau de notes avec filtres et notes d'exemple](docs/images/screens/04-panel-notas-360x800.png) | ![Panneau de notes en paysage](docs/images/screens/06-panel-notas-800x360.png) |
 
 ## Documents du projet
 

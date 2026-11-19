@@ -1,6 +1,6 @@
 # DSH Mobile Companion
 
-![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-405%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/282%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-416%2B%20checks-2ea043?style=flat-square) ![size](https://img.shields.io/badge/181%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · **[简体中文](README.zh.md)** · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · [Français](README.fr.md) · [Deutsch](README.de.md)
 
@@ -397,12 +397,6 @@ PC 面板有一个 **“Notas recibidas”（已接收笔记）** 收件箱，�
 
 **5.4.0 是 5 系列的当前稳定版。** `stable/5` 分支保存此版本树，仅接收安全与维护修复；5.3.x 为上一版本线。
 
-## 截图
-
-| 应用 | 配对面板 | 离线阅读器 |
-| --- | --- | --- |
-| ![应用](docs/images/app.png) | ![配对面板](docs/images/panel.png) | ![离线阅读器](docs/images/offline.png) |
-
 ## 社区项目声明
 
 > **声明：** DSH Mobile Companion 是由社区开发的伴随移动客户端，旨在方便开发者通过私有网络（ZeroTier / Tailscale）安全地远程访问 DeepSeek Harness。它不是 DeepSeek 的官方产品，也与 DeepSeek 不存在隶属、赞助或背书关系。文中提及的所有商标和徽标均归其各自所有者所有。
@@ -426,6 +420,16 @@ PC 面板有一个 **“Notas recibidas”（已接收笔记）** 收件箱，�
 New-Item -ItemType Directory -Force .dsh\skills | Out-Null
 cmd /c mklink /J .dsh\skills\mobile-companion-setup skills\mobile-companion-setup
 ```
+
+## 截图
+
+演示截图，数据均为虚构，并非真实会话或真实设备的画面。
+
+| 竖屏（360×800） | 横屏（800×360） |
+| --- | --- |
+| ![带命令坞的竖屏聊天视图](docs/images/screens/01-dock-vertical-360x800.png) | ![横屏视图，键盘打开并显示紧凑命令坞](docs/images/screens/02-dock-apaisado-teclado-800x360.png) |
+| ![包含快捷命令的命令面板](docs/images/screens/03-hoja-comandos-360x800.png) | ![横屏命令面板](docs/images/screens/05-hoja-comandos-800x360.png) |
+| ![带筛选与示例笔记的笔记面板](docs/images/screens/04-panel-notas-360x800.png) | ![横屏笔记面板](docs/images/screens/06-panel-notas-800x360.png) |
 
 ## 项目文档
 

@@ -29,4 +29,5 @@ Tarjeta social de 1280×640 px (fondo `#0D1117`): marca «DSH Mobile Companion»
 - `social-preview.png`: composición con Pillow (fondo `#0D1117`, glows sutiles, tipografía del sistema Segoe UI).
 - `app.png` y `panel.png`: mismas técnicas de maqueta; el QR del panel es un patrón determinista decorativo.
 
-Las capturas no están incrustadas en los README de idioma; este directorio solo documenta los archivos.
+Las capturas de `screens/` están incrustadas en la sección de capturas de los siete README de idioma;
+este directorio documenta los archivos y cómo se generaron.

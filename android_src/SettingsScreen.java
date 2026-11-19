@@ -145,6 +145,15 @@ class SettingsScreen {
                     WebBridge.applyDockPreferencesToWeb(a);
                 }));
 
+        form.addView(UiKit.settingSwitchCard(a,
+                "Mostrar el botón «Ocultar» del dock",
+                "Muestra el botón para plegar comandos y símbolos. Si lo apagas, el dock se queda abierto.",
+                a.prefs.getBoolean(KEY_DOCK_HIDE_BUTTON, true),
+                (view, checked) -> {
+                    a.prefs.edit().putBoolean(KEY_DOCK_HIDE_BUTTON, checked).apply();
+                    WebBridge.applyDockPreferencesToWeb(a);
+                }));
+
         addQuickCommandsSection(a, form);
 
         // P54 (bloque F): la copia del chat para el lector sin conexión se

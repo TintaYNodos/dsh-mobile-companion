@@ -77,7 +77,7 @@ final class QuickCommandsTest {
         expect("trabajo", PrefKeys.QUICK_COMMANDS[12][3], "Notas en el grupo Trabajo");
 
         // 7. La configuracion que recibe el dock incluye perfil, ids e interruptores.
-        String dock = PrefKeys.quickDockJson(raw, true, false);
+        String dock = PrefKeys.quickDockJson(raw, true, false, false, true);
         expect(true, dock.contains("\"perfil\":\"codigo\""), "dock: perfil");
         expect(true, dock.contains("\"activos\":[\"auditar\",\"depurar\",\"continuar\"]"), "dock: activos");
         expect(true, dock.contains("\"quick\":true") && dock.contains("\"keys\":false"), "dock: interruptores");

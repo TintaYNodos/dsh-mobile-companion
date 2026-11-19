@@ -109,13 +109,15 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.setAttribute('aria-label', 'Comandos y teclas');
     row.style.cssText = 'display:none;align-items:center;gap:4px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 6px;';
 
-    row.appendChild(compactButton('Ocultar', 'min-width:44px;padding:0 8px;', function(e) {
+    var hideChip = compactButton('Ocultar', 'min-width:44px;padding:0 8px;', function(e) {
       e.preventDefault();
       e.stopPropagation();
       haptic('tick');
       dockCompactOpen = false;
       updateComposerDockVisibility();
-    }, 'Ocultar comandos y teclas'));
+    }, 'Ocultar comandos y teclas');
+    hideChip.id = 'dsh-dock-hide';
+    row.appendChild(hideChip);
 
     // En apaisado DSH esconde su fila de herramientas para ganar franja; este
     // chip devuelve el acceso a los archivos abriendo el menu de adjuntar.
@@ -221,6 +223,8 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     if (collapse) collapse.style.display = 'none';
     if (quickRow) quickRow.style.display = 'none';
     if (keysRow) keysRow.style.display = 'none';
+    var hideChipEl = document.getElementById('dsh-dock-hide');
+    if (hideChipEl) hideChipEl.style.display = dockPrefs.hideButton === false ? 'none' : '';
     var compactQuick = document.getElementById('dsh-compact-quick');
     if (compactQuick) compactQuick.style.display = dockPrefs.quick ? 'flex' : 'none';
     var compactKeys = document.getElementById('dsh-compact-keys');

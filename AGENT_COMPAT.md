@@ -116,7 +116,7 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 d3601b1c256f9a8d330ba4d61eb6072c5412f2ebae7d4b0302427d6c083cf054 `
+  --expect-apk-sha256 2c41ece9f5632c6205fdb5ac15036a3e8f46e1a88d9748e3414c62b3474c0cd1 `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 

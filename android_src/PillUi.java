@@ -40,15 +40,49 @@ class PillUi {
 
     /** Limites de pantalla para que la pildora no se salga por ningun borde. */
     static float clampX(MainActivity a, float x, int width) {
+        int[] bars = systemBars(a);
         int screen = a.getResources().getDisplayMetrics().widthPixels;
-        float margin = ThemePalette.dp(a, 6);
-        return Math.max(margin, Math.min(x, Math.max(margin, screen - width - margin)));
+        float margin = ThemePalette.dp(a, 8);
+        float left = Math.max(margin, bars[2] + margin);
+        float rightLimit = screen - width - bars[3] - margin;
+        return Math.max(left, Math.min(x, Math.max(left, rightLimit)));
+    }
+
+    /** Insets de las barras del sistema: el area util de arrastre es la que
+     * queda entre la barra de estado y la de navegacion, no la pantalla entera. */
+    private static int[] systemBars(MainActivity a) {
+        int top = 0;
+        int bottom = 0;
+        int left = 0;
+        int right = 0;
+        try {
+            android.view.WindowInsets insets = a.getWindow().getDecorView().getRootWindowInsets();
+            if (insets != null) {
+                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                    android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                    top = bars.top;
+                    bottom = bars.bottom;
+                    left = bars.left;
+                    right = bars.right;
+                } else {
+                    top = insets.getSystemWindowInsetTop();
+                    bottom = insets.getSystemWindowInsetBottom();
+                    left = insets.getSystemWindowInsetLeft();
+                    right = insets.getSystemWindowInsetRight();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return new int[]{top, bottom, left, right};
     }
 
     static float clampY(MainActivity a, float y, int height) {
+        int[] bars = systemBars(a);
         int screen = a.getResources().getDisplayMetrics().heightPixels;
-        float top = ThemePalette.dp(a, 44);
-        return Math.max(top, Math.min(y, Math.max(top, screen - height - ThemePalette.dp(a, 48))));
+        float margin = ThemePalette.dp(a, 8);
+        float top = Math.max(margin, bars[0] + margin);
+        float bottomLimit = screen - height - bars[1] - margin;
+        return Math.max(top, Math.min(y, Math.max(top, bottomLimit)));
     }
 
     /** Ajustes: permite mostrar la pildora en horizontal (por defecto oculta). */
@@ -153,7 +187,34 @@ class PillUi {
         // la hacia casi invisible y confundia. Se oculta entera mientras el
         // teclado esta abierto y vuelve completa al cerrarlo.
         PillUi.setPillExpanded(a, true, false);
+        PILL_WATCH.removeCallbacks(PILL_WATCH_TASK);
+        PILL_WATCH.postDelayed(PILL_WATCH_TASK, 1500);
     }
+
+    /** Vigila que la pildora no quede oculta por un aviso perdido (rotacion,
+     * teclado, selector del sistema): la vuelve a mostrar y recolocar cada 1,5 s
+     * dentro del area util real. Es la red de seguridad, no la logica principal. */
+    private static final android.os.Handler PILL_WATCH =
+            new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final Runnable PILL_WATCH_TASK = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                MainActivity a = MainActivity.getInstance();
+                if (a != null && a.pill != null && !hiddenForSystemSheet) {
+                    boolean landscape = isLandscape(a);
+                    boolean shouldHide = a.isImeVisible || (landscape && !showsInLandscape(a));
+                    if (!shouldHide && a.pill.getVisibility() != View.VISIBLE) {
+                        applyOrientationLayout(a, a.getResources().getConfiguration().orientation);
+                    } else if (a.pill.getVisibility() == View.VISIBLE) {
+                        reclampPill(a);
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+            PILL_WATCH.postDelayed(this, 1500);
+        }
+    };
 
     static void paintDot(MainActivity a, int fill) {
         if (a.pillDot == null) return;

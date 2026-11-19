@@ -57,6 +57,7 @@ class PrefKeys {
     static final String KEY_PILL_X = "pill_fraction_x";
     static final String KEY_PILL_LANDSCAPE = "pill_show_landscape";
     static final String KEY_DOCK_HIDDEN_PORTRAIT = "dock_hidden_portrait";
+    static final String KEY_DOCK_HIDE_BUTTON = "dock_hide_button";
     static final String KEY_PILL_EXPANDED_ONCE = "pill_expanded_once";
     static final String KEY_ACCESS_KEY = "access_key";
     static final String KEY_ENTER_NEWLINE = "enter_is_newline";
@@ -223,7 +224,7 @@ class PrefKeys {
     }
 
     /** Preferencia completa que consume el dock (perfil, ids e interruptores). */
-    static String quickDockJson(String raw, boolean quick, boolean keys, boolean hiddenPortrait) {
+    static String quickDockJson(String raw, boolean quick, boolean keys, boolean hiddenPortrait, boolean hideButton) {
         org.json.JSONObject json = new org.json.JSONObject();
         try {
             json.put("perfil", quickProfileOf(raw));
@@ -233,6 +234,7 @@ class PrefKeys {
             json.put("quick", quick);
             json.put("keys", keys);
             json.put("hiddenPortrait", hiddenPortrait);
+            json.put("hideButton", hideButton);
             json.put("notas", true);
         } catch (Exception ignored) {
         }

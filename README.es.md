@@ -319,7 +319,7 @@ La clave de acceso manual sigue disponible como respaldo para el acceso desde un
 **Aplicación nativa (Android)**
 
 - `DSH-Companion.apk` — versión **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
-- Sin AndroidX y sin Kotlin: bytecode Java puro; el APK de la 5.4.0 pesa 181 KB (185,440 bytes).
+- Sin AndroidX y sin Kotlin: bytecode Java puro; el APK de la 5.4.0 pesa 185 KB (189,536 bytes).
 - **Tráfico en claro bloqueado fuera de la red privada**: `CleartextPolicy` rechaza cualquier solicitud que no sea HTTPS o que no apunte al búnker configurado o a una dirección privada/loopback, y la configuración de seguridad de red prohíbe el tráfico en claro hacia los servicios públicos con los que habla la app (GitHub, para comprobar actualizaciones). Esto se aplica por encima del WebView, porque la configuración de seguridad de red de Android no puede expresar "solo rangos de IP privados".
 - Acceso a archivos locales deshabilitado, contenido mixto bloqueado, ventanas emergentes y depuración remota deshabilitadas.
 - Acceso al micrófono restringido al origen exacto del búnker (esquema, host y puerto).

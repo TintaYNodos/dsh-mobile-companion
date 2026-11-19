@@ -322,7 +322,7 @@ The manual access key remains available as a fallback for standard browser acces
 **Native application (Android)**
 
 - `DSH-Companion.apk` — version **5.4.0**, `versionCode` 66, `minSdk` 26, `targetSdk` 35.
-- No AndroidX and no Kotlin: pure Java bytecode; the 5.4.0 APK is 181 KB (185,440 bytes).
+- No AndroidX and no Kotlin: pure Java bytecode; the 5.4.0 APK is 185 KB (189,536 bytes).
 - **Cleartext blocked outside the private network**: `CleartextPolicy` rejects any request that is not HTTPS or pointed at the configured bunker or a private/loopback address, and the network security config forbids cleartext to the public services the app talks to (GitHub, for update checks). This is enforced above the WebView, because Android's network security config cannot express "private IP ranges only".
 - Local file access disabled, mixed content blocked, popups and remote debugging disabled.
 - Microphone access restricted to the bunker's exact origin (scheme, host and port).

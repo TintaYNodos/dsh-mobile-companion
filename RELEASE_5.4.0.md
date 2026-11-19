@@ -83,7 +83,7 @@ por computadora.
 
 ## Verificación
 
-- **18 suites**, **409 comprobaciones en CI** (13 suites + 3 omitidas con motivo) y **915
+- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **409 comprobaciones en CI** y **915
   comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
   notas, reenvío, copia para el chat, comandos, versiones y lector offline).
 - `node tools/audit-repo.mjs`: sin hallazgos.

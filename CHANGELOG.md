@@ -109,7 +109,7 @@ de seguridad y mantenimiento.
 ### Notas de la build
 
 - APK: **185,440 bytes (181 KB)**, SHA-256
-  `63bacbd69b4503d1ad5a6869098c08e67e05755e7f60654f2f9e4c589e2d9a46`. Commit de origen
+  `7f9745c10c8c8aa1dee841f9197dc13838a6088e8a729c601cb212c9af8110d3`. Commit de origen
   `dc231ccbe216ca810540bc2246b02c2506835e8d`; el registro completo está en `RELEASES.json`.
 - Verificación sobre el binario publicado: **418 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.

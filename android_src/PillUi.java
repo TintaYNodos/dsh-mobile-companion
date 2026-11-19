@@ -268,10 +268,24 @@ class PillUi {
         }
     }
 
+    /** El teclado puede estar abierto sin que el listener haya avisado (p. ej.
+     * tras rotar): se comprueba con el area visible real de la ventana. */
+    static boolean keyboardProbablyOpen(MainActivity a) {
+        try {
+            android.graphics.Rect visible = new android.graphics.Rect();
+            a.getWindow().getDecorView().getWindowVisibleDisplayFrame(visible);
+            int screen = a.getResources().getDisplayMetrics().heightPixels;
+            return screen - visible.bottom > screen * 0.15;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     static void applyOrientationLayout(MainActivity a, int orientation) {
         if (a.pill == null) return;
         boolean landscape = orientation == Configuration.ORIENTATION_LANDSCAPE;
-        if (a.isImeVisible || (landscape && !showsInLandscape(a))) {
+        boolean ime = a.isImeVisible || keyboardProbablyOpen(a);
+        if (ime || (landscape && !showsInLandscape(a))) {
             a.pill.setVisibility(View.GONE);
             return;
         }

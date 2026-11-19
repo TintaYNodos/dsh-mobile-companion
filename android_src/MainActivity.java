@@ -78,7 +78,6 @@ public class MainActivity extends Activity {
     static MainActivity sInstance;
     static boolean sIsAppVisible = false;
     volatile boolean isGeneratingResponse = false;
-
     final Handler ui = new Handler(Looper.getMainLooper());
     SharedPreferences prefs;
     FrameLayout root;
@@ -93,14 +92,10 @@ public class MainActivity extends Activity {
     AlertDialog sheetDialog;
     AlertDialog settingsDialog;
     String activeUrl = "";
-    int state = STATE_RETRYING;
-    int attempts = 0;
-    boolean reconnecting = false;
-    boolean pageLoading = false;
-    boolean mainFrameFailed = false;
-    boolean isImeVisible = false;
-    boolean biometricUnlocked = false;
-    boolean biometricPromptActive = false;
+    int state = STATE_RETRYING, attempts = 0;
+    boolean reconnecting = false, pageLoading = false;
+    boolean mainFrameFailed = false, isImeVisible = false;
+    boolean biometricUnlocked = false, biometricPromptActive = false;
     long lastPausedAt = 0L;
     long lastConnectedTime = System.currentTimeMillis();
     boolean disconnectionAlerted = false;
@@ -376,7 +371,11 @@ public class MainActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        // Al rotar el aviso de teclado puede quedar desfasado: reevaluar.
+        isImeVisible = false;
         PillUi.applyOrientationLayout(this, newConfig.orientation);
+        ui.postDelayed(() -> PillUi.applyOrientationLayout(this,
+                getResources().getConfiguration().orientation), 400);
     }
 
     @Override

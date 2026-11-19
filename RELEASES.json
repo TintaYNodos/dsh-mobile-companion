@@ -67,7 +67,7 @@
       "channel": "stable",
       "releasedAt": "2026-11-18",
       "commit": "dc231ccbe216ca810540bc2246b02c2506835e8d",
-      "apkSha256": "63bacbd69b4503d1ad5a6869098c08e67e05755e7f60654f2f9e4c589e2d9a46",
+      "apkSha256": "7f9745c10c8c8aa1dee841f9197dc13838a6088e8a729c601cb212c9af8110d3",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Version estable final de la serie 5 (versionCode 66): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con INDICE.md, reenvio corregido, Copiar para el chat, ancla del APK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PC con kill switch solo en la PC activa."
     }

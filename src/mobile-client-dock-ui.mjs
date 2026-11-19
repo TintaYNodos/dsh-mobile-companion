@@ -177,37 +177,37 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     }
 
     if (!tightLandscape) {
-      // Vertical y pantallas altas: el dock clasico. El usuario puede plegarlo
-      // como en apaisado; al plegarse queda la lengueta «Mas» sobre el campo.
+      // Vertical: una sola fila (igual que el apaisado) para no comerse la
+      // pantalla del chat. El chip «Ocultar» la pliega y la lengueta «Mas» la
+      // reabre; al plegarse no se reserva franja, solo flota la lengueta.
       restoreDockReserve();
       if (compactRow) compactRow.style.display = 'none';
       if (collapse) collapse.style.display = 'none';
       if (latch) latch.style.display = 'none';
+      if (quickRow) quickRow.style.display = 'none';
+      if (keysRow) keysRow.style.display = 'none';
+      var portraitQuick = document.getElementById('dsh-compact-quick');
+      if (portraitQuick) portraitQuick.style.display = dockPrefs.quick ? 'flex' : 'none';
+      var portraitKeys = document.getElementById('dsh-compact-keys');
+      if (portraitKeys) portraitKeys.style.display = dockPrefs.keys ? 'flex' : 'none';
       if (dockCompactOpen === false) {
         setDockDisplay(dock, false);
         positionDockLatch(latch, editor);
         dshMarkAllRowOverflow();
         return;
       }
-      if (collapse) collapse.style.display = 'none';
-      if (dockCompactOpen === false) {
-        setDockDisplay(dock, false);
-        positionDockLatch(latch, editor);
-        dshMarkAllRowOverflow();
-        return;
-      }
-      if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
-      if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
-      dock.style.flexDirection = 'column';
-      dock.style.alignItems = 'stretch';
-      dock.style.gap = '5px';
-      dock.style.height = 'auto';
-      dock.style.padding = '5px 8px 7px 8px';
+      if (compactRow) compactRow.style.display = 'flex';
+      dock.style.flexDirection = 'row';
+      dock.style.alignItems = 'center';
+      dock.style.gap = '0';
+      dock.style.height = COMPACT_DOCK_HEIGHT + 'px';
+      dock.style.padding = '0';
       dock.style.left = '0';
       dock.style.right = '0';
+      dock.style.borderTop = '1px solid var(--dshc-separator)';
+      dock.style.borderBottom = 'none';
       setDockDisplay(dock, true);
       if (!positionClassicDock(dock, editor)) paintDockSurface(dock, editor);
-      positionDockCollapse(collapse, dock, editor);
       dshMarkAllRowOverflow();
       return;
     }

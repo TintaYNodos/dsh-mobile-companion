@@ -98,13 +98,13 @@ por computadora.
 | --- | --- |
 | Versión | `versionCode 66` / `versionName 5.4.0` |
 | Tamaño | 185,440 bytes (181 KB) |
-| SHA-256 | `9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a` |
+| SHA-256 | `63bacbd69b4503d1ad5a6869098c08e67e05755e7f60654f2f9e4c589e2d9a46` |
 | Firma | v2+v3, certificado de release RSA 4186 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
 ## Build
 
 - APK firmado con el keystore de release: **185,440 bytes (181 KB)**, SHA-256
-  `9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a`.
+  `63bacbd69b4503d1ad5a6869098c08e67e05755e7f60654f2f9e4c589e2d9a46`.
 - Commit de origen: `dc231ccbe216ca810540bc2246b02c2506835e8d` (el sello del registro se anota en
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y

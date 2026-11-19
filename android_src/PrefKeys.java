@@ -54,6 +54,8 @@ class PrefKeys {
     static final String KEY_ACTIVE = "active_slot";
     static final String KEY_KEEP_SCREEN = "keep_screen_on";
     static final String KEY_PILL_Y = "pill_fraction_y";
+    static final String KEY_PILL_X = "pill_fraction_x";
+    static final String KEY_PILL_LANDSCAPE = "pill_show_landscape";
     static final String KEY_PILL_EXPANDED_ONCE = "pill_expanded_once";
     static final String KEY_ACCESS_KEY = "access_key";
     static final String KEY_ENTER_NEWLINE = "enter_is_newline";

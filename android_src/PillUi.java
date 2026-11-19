@@ -25,6 +25,42 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Pildora flotante de conexion, arrastre y visibilidad con el teclado.
  */
 class PillUi {
+    /** Parametros de la pildora: se coloca por fracciones de pantalla, asi se
+     * recuerda donde la dejo el usuario (arriba/abajo y derecha/izquierda). */
+    private static FrameLayout.LayoutParams pillParams(MainActivity a) {
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.START);
+        float fractionY = a.prefs.getFloat(KEY_PILL_Y, 0.35f);
+        float fractionX = a.prefs.getFloat(KEY_PILL_X, 0.82f);
+        params.topMargin = (int) (a.getResources().getDisplayMetrics().heightPixels * fractionY);
+        params.setMarginStart((int) (a.getResources().getDisplayMetrics().widthPixels * fractionX));
+        return params;
+    }
+
+    /** Limites de pantalla para que la pildora no se salga por ningun borde. */
+    static float clampX(MainActivity a, float x, int width) {
+        int screen = a.getResources().getDisplayMetrics().widthPixels;
+        float margin = ThemePalette.dp(a, 6);
+        return Math.max(margin, Math.min(x, Math.max(margin, screen - width - margin)));
+    }
+
+    static float clampY(MainActivity a, float y, int height) {
+        int screen = a.getResources().getDisplayMetrics().heightPixels;
+        float top = ThemePalette.dp(a, 44);
+        return Math.max(top, Math.min(y, Math.max(top, screen - height - ThemePalette.dp(a, 48))));
+    }
+
+    /** Ajustes: permite mostrar la pildora en horizontal (por defecto oculta). */
+    static boolean showsInLandscape(MainActivity a) {
+        return a.prefs != null && a.prefs.getBoolean(KEY_PILL_LANDSCAPE, false);
+    }
+
+    /** Repinta visibilidad y posicion tras cambiar el ajuste de horizontal. */
+    static void refreshVisibility(MainActivity a) {
+        applyOrientationLayout(a, a.getResources().getConfiguration().orientation);
+    }
+
     static void buildPill(MainActivity a) {
         a.pill = new LinearLayout(a);
         a.pill.setOrientation(LinearLayout.HORIZONTAL);
@@ -52,13 +88,7 @@ class PillUi {
         a.pill.addView(a.pillDot);
         a.pill.addView(a.pillLabel);
 
-        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.END);
-        float storedFraction = a.prefs.getFloat(KEY_PILL_Y, 0.35f);
-        params.topMargin = (int) (a.getResources().getDisplayMetrics().heightPixels * storedFraction);
-        params.setMarginEnd(ThemePalette.dp(a, 10));
-        a.pill.setLayoutParams(params);
+        a.pill.setLayoutParams(pillParams(a));
         a.pill.setElevation(ThemePalette.dp(a, 8));
 
         // El clic accesible (TalkBack, ENTER, D-pad) entra por aquí.
@@ -72,6 +102,7 @@ class PillUi {
                         a.touchStartX = event.getRawX();
                         a.touchStartY = event.getRawY();
                         a.dragOffsetY = view.getY() - event.getRawY();
+                        a.dragOffsetX = view.getX() - event.getRawX();
                         a.dragging = false;
                         a.ui.removeCallbacks(a.collapsePill);
                         PillUi.expandPill(a);
@@ -83,10 +114,8 @@ class PillUi {
                         if (!a.dragging && (dx > ThemePalette.dp(a, 6) || dy > ThemePalette.dp(a, 6))) a.dragging = true;
 
                         if (a.dragging) {
-                            int limit = a.getResources().getDisplayMetrics().heightPixels
-                                    - view.getHeight() - ThemePalette.dp(a, 48);
-                            float next = event.getRawY() + a.dragOffsetY;
-                            view.setY(Math.max(ThemePalette.dp(a, 44), Math.min(next, limit)));
+                            view.setX(clampX(a, event.getRawX() + a.dragOffsetX, view.getWidth()));
+                            view.setY(clampY(a, event.getRawY() + a.dragOffsetY, view.getHeight()));
                         }
                         return true;
                     }
@@ -97,8 +126,12 @@ class PillUi {
                             // dispara el mismo manejador que TalkBack.
                             view.performClick();
                         } else {
-                            float fraction = view.getY() / Math.max(1, a.getResources().getDisplayMetrics().heightPixels);
-                            a.prefs.edit().putFloat(KEY_PILL_Y, Math.min(0.95f, Math.max(0.02f, fraction))).apply();
+                            float fx = view.getX() / Math.max(1, a.getResources().getDisplayMetrics().widthPixels);
+                            float fy = view.getY() / Math.max(1, a.getResources().getDisplayMetrics().heightPixels);
+                            a.prefs.edit()
+                                    .putFloat(KEY_PILL_X, Math.min(0.95f, Math.max(0f, fx)))
+                                    .putFloat(KEY_PILL_Y, Math.min(0.95f, Math.max(0.02f, fy)))
+                                    .apply();
                             PillUi.collapseSoon(a);
                         }
                         return true;
@@ -214,7 +247,7 @@ class PillUi {
         hiddenForSystemSheet = false;
         MainActivity a = MainActivity.getInstance();
         if (a == null || a.pill == null) return;
-        a.pill.setVisibility(PillUi.isLandscape(a) || a.isImeVisible
+        a.pill.setVisibility((PillUi.isLandscape(a) && !PillUi.showsInLandscape(a)) || a.isImeVisible
                 ? View.GONE : View.VISIBLE);
     }
 
@@ -229,27 +262,20 @@ class PillUi {
         if (a.pill == null) return;
         if (visible) {
             a.pill.setVisibility(View.GONE);
-        } else {
-            if (!PillUi.isLandscape(a)) {
-                a.pill.setVisibility(View.VISIBLE);
-            }
+        } else if (!PillUi.isLandscape(a) || PillUi.showsInLandscape(a)) {
+            a.pill.setVisibility(View.VISIBLE);
+            a.pill.setLayoutParams(pillParams(a));
         }
     }
 
     static void applyOrientationLayout(MainActivity a, int orientation) {
-        if (a.pill != null) {
-            if (orientation == Configuration.ORIENTATION_LANDSCAPE || a.isImeVisible) {
-                a.pill.setVisibility(View.GONE);
-            } else {
-                a.pill.setVisibility(View.VISIBLE);
-                ViewGroup.LayoutParams lp = a.pill.getLayoutParams();
-                if (lp instanceof FrameLayout.LayoutParams) {
-                    FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
-                    float storedFraction = a.prefs != null ? a.prefs.getFloat(KEY_PILL_Y, 0.35f) : 0.35f;
-                    flp.topMargin = (int) (a.getResources().getDisplayMetrics().heightPixels * storedFraction);
-                    a.pill.setLayoutParams(flp);
-                }
-            }
+        if (a.pill == null) return;
+        boolean landscape = orientation == Configuration.ORIENTATION_LANDSCAPE;
+        if (a.isImeVisible || (landscape && !showsInLandscape(a))) {
+            a.pill.setVisibility(View.GONE);
+            return;
         }
+        a.pill.setVisibility(View.VISIBLE);
+        a.pill.setLayoutParams(pillParams(a));
     }
 }

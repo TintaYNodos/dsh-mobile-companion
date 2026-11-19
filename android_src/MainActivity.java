@@ -114,7 +114,7 @@ public class MainActivity extends Activity {
     volatile AtomicBoolean scanCancelled = new AtomicBoolean(false); // testigo del sondeo en curso
     Future<?> scanFuture;
     ConnectivityManager.NetworkCallback networkCallback;
-    float dragOffsetY;
+    float dragOffsetX, dragOffsetY;
     float touchStartX;
     float touchStartY;
     boolean dragging;

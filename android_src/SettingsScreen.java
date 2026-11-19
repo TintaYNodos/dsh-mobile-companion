@@ -127,6 +127,15 @@ class SettingsScreen {
                     WebBridge.applyDockPreferencesToWeb(a);
                 }));
 
+        form.addView(UiKit.settingSwitchCard(a,
+                "Píldora de conexión en horizontal",
+                "Muestra la píldora flotante de estado también en apaisado. Se puede arrastrar a cualquier borde de la pantalla.",
+                a.prefs.getBoolean(KEY_PILL_LANDSCAPE, false),
+                (view, checked) -> {
+                    a.prefs.edit().putBoolean(KEY_PILL_LANDSCAPE, checked).apply();
+                    PillUi.refreshVisibility(a);
+                }));
+
         addQuickCommandsSection(a, form);
 
         // P54 (bloque F): la copia del chat para el lector sin conexión se

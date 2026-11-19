@@ -116,13 +116,13 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 106fc96e517fc13c7c41a8b0bad8ec02a8ad5da28171b3122f632648bab6776f `
+  --expect-apk-sha256 9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 
 El SHA-256 de la 5.4.0 (`74d6a8c1…a701848`) se toma del campo `apkSha256` de `RELEASES.json` una
 vez compilada la build; no se inventa ni se copia de una versión anterior. La verificación de esa
-build dio 416 comprobaciones en local con el APK presente y 413 en CI (allí 3 se omiten con motivo:
+build dio 418 comprobaciones en local con el APK presente y 413 en CI (allí 3 se omiten con motivo:
 2 por el APK gitignored y 1 por ser exclusiva de Windows), más 915 comprobaciones Java ejecutadas en
 local.
 

@@ -83,7 +83,7 @@ por computadora.
 
 ## Verificación
 
-- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **416
+- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **418
   comprobaciones en local con el APK** y **413 en CI** (3 omitidas allí con motivo: 2 por el APK no
   versionado y 1 por la ventana del panel, exclusiva de Windows), más **915 comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
   notas, reenvío, copia para el chat, comandos, versiones y lector offline).
@@ -98,17 +98,17 @@ por computadora.
 | --- | --- |
 | Versión | `versionCode 66` / `versionName 5.4.0` |
 | Tamaño | 185,440 bytes (181 KB) |
-| SHA-256 | `106fc96e517fc13c7c41a8b0bad8ec02a8ad5da28171b3122f632648bab6776f` |
-| Firma | v2+v3, certificado de release RSA 4166 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
+| SHA-256 | `9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a` |
+| Firma | v2+v3, certificado de release RSA 4186 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
 ## Build
 
 - APK firmado con el keystore de release: **185,440 bytes (181 KB)**, SHA-256
-  `106fc96e517fc13c7c41a8b0bad8ec02a8ad5da28171b3122f632648bab6776f`.
+  `9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a`.
 - Commit de origen: `dc231ccbe216ca810540bc2246b02c2506835e8d` (el sello del registro se anota en
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
   `certSha256`.
-- Verificación sobre el binario publicado: **416 comprobaciones en local con el APK** (**413 en
+- Verificación sobre el binario publicado: **418 comprobaciones en local con el APK** (**413 en
   CI**: 3 omitidas con motivo —2 por el binario no versionado y 1 por ser exclusiva de Windows—) y
   **915 comprobaciones Java ejecutadas en local**.

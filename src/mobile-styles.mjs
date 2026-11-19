@@ -75,7 +75,10 @@ article img,
    tactil comodo sin gastar franja). Contraste intacto (defecto 5) y filas con
    scroll horizontal y degradado (defecto 3). Densidad final: gap 5 px, padding
    interno 8 px y fuente 11 px; caben mas chips en la misma franja. */
-.dsh-chip { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 8px; border-radius: 9px; border: 1px solid var(--dshc-chip-border); background: var(--dshc-chip-bg); color: var(--dshc-chip-text); font-size: 11px; font-weight: 600; line-height: 1.15; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.dsh-chip { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--dshc-chip-border); background: var(--dshc-chip-bg); color: var(--dshc-chip-text); font-size: 10.5px; font-weight: 600; line-height: 1.1; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* La fila compacta del apaisado va un punto mas apretada de aspecto (misma
+   zona tactil de 44 px): el chip se ve mas pequeno sin perder precision. */
+#dsh-dock-compact .dsh-chip { font-size: 10px; padding: 0 5px; border-radius: 7px; }
 /* Fila con scroll horizontal: scroll-padding + snap suave para que un chip no
    quede a medias, y mascara de degradado SOLO por el lado que tiene contenido
    oculto (al inicio nunca hay degradado izquierdo: «Escena» se ve entera). */

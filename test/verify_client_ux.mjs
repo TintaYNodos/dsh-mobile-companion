@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { MOBILE_STYLES } from "../src/mobile-styles.mjs";
 import { MOBILE_CLIENT_DOCK } from "../src/mobile-client-dock.mjs";
 import { MOBILE_CLIENT_DOCK_UI } from "../src/mobile-client-dock-ui.mjs";
+import { MOBILE_CLIENT_DOCK_CONTROLS } from "../src/mobile-client-dock-controls.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -87,7 +88,9 @@ const chipRule = (MOBILE_STYLES.match(/\.dsh-chip\s*\{[^}]*\}/) || [""])[0];
 check("chip del dock mide 44 dp de ancho", /min-width:\s*44px/.test(chipRule));
 check("chip del dock mide 44 dp de alto", /min-height:\s*44px/.test(chipRule));
 check("boton que abre el dock mide 44 dp", /COMPACT_LATCH_HEIGHT\s*=\s*44\b/.test(MOBILE_CLIENT_DOCK));
-check("latch del dock dibuja 44 px de alto", /min-height:44px/.test(MOBILE_CLIENT_DOCK_UI));
+check("latch del dock dibuja 44 px de alto", /min-height:44px/.test(MOBILE_CLIENT_DOCK_CONTROLS));
+check("boton Ocultar vertical dibuja 44 px", /dsh-dock-collapse[\s\S]{0,400}min-height:44px/.test(MOBILE_CLIENT_DOCK_CONTROLS));
+check("chip Archivo en la fila compacta", /Archivo/.test(MOBILE_CLIENT_DOCK_UI) && /dshOpenAttachMenu/.test(MOBILE_CLIENT_DOCK_CONTROLS));
 check("boton compacto exige 44 px de ancho", /min-width:44px/.test(MOBILE_CLIENT_DOCK_UI));
 check("filas de menu tactiles de 44 px", /role="menuitem"[\s\S]{0,120}min-height:\s*44px/.test(MOBILE_STYLES));
 

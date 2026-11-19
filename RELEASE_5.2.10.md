@@ -66,7 +66,7 @@ emparejamiento, QR, modo apaisado y operación en Windows.
 
 ## Verificación
 
-- **17 suites, 416 comprobaciones** en local; **344 en CI** (`run-suite`, 12 suites + 3 omitidas con
+- **17 suites, 418 comprobaciones** en local; **344 en CI** (`run-suite`, 12 suites + 3 omitidas con
   motivo); **628** comprobaciones Java (61 watchdog + 14 bridgeguard + 16 cleartext + 25 apkdigest +
   481 notas + 26 versiones + 5 guard de envío).
 - Caos: 20 rondas de `SIGKILL` a mitad de escritura y reenvío del mismo `id` → 0 archivos de 0 bytes

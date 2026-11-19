@@ -142,7 +142,7 @@ El trabajo `suite` de [verify.yml](../.github/workflows/verify.yml) ejecuta
   `/status` contra ese archivo. En local, con el APK en la raíz, se ejecutan y
   deben estar verdes. Se contabilizan como omitidas (SKIP), no como PASS. En CI
   (ubuntu) el runner resume **413 PASS + 3 SKIP**: esas 2 más la comprobación de
-  la ventana del panel, que solo se abre en Windows. En local con el APK, **416
+  la ventana del panel, que solo se abre en Windows. En local con el APK, **418
   PASS**; al simular CI sin APK en Windows, **414 PASS + 2 SKIP**.
 
 ## Cómo ejecutar la suite de CI en tu máquina
@@ -163,7 +163,7 @@ Nota (**H-17**): el runner arranca el puente con `DSH_SYNC_DIR`, `DSH_LOG_FILE` 
 ## Verificaciones adicionales (5.2.0)
 
 Además de las suites de arriba, la 5.2.0 añade dos comprobaciones que se ejecutan por separado y
-quedan **fuera** del conteo de las suites (18 suites; 416 comprobaciones en local con el APK y 413
+quedan **fuera** del conteo de las suites (18 suites; 418 comprobaciones en local con el APK y 413
 en CI, donde 3 se omiten con motivo: 2 por el APK no versionado y 1 por ser exclusiva de Windows, y
 915+ comprobaciones Java puras). No forman parte de `run-all.mjs` ni de `test/ci/run-suite.mjs`; sus
 comprobaciones se suman aparte y no alteran la comparabilidad con las releases de la serie 5.

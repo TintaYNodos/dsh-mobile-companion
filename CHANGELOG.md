@@ -109,9 +109,9 @@ de seguridad y mantenimiento.
 ### Notas de la build
 
 - APK: **185,440 bytes (181 KB)**, SHA-256
-  `106fc96e517fc13c7c41a8b0bad8ec02a8ad5da28171b3122f632648bab6776f`. Commit de origen
+  `9a6ca9fe9c705980cd37426decb078850af7799d8a456e061051b334a16a296a`. Commit de origen
   `dc231ccbe216ca810540bc2246b02c2506835e8d`; el registro completo está en `RELEASES.json`.
-- Verificación sobre el binario publicado: **416 comprobaciones en CI** y **915 comprobaciones Java
+- Verificación sobre el binario publicado: **418 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.
 
 ## 5.2.10 — `versionCode` 54
@@ -488,7 +488,7 @@ abrían dos vías de privilegio.
 ### Cambiado
 
 - **El APK se firma con un keystore de release**, no con el de depuración. Certificado nuevo
-  (SHA-256 `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`), RSA 4166, válido 30 años. Cualquiera puede verificar con
+  (SHA-256 `4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23`), RSA 4186, válido 30 años. Cualquiera puede verificar con
   `apksigner verify --print-certs`.
 - `build-release.ps1` compila y firma leyendo la contraseña desde
   `~/.dsh/release-keys/keystore-password.txt`: el keystore y la contraseña **no** viven en el

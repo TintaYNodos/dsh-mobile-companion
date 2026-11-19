@@ -107,7 +107,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     row.className = 'dsh-row';
     row.setAttribute('role', 'toolbar');
     row.setAttribute('aria-label', 'Comandos y teclas');
-    row.style.cssText = 'display:none;align-items:center;gap:5px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 8px;';
+    row.style.cssText = 'display:none;align-items:center;gap:4px;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 6px;';
 
     row.appendChild(compactButton('Ocultar', 'min-width:44px;padding:0 8px;', function(e) {
       e.preventDefault();
@@ -117,61 +117,26 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       updateComposerDockVisibility();
     }, 'Ocultar comandos y teclas'));
 
+    // En apaisado DSH esconde su fila de herramientas para ganar franja; este
+    // chip devuelve el acceso a los archivos abriendo el menu de adjuntar.
+    row.appendChild(compactButton('Archivo', 'min-width:44px;padding:0 8px;', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      haptic('tick');
+      dshOpenAttachMenu();
+    }, 'Adjuntar un archivo'));
+
     var quick = document.createElement('div');
     quick.id = 'dsh-compact-quick';
-    quick.style.cssText = 'display:flex;align-items:center;gap:5px;flex:0 0 auto;';
+    quick.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
     row.appendChild(quick);
 
     var keys = document.createElement('div');
     keys.id = 'dsh-compact-keys';
-    keys.style.cssText = 'display:flex;align-items:center;gap:5px;flex:0 0 auto;';
+    keys.style.cssText = 'display:flex;align-items:center;gap:4px;flex:0 0 auto;';
     row.appendChild(keys);
 
     return row;
-  }
-
-  /** Boton que abre el dock cuando la fila no cabe o el usuario la pliega.
-   * Se coloca encima de la tarjeta, nunca sobre el campo ni los botones. */
-  function ensureDockLatch() {
-    var latch = document.getElementById('dsh-dock-latch');
-    if (latch) return latch;
-    latch = document.createElement('button');
-    latch.id = 'dsh-dock-latch';
-    latch.type = 'button';
-    latch.className = 'dsh-chip';
-    // Defecto 6: ni glifos de teclado ni sólo iconos; texto claro y corto.
-    latch.textContent = 'Más';
-    latch.setAttribute('aria-label', 'Abrir comandos y teclas');
-    latch.style.cssText = 'position:fixed;z-index:71;left:auto;right:10px;top:auto;bottom:10px;display:none;min-height:44px;padding:0 14px;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,0.45);';
-    preventFocusLoss(latch);
-    latch.onclick = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      haptic('tick');
-      dockCompactOpen = true;
-      updateComposerDockVisibility();
-    };
-    (document.body || document.documentElement).appendChild(latch);
-    return latch;
-  }
-
-  /**
-   * Boton que abre la fila compacta cuando no cabe encima del compositor. Se
-   * coloca justo POR ENCIMA de la tarjeta (nunca sobre el campo de texto) y
-   * siempre dentro de la franja visible, es decir, por encima del teclado.
-   */
-  function positionDockLatch(latch, editor) {
-    if (!latch) return;
-    var card = composerCardFor(editor);
-    var cardRect = card ? card.getBoundingClientRect() : editor.getBoundingClientRect();
-    var top = Math.round(cardRect.top - COMPACT_LATCH_HEIGHT - 6);
-    var limit = visibleBottomEdge() - COMPACT_LATCH_HEIGHT - 6;
-    if (top > limit) top = limit;
-    if (top < 4) top = 4;
-    latch.style.top = top + 'px';
-    latch.style.bottom = 'auto';
-    latch.style.display = 'inline-flex';
-    paintDockSurface(latch, editor);
   }
 
   function updateComposerDockVisibility() {
@@ -188,6 +153,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     var keysRow = document.getElementById('dsh-code-keys');
     var compactRow = document.getElementById('dsh-dock-compact');
     var latch = document.getElementById('dsh-dock-latch');
+    var collapse = document.getElementById('dsh-dock-collapse');
     var anyRow = dockPrefs.quick || dockPrefs.keys;
     var editor = findEditor();
     var keyboardOpen = Boolean(editor) && anyRow && isKeyboardOpen();
@@ -206,17 +172,30 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       setDockDisplay(dock, false);
       if (compactRow) compactRow.style.display = 'none';
       if (latch) latch.style.display = 'none';
+      if (collapse) collapse.style.display = 'none';
       return;
     }
 
     if (!tightLandscape) {
-      // Comportamiento de siempre (vertical y pantallas altas): sin reservar.
-      // El tope del borrador se reaplica al colocar el dock; no se devuelve el
-      // scroll de DSH aqui o el texto se iria al principio en cada tick.
-      dockCompactOpen = null;
+      // Vertical y pantallas altas: el dock clasico. El usuario puede plegarlo
+      // como en apaisado; al plegarse queda la lengueta «Mas» sobre el campo.
       restoreDockReserve();
       if (compactRow) compactRow.style.display = 'none';
+      if (collapse) collapse.style.display = 'none';
       if (latch) latch.style.display = 'none';
+      if (dockCompactOpen === false) {
+        setDockDisplay(dock, false);
+        positionDockLatch(latch, editor);
+        dshMarkAllRowOverflow();
+        return;
+      }
+      if (collapse) collapse.style.display = 'none';
+      if (dockCompactOpen === false) {
+        setDockDisplay(dock, false);
+        positionDockLatch(latch, editor);
+        dshMarkAllRowOverflow();
+        return;
+      }
       if (quickRow) quickRow.style.display = dockPrefs.quick ? 'flex' : 'none';
       if (keysRow) keysRow.style.display = dockPrefs.keys ? 'flex' : 'none';
       dock.style.flexDirection = 'column';
@@ -228,6 +207,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       dock.style.right = '0';
       setDockDisplay(dock, true);
       if (!positionClassicDock(dock, editor)) paintDockSurface(dock, editor);
+      positionDockCollapse(collapse, dock, editor);
       dshMarkAllRowOverflow();
       return;
     }
@@ -235,6 +215,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
     // --- Apaisado de telefono con teclado ---
     // La franja util la fija el scroller del chat, no la ventana: el asiento es
     // sticky al fondo y lo que sobra se recorta por ARRIBA, donde esta el campo.
+    if (collapse) collapse.style.display = 'none';
     if (quickRow) quickRow.style.display = 'none';
     if (keysRow) keysRow.style.display = 'none';
     var compactQuick = document.getElementById('dsh-compact-quick');
@@ -328,6 +309,7 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
   function ensureComposerDock() {
     if (!findEditor()) return;
     ensureDockLatch();
+    ensureDockCollapse();
 
     var dock = document.getElementById('dsh-composer-dock');
     if (dock && dock.isConnected !== false) {

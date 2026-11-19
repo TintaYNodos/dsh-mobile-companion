@@ -14,6 +14,7 @@ import { MOBILE_CLIENT_DIAGNOSTICS } from "./mobile-client-diagnostics.mjs";
 import { MOBILE_CLIENT_UI } from "./mobile-client-ui.mjs";
 import { MOBILE_CLIENT_EDITOR } from "./mobile-client-editor.mjs";
 import { MOBILE_CLIENT_DOCK } from "./mobile-client-dock.mjs";
+import { MOBILE_CLIENT_DOCK_CONTROLS } from "./mobile-client-dock-controls.mjs";
 import { MOBILE_CLIENT_DOCK_UI } from "./mobile-client-dock-ui.mjs";
 import { MOBILE_CLIENT_CODE_KEYS } from "./mobile-client-code-keys.mjs";
 import { MOBILE_CLIENT_OFFLINE } from "./mobile-client-offline.mjs";
@@ -27,6 +28,7 @@ const CLIENT_BODY = [
   MOBILE_CLIENT_UI,
   MOBILE_CLIENT_EDITOR,
   MOBILE_CLIENT_DOCK,
+  MOBILE_CLIENT_DOCK_CONTROLS,
   MOBILE_CLIENT_DOCK_UI,
   MOBILE_CLIENT_CODE_KEYS,
   MOBILE_CLIENT_OFFLINE,

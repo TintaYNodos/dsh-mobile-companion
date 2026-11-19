@@ -274,10 +274,13 @@ class PillUi {
         try {
             android.graphics.Rect visible = new android.graphics.Rect();
             a.getWindow().getDecorView().getWindowVisibleDisplayFrame(visible);
+            // Antes del primer layout el area visible es 0: no es teclado, es
+            // que la ventana aun no existe (si no, la pildora nacia oculta).
+            if (visible.bottom <= 0 || visible.height() <= 0) return a.isImeVisible;
             int screen = a.getResources().getDisplayMetrics().heightPixels;
             return screen - visible.bottom > screen * 0.15;
         } catch (Exception e) {
-            return false;
+            return a.isImeVisible;
         }
     }
 

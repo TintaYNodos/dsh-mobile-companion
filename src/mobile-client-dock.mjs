@@ -26,7 +26,7 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
    * y los activos llegan por __DSH_SET_DOCK_PREFS__ al cargar y al cambiar.
    */
   var DEFAULT_ACTIVE = ['escena', 'estilo', 'fuentes', 'continuar'];
-  var dockPrefs = { quick: true, keys: true, perfil: 'auto', activos: DEFAULT_ACTIVE.slice() };
+  var dockPrefs = { quick: true, keys: true, perfil: 'auto', hiddenPortrait: false, activos: DEFAULT_ACTIVE.slice() };
 
   function readDockPrefs() {
     var quick = callBridgeValue('quickActionsEnabled', [], null);
@@ -46,6 +46,7 @@ export const MOBILE_CLIENT_DOCK = `  // Catalogo, seleccion de los 4 chips y hoj
     if (typeof next.quick === 'boolean') dockPrefs.quick = next.quick;
     if (typeof next.keys === 'boolean') dockPrefs.keys = next.keys;
     if (typeof next.perfil === 'string') dockPrefs.perfil = next.perfil;
+    if (typeof next.hiddenPortrait === 'boolean') dockPrefs.hiddenPortrait = next.hiddenPortrait;
     if (next.activos && typeof next.activos.length === 'number') {
       dockPrefs.activos = dshNormalizeActive(next.activos);
     }

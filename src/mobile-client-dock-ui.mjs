@@ -190,6 +190,9 @@ export const MOBILE_CLIENT_DOCK_UI = `  // null = automatico (fila si sobra fran
       if (portraitQuick) portraitQuick.style.display = dockPrefs.quick ? 'flex' : 'none';
       var portraitKeys = document.getElementById('dsh-compact-keys');
       if (portraitKeys) portraitKeys.style.display = dockPrefs.keys ? 'flex' : 'none';
+      // Ajuste «ocultar comandos en vertical»: nace plegado (solo lengueta) y
+      // el usuario lo abre cuando lo necesita.
+      if (dockCompactOpen === null && dockPrefs.hiddenPortrait) dockCompactOpen = false;
       if (dockCompactOpen === false) {
         setDockDisplay(dock, false);
         positionDockLatch(latch, editor);

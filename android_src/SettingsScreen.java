@@ -136,6 +136,15 @@ class SettingsScreen {
                     PillUi.refreshVisibility(a);
                 }));
 
+        form.addView(UiKit.settingSwitchCard(a,
+                "Ocultar comandos y símbolos en vertical",
+                "En vertical el dock arranca plegado: solo queda la lengueta «Más» hasta que la abras.",
+                a.prefs.getBoolean(KEY_DOCK_HIDDEN_PORTRAIT, false),
+                (view, checked) -> {
+                    a.prefs.edit().putBoolean(KEY_DOCK_HIDDEN_PORTRAIT, checked).apply();
+                    WebBridge.applyDockPreferencesToWeb(a);
+                }));
+
         addQuickCommandsSection(a, form);
 
         // P54 (bloque F): la copia del chat para el lector sin conexión se

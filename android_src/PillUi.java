@@ -132,7 +132,6 @@ class PillUi {
                                     .putFloat(KEY_PILL_X, Math.min(0.95f, Math.max(0f, fx)))
                                     .putFloat(KEY_PILL_Y, Math.min(0.95f, Math.max(0.02f, fy)))
                                     .apply();
-                            PillUi.collapseSoon(a);
                         }
                         return true;
 
@@ -151,8 +150,10 @@ class PillUi {
         });
 
         a.root.addView(a.pill);
-        PillUi.setPillExpanded(a, !a.prefs.getBoolean(KEY_PILL_EXPANDED_ONCE, false), false);
-        PillUi.collapseSoon(a);
+        // Siempre con la etiqueta: reducirla a un punto al desplegar el teclado
+        // la hacia casi invisible y confundia. Se oculta entera mientras el
+        // teclado esta abierto y vuelve completa al cerrarlo.
+        PillUi.setPillExpanded(a, true, false);
     }
 
     static void paintDot(MainActivity a, int fill) {

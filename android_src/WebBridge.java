@@ -201,6 +201,10 @@ class WebBridge {
         });
     }
 
+    static boolean isDockHiddenPortrait(MainActivity a) {
+        return a.prefs != null && a.prefs.getBoolean(KEY_DOCK_HIDDEN_PORTRAIT, false);
+    }
+
     static boolean isCodeKeysEnabled(MainActivity a) {
         return a.prefs == null || a.prefs.getBoolean(KEY_SHOW_CODE_KEYS, true);
     }
@@ -215,7 +219,8 @@ class WebBridge {
         if (a.webView == null) return;
         String raw = a.prefs == null ? null : a.prefs.getString(KEY_QUICK_COMMANDS, null);
         String config = PrefKeys.quickDockJson(raw,
-                WebBridge.isQuickActionsEnabled(a), WebBridge.isCodeKeysEnabled(a));
+                WebBridge.isQuickActionsEnabled(a), WebBridge.isCodeKeysEnabled(a),
+                WebBridge.isDockHiddenPortrait(a));
         // Si el cliente aun no definio el receptor (script en el <head> que
         // todavia no corrio), se reintenta un numero acotado de veces: con un
         // unico push el dock se quedaba con los valores por defecto.

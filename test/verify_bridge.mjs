@@ -301,13 +301,11 @@ try {
   await own.stop();
 }
 
-// 23. 5.3.4: ancla del APK. El SHA-256 debe calcularse sobre config.root y no
-// depender del CWD del proceso; si falta el archivo, /status debe avisar con
-// apkAnchorMissing=true en vez de que el telefono caiga en `no-anchor` y instale
-// sin verificar.
+// 23. 5.3.4: ancla del APK: el SHA se calcula sobre config.root, nunca sobre el
+// CWD. Sin APK (CI: gitignored) se OMITE con motivo y cuenta como SKIP, no FAIL.
 const sha256Of = (file) => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 const realApk = path.join(REPO_ROOT, "DSH-Companion.apk");
-const realApkSha = sha256Of(realApk);
+const realApkSha = fs.existsSync(realApk) ? sha256Of(realApk) : "";
 const originalCwd = process.cwd();
 let cwdApkSha = "";
 try {
@@ -316,10 +314,11 @@ try {
 } finally {
   process.chdir(originalCwd);
 }
-check("5.3.4 ancla APK: apkSha256() no depende del CWD (mismo SHA con CWD distinto)",
+const apkCheck = (name, ok, detail) => realApkSha ? check(name, ok, detail) : skip(name, "sin DSH-Companion.apk en la raiz (gitignored: CI no lo tiene): no hay SHA real que probar");
+apkCheck("5.3.4 ancla APK: apkSha256() no depende del CWD (mismo SHA con CWD distinto)",
   cwdApkSha.length === 64 && cwdApkSha === realApkSha,
   `sha=${cwdApkSha.slice(0, 12)}… real=${realApkSha.slice(0, 12)}… cwd=${os.tmpdir()}`);
-check("5.3.4 ancla APK: /status publica el SHA del APK real y apkAnchorMissing=false",
+apkCheck("5.3.4 ancla APK: /status publica el SHA del APK real y apkAnchorMissing=false",
   statusJson.apkSha256 === realApkSha && statusJson.apkAnchorMissing === false,
   `sha=${String(statusJson.apkSha256).slice(0, 12)}… missing=${statusJson.apkAnchorMissing}`);
 

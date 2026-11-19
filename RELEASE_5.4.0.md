@@ -83,8 +83,9 @@ por computadora.
 
 ## Verificación
 
-- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **416 comprobaciones en CI** y **915
-  comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
+- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **416
+  comprobaciones en local con el APK** y **413 en CI** (3 omitidas allí con motivo: 2 por el APK no
+  versionado y 1 por la ventana del panel, exclusiva de Windows), más **915 comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
   notas, reenvío, copia para el chat, comandos, versiones y lector offline).
 - `node tools/audit-repo.mjs`: sin hallazgos.
 - `doctor.ps1 -Json -Report` con recibo verificado por `tools/verify-receipt.mjs`.
@@ -108,5 +109,6 @@ por computadora.
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
   `certSha256`.
-- Verificación sobre el binario publicado: **416 comprobaciones en CI** y **915 comprobaciones Java
-  ejecutadas en local**.
+- Verificación sobre el binario publicado: **416 comprobaciones en local con el APK** (**413 en
+  CI**: 3 omitidas con motivo —2 por el binario no versionado y 1 por ser exclusiva de Windows—) y
+  **915 comprobaciones Java ejecutadas en local**.

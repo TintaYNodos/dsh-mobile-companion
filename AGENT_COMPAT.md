@@ -120,9 +120,11 @@ node tools/verify-receipt.mjs doctor-report.json `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 
-El SHA-256 de la 5.4.0 (`b0da9570…fabc1ca`) se toma del campo `apkSha256` de `RELEASES.json` una
+El SHA-256 de la 5.4.0 (`74d6a8c1…a701848`) se toma del campo `apkSha256` de `RELEASES.json` una
 vez compilada la build; no se inventa ni se copia de una versión anterior. La verificación de esa
-build dio 416 comprobaciones en CI y 915 comprobaciones Java ejecutadas en local.
+build dio 416 comprobaciones en local con el APK presente y 413 en CI (allí 3 se omiten con motivo:
+2 por el APK gitignored y 1 por ser exclusiva de Windows), más 915 comprobaciones Java ejecutadas en
+local.
 
 Texto mínimo de handoff para un asistente sin shell:
 

@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
     ValueCallback<Uri[]> fileCallback;
     PermissionRequest audioRequest;
     final ExecutorService scanExecutor = Executors.newSingleThreadExecutor();
-    final AtomicBoolean scanCancelled = new AtomicBoolean(false);
+    volatile AtomicBoolean scanCancelled = new AtomicBoolean(false); // testigo del sondeo en curso
     Future<?> scanFuture;
     ConnectivityManager.NetworkCallback networkCallback;
     float dragOffsetY;

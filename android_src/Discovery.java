@@ -55,17 +55,37 @@ import static com.tintaynodos.dshcompanion.PrefKeys.*;
  * Descubrimiento de bunkers en la red privada (sondeo paralelo).
  */
 class Discovery {
+    /**
+     * Presupuesto total del sondeo. Sin el, con WiFi + datos + VPN el barrido de
+     * todas las subredes puede durar decenas de segundos y el callback de la UI
+     * (onDiscoveryFinished) no llega nunca: el usuario solo ve el aviso de
+     * «Buscando...» y cree que el boton no hizo nada.
+     */
+    static final long SCAN_BUDGET_MS = 12_000L;
+
     static void discover(MainActivity a, boolean silent) {
         ConnectionController.markRetrying(a);
         if (!silent) BannerUi.showBanner(a, "Buscando computadoras en la red privada...");
 
-        a.scanCancelled.set(true);
+        // Cada sondeo lleva su PROPIO testigo de cancelacion. Antes se ponia el
+        // testigo compartido a true y se devolvia a false en la linea siguiente:
+        // el hilo interrumpido volvia a leer false, seguia con el barrido
+        // completo y, al ser un executor de un solo hilo, el sondeo nuevo
+        // esperaba detras. Dos pulsaciones podian triplicar la espera.
+        final AtomicBoolean token = new AtomicBoolean(false);
+        final AtomicBoolean previous = a.scanCancelled;
+        a.scanCancelled = token;
+        if (previous != null) previous.set(true);
         if (a.scanFuture != null) a.scanFuture.cancel(true);
-        a.scanCancelled.set(false);
 
         a.scanFuture = a.scanExecutor.submit(() -> {
-            List<String> found = Discovery.probeCandidates(Discovery.candidates(a), a.scanCancelled);
-            a.ui.post(() -> Discovery.onDiscoveryFinished(a, found));
+            List<String> found = Discovery.probeCandidates(Discovery.candidates(a), token);
+            a.ui.post(() -> {
+                // Un sondeo mas nuevo ya reemplazo a este: su resultado no debe
+                // reabrir el Hub ni pisar el que esta en curso.
+                if (a.scanCancelled != token) return;
+                Discovery.onDiscoveryFinished(a, found);
+            });
         });
     }
 
@@ -74,6 +94,11 @@ class Discovery {
 
         if (found.isEmpty()) {
             BannerUi.showBanner(a, "No se encontró ninguna computadora activa.");
+            // El banner vive en la ventana de la Activity y la hoja del Hub es
+            // otra ventana encima: sin este aviso el usuario solo ve reaparecer
+            // las opciones y concluye que «Explorar red» no hace nada.
+            Toast.makeText(a, "No se encontró ninguna computadora activa. Revisa la PC y la VPN.",
+                    Toast.LENGTH_LONG).show();
             HubSheet.openHub(a);
             return;
         }
@@ -138,10 +163,17 @@ class Discovery {
                     Discovery.probe("http://" + host + ":" + PORT + "/dsh-companion/status") ? host : null);
         }
 
+        // Tope global: el barrido se corta aunque queden hosts por probar. Antes
+        // solo existia el timeout por socket (450 ms) y el numero de subredes
+        // (hasta 254 hosts por interfaz) no tenia limite: en un telefono con
+        // WiFi, datos y VPN el sondeo podia pasar de 30 s sin devolver nada.
+        final long deadline = System.currentTimeMillis() + SCAN_BUDGET_MS;
         for (int index = 0; index < hosts.size(); index++) {
             if (cancelled != null && cancelled.get()) break;
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0L) break;
             try {
-                Future<String> result = completion.poll(700, TimeUnit.MILLISECONDS);
+                Future<String> result = completion.poll(Math.min(remaining, 250L), TimeUnit.MILLISECONDS);
                 if (result == null) continue;
                 String host = result.get();
                 if (host != null && !found.contains("http://" + host + ":" + PORT)) {

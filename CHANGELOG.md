@@ -3,7 +3,7 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
-## 5.4.0 — `versionCode` 66 (versión estable final de la serie 5)
+## 5.4.0 — `versionCode` 67 (versión estable final de la serie 5)
 
 Cierre de la serie 5. La 5.4.0 consolida todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (documentadas más abajo) y el trabajo de producto de la línea 5.3 (comandos por perfil, dock
@@ -99,7 +99,7 @@ de seguridad y mantenimiento.
 ### Compatibilidad
 
 - Se instala **encima de la 5.3.7** (`versionCode` 65) sin desinstalar: la firma no cambia desde la
-  5.1.7. El APK 5.4.0 es `versionCode` 66 y el puente y el APK deben actualizarse juntos.
+  5.1.7. El APK 5.4.0 es `versionCode` 67 y el puente y el APK deben actualizarse juntos.
 - Sin dependencias npm nuevas (cero dependencias) y sin cambios en el formato de datos: las notas,
   los chats sincronizados y el registro de dispositivos se conservan.
 - La 5.4.0 es la versión estable de cierre de la serie 5; las publicaciones posteriores de la línea
@@ -109,7 +109,7 @@ de seguridad y mantenimiento.
 ### Notas de la build
 
 - APK: **189,536 bytes (185 KB)**, SHA-256
-  `2c41ece9f5632c6205fdb5ac15036a3e8f46e1a88d9748e3414c62b3474c0cd1`. Commit de origen
+  `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`. Commit de origen
   `dc231ccbe216ca810540bc2246b02c2506835e8d`; el registro completo está en `RELEASES.json`.
 - Verificación sobre el binario publicado: **418 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.

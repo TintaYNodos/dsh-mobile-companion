@@ -1,6 +1,6 @@
 # Política de soporte
 
-**Versión estable actual: 5.4.0** (puente y APK, versionCode 66). La línea estable recibe
+**Versión estable actual: 5.4.0** (puente y APK, versionCode 67). La línea estable recibe
 correcciones de seguridad y versiones de mantenimiento de la serie 5. **La 5.3.7 y anteriores
 quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, actualiza a 5.4.0.
 
@@ -8,7 +8,7 @@ quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, 
 
 | Versión | Estado | Qué recibe |
 | --- | --- | --- |
-| 5.4.0 (estable, versionCode 66) | **Soportada** | Correcciones de seguridad y mantenimiento de la serie 5 |
+| 5.4.0 (estable, versionCode 67) | **Soportada** | Correcciones de seguridad y mantenimiento de la serie 5 |
 | 5.3.7 y anteriores de la serie 5 (incluidas 5.2.x) | Sin soporte | Nada; actualiza a la 5.4.0 |
 | 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.4.0 |
 

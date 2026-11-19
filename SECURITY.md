@@ -4,7 +4,7 @@
 
 | Version | Supported |
 | --- | --- |
-| 5.4.0 (current, `versionCode` 66) | Yes — security fixes only |
+| 5.4.0 (current, `versionCode` 67) | Yes — security fixes only |
 | 5.3.7 and earlier | No (previous builds) |
 
 5.4.0 is the current stable version of the 5 series. The tree receives security and maintenance

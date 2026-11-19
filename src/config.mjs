@@ -69,7 +69,7 @@ export const config = Object.freeze({
   root: ROOT,
   version: "5.4.0",
   apkVersion: "5.4.0",
-  apkVersionCode: 66,
+  apkVersionCode: 67,
 
   targetHost: "127.0.0.1",
   targetPort: positiveInt(process.env.DSH_TARGET_PORT, 52710, "DSH_TARGET_PORT"),

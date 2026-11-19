@@ -1,6 +1,6 @@
 # Operación y soporte remoto
 
-Guía para operar **DSH Mobile Companion 5.4.0** (versionCode 66) y dar soporte cuando la
+Guía para operar **DSH Mobile Companion 5.4.0** (versionCode 67) y dar soporte cuando la
 computadora no está delante. El uso normal ocurre dentro de la red privada (ZeroTier, Tailscale u
 otra): el teléfono abre `http://<IP-PRIVADA>:57420`. El panel de aprobación escucha **solo en
 `127.0.0.1:57421`** y el puente **nunca se expone a Internet**: no se abre un puerto en el router,
@@ -192,7 +192,7 @@ sustituye a BitLocker en equipos compartidos.
 ## 7. Actualizar el APK
 
 1. En el teléfono, con la VPN activa, abre `http://<IP-PRIVADA>:57420/` y entra en *Actualizar*: la
-   página muestra la versión publicada (5.4.0, versionCode 66) y el SHA-256 del APK.
+   página muestra la versión publicada (5.4.0, versionCode 67) y el SHA-256 del APK.
 2. Descárgalo, comprueba que la huella coincide con la publicada (también está en la página de
    GitHub Releases y en el campo `apkSha256` de `/dsh-companion/status` una vez emparejado) y
    instálalo encima. Desde la 5.1.7 la firma es la misma y se instala encima sin desinstalar; si

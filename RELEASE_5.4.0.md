@@ -1,4 +1,4 @@
-# DSH Mobile Companion 5.4.0 (`versionCode` 66) — versión estable final de la serie 5
+# DSH Mobile Companion 5.4.0 (`versionCode` 67) — versión estable final de la serie 5
 
 Cierre de la serie 5. La 5.4.0 recoge todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (integridad de las notas, acceso, QR y operación) y el trabajo de producto de la línea 5.3:
@@ -71,7 +71,7 @@ por computadora.
 
 ## Cómo se instala
 
-1. Instala el APK **5.4.0** (`versionCode` 66) **encima de la 5.3.7** (`versionCode` 65): no hace
+1. Instala el APK **5.4.0** (`versionCode` 67) **encima de la 5.3.7** (`versionCode` 65): no hace
    falta desinstalar ni volver a emparejar.
 2. Actualiza el puente y reinícialo (`stop.bat` + `start.bat`, o deja que el autoarranque lo
    levante). Puente y APK deben hablar el mismo contrato.
@@ -96,15 +96,15 @@ por computadora.
 
 | Dato | Valor |
 | --- | --- |
-| Versión | `versionCode 66` / `versionName 5.4.0` |
+| Versión | `versionCode 67` / `versionName 5.4.0` |
 | Tamaño | 189,536 bytes (185 KB) |
-| SHA-256 | `2c41ece9f5632c6205fdb5ac15036a3e8f46e1a88d9748e3414c62b3474c0cd1` |
+| SHA-256 | `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc` |
 | Firma | v2+v3, certificado de release RSA 4186 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
 ## Build
 
 - APK firmado con el keystore de release: **189,536 bytes (185 KB)**, SHA-256
-  `2c41ece9f5632c6205fdb5ac15036a3e8f46e1a88d9748e3414c62b3474c0cd1`.
+  `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`.
 - Commit de origen: `dc231ccbe216ca810540bc2246b02c2506835e8d` (el sello del registro se anota en
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y

@@ -294,5 +294,36 @@ class PillUi {
         }
         a.pill.setVisibility(View.VISIBLE);
         a.pill.setLayoutParams(pillParams(a));
+        // La posicion se guarda por fraccion del ancho: al pasar de apaisado a
+        // vertical esa fraccion puede dejar la pildora FUERA de la pantalla
+        // (parecia desaparecer). Se recoloca dentro de los bordes en cuanto se
+        // mide y se corrige la fraccion guardada.
+        a.pill.post(() -> PillUi.reclampPill(a));
+    }
+
+    /** Mete la pildora dentro de la pantalla y guarda la fraccion ya corregida. */
+    static void reclampPill(MainActivity a) {
+        if (a.pill == null || a.pill.getWidth() <= 0) return;
+        int w = a.getResources().getDisplayMetrics().widthPixels;
+        int h = a.getResources().getDisplayMetrics().heightPixels;
+        float x = clampX(a, a.pill.getX(), a.pill.getWidth());
+        float y = clampY(a, a.pill.getY(), a.pill.getHeight());
+        a.pill.setX(x);
+        a.pill.setY(y);
+        a.prefs.edit()
+                .putFloat(KEY_PILL_X, Math.min(0.95f, Math.max(0f, x / Math.max(1, w))))
+                .putFloat(KEY_PILL_Y, Math.min(0.95f, Math.max(0.02f, y / Math.max(1, h))))
+                .apply();
+    }
+
+    /** Al volver a la app: restaura tras el selector del sistema, recupera la
+     * opacidad (el scroll la dejaba casi invisible si la app se pausaba antes de
+     * repintarla), recalcula visibilidad y la mete dentro de los bordes. */
+    static void onResumeRestore(MainActivity a) {
+        PillUi.restoreAfterSystemSheet();
+        if (a.pill == null) return;
+        a.pill.setAlpha(0.94f);
+        PillUi.refreshVisibility(a);
+        a.pill.post(() -> PillUi.reclampPill(a));
     }
 }

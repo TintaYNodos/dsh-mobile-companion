@@ -320,8 +320,8 @@ public class MainActivity extends Activity {
         // H-10: el interruptor de batería se quedaba encendido aunque el sistema
         // denegara la exención; se re-sincroniza al volver del diálogo.
         SettingsNotifications.resyncBatterySwitch(this);
-        // Share-sheet: la píldora se ocultó al lanzar el selector del sistema.
-        PillUi.restoreAfterSystemSheet();
+        // Al volver: restaura la pildora (share-sheet), su opacidad y posicion.
+        PillUi.onResumeRestore(this);
         ConnectionController.onResume(this);
     }
 

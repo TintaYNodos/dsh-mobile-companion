@@ -35,8 +35,21 @@ export const MOBILE_CLIENT_EDITOR = `  /**
     sel.addRange(range);
   }
 
-  function insertIntoEditor(el, text) {
-    if (!el) return false;
+  function editorText(el) {
+    if (!el) return '';
+    var editable = el.tagName === 'TEXTAREA' || el.tagName === 'INPUT';
+    return editable ? String(el.value || '') : String(el.innerText != null ? el.innerText : (el.textContent || ''));
+  }
+
+  /**
+   * Insercion como teclado con verificacion real: execCommand puede devolver
+   * true sin confirmar (Lexical recien montado); si el texto no consta, 80 ms
+   * despues se reintenta con beforeinput sintetico y se comprueba hasta 1 s.
+   * settled(ok) recibe el resultado; la API del puente solo da true si consta.
+   */
+  function insertIntoEditor(el, text, settled) {
+    settled = settled || function() {};
+    if (!el) return settled(false), false;
     try { el.focus(); } catch(e) {}
 
     if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
@@ -44,45 +57,65 @@ export const MOBILE_CLIENT_EDITOR = `  /**
       var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
       var start = el.selectionStart != null ? el.selectionStart : el.value.length;
       var end = el.selectionEnd != null ? el.selectionEnd : el.value.length;
-      var next = el.value.substring(0, start) + text + el.value.substring(end);
-      setter.call(el, next);
+      setter.call(el, el.value.substring(0, start) + text + el.value.substring(end));
       el.selectionStart = el.selectionEnd = start + text.length;
       el.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
-      return true;
+      var inField = editorText(el).indexOf(text) >= 0;
+      return settled(inField), inField;
     }
 
     caretIntoEditor(el);
-    try {
-      if (document.execCommand('insertText', false, text)) return true;
-    } catch(e) {}
+    var before = editorText(el);
+    var accepted = false;
+    try { accepted = document.execCommand('insertText', false, text) === true; } catch(e) {}
+    if (editorText(el) !== before) return settled(true), true;
+    if (!accepted) return settled(false), false;
 
-    // Ultimo recurso para contenteditable sin execCommand disponible.
-    try {
-      var sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return false;
-      var range = sel.getRangeAt(0);
-      range.deleteContents();
-      var node = document.createTextNode(text);
-      range.insertNode(node);
-      range.setStart(node, text.length);
-      range.setEnd(node, text.length);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      el.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
-      return true;
-    } catch(e) {
-      return false;
-    }
+    // Commit diferido: se espera al de Lexical y solo si no llega se reintenta
+    // como beforeinput. Espera acotada (<1 s) y sin duplicar si ya consta.
+    var done = false, deadline = Date.now() + 1000;
+    var check = function(retried) {
+      if (done) return;
+      if (editorText(el) !== before) { done = true; settled(true); return; }
+      if (!retried) {
+        try { el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: text })); } catch(e) {}
+        setTimeout(function() { check(true); }, 40);
+      } else if (Date.now() < deadline) {
+        setTimeout(function() { check(true); }, 50);
+      } else {
+        done = true;
+        settled(false);
+      }
+    };
+    setTimeout(function() { check(false); }, 80);
+    return true;
   }
+
+  // API del puente: true solo con el texto ya en el editor; si queda pendiente
+  // devuelve false (el llamador conserva el pendiente y reintenta) sin duplicar.
+  var composerInsert = null;
 
   window.__DSH_INSERT_INTO_COMPOSER__ = function(text) {
     try {
+      text = String(text == null ? '' : text);
       var editor = findEditor();
-      if (!editor) return false;
-      return insertIntoEditor(editor, String(text == null ? '' : text));
-    } catch(e) {
-      return false;
-    }
+      if (!editor || !text) return false;
+      var previous = composerInsert;
+      if (previous && previous.text === text) {
+        if (!previous.done) return false;
+        composerInsert = null;
+        if (previous.ok && editorText(editor).indexOf(text) >= 0) return true;
+      }
+      var attempt = { text: text, done: false, ok: false };
+      composerInsert = attempt;
+      var immediate = insertIntoEditor(editor, text, function(ok) {
+        attempt.done = true;
+        attempt.ok = ok === true && editorText(editor).indexOf(text) >= 0;
+      });
+      if (!immediate || !attempt.done || !attempt.ok) return false;
+      composerInsert = null;
+      return true;
+    } catch(e) { return false; }
   };
 
   // Control de comportamiento de tecla Enter (↵): Salto de línea vs Enviar mensaje.

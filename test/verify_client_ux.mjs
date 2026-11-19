@@ -135,5 +135,27 @@ const hub = read("android_src/HubSheet.java");
 check("HubSheet delega el arrastre en HubDragPolicy", /HubDragPolicy\.dropAction/.test(hub) &&
   /HubDragPolicy\.dismissAfterPx/.test(hub));
 
+// ---------------------------------------------------------------------------
+// 6. Inserción en el compositor: true solo si el texto está de verdad dentro
+// ---------------------------------------------------------------------------
+const editor = read("src/mobile-client-editor.mjs");
+check("el editor comprueba el texto tras execCommand",
+  /editorText\(el\)/.test(editor) && /execCommand\('insertText'/.test(editor));
+check("si execCommand no commitea se reintenta con beforeinput sintético",
+  /new InputEvent\('beforeinput'[\s\S]{0,120}inputType:\s*'insertText'/.test(editor));
+check("la comprobación diferida espera 80 ms y se acota a 1 s",
+  /setTimeout\(function\(\) \{ check\(false\); \}, 80\)/.test(editor) && /Date\.now\(\) \+ 1000/.test(editor));
+check("__DSH_INSERT_INTO_COMPOSER__ devuelve true solo si el texto consta",
+  /if \(!immediate \|\| !attempt\.done \|\| !attempt\.ok\) return false;/.test(editor) &&
+    /attempt\.ok = ok === true && editorText\(editor\)\.indexOf\(text\) >= 0;/.test(editor));
+check("un reintento con el mismo texto no duplica la inserción", /previous\.text === text/.test(editor));
+const bridge = read("android_src/WebBridge.java");
+const draftFn = bridge.slice(bridge.indexOf("checkAndInjectOfflineOutbox(MainActivity a)"), bridge.indexOf("captureDraftIfOffline"));
+check("el borrador pendiente solo se borra cuando la inserción consta",
+  /if \("true"\.equals\(res\)[\s\S]{0,160}remove\("pending_outbox_draft"\)/.test(draftFn));
+const sharedFn = bridge.slice(bridge.indexOf("injectSharedTextIfReady(MainActivity a)"));
+check("el texto compartido pendiente solo se borra cuando la inserción consta",
+  /if \("true"\.equals\(res\)\)[\s\S]{0,200}pendingSharedText = null/.test(sharedFn));
+
 console.log(`\nRESULTADO: ${checks.filter(Boolean).length}/${checks.length} pruebas correctas`);
 if (checks.some((c) => !c)) process.exitCode = 1;

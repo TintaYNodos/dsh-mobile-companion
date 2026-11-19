@@ -172,7 +172,7 @@ const readInboxRaw = () => {
  * Escribe (o reemplaza) la linea de la nota en `inbox.jsonl` con escritura
  * atomica; la actualizada queda al final, que es de donde lee el lado PC. Todo
  * el ciclo leer-modificar-escribir va en la cola de la bandeja que comparte con
- * la poda del sync (H-20): antes dos rutas la reescribian a la vez (EPERM).
+ * la poda del sync (H-20) y se recorta aqui al tope (antes: `stat` por linea).
  */
 const upsertInboxLine = (line, file) =>
   queueInboxWrite(async () => {
@@ -186,7 +186,7 @@ const upsertInboxLine = (line, file) =>
       }
     });
     kept.push(line);
-    await writeAtomic(inboxPath(), `${kept.join("\n")}\n`);
+    await writeAtomic(inboxPath(), `${kept.slice(-INBOX_MAX_LINES).join("\n")}\n`);
   });
 
 /** Agrega la linea de la nota a la bandeja sin tumbar la escritura si falla. */

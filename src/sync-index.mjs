@@ -18,10 +18,38 @@ export const assertInside = (directory, candidate) => {
   return resolved;
 };
 
+/**
+ * H-20: codigos TRANSITORIOS al reemplazar un archivo en Windows. El `rename`
+ * sobre un destino que antivirus, el indice de busqueda u otro proceso tiene
+ * abierto un instante falla asi y no es un error de logica: se reintenta.
+ */
+const TRANSIENT_WRITE_CODES = new Set(["EPERM", "EACCES", "EBUSY", "EEXIST", "ENOENT", "EAGAIN"]);
+
+/**
+ * Escritura atomica con reintento: temporal unico + rename. Sin reintento, un
+ * EPERM/EACCES/EBUSY transitorio de Windows hacia fallar el POST (500) y dejaba
+ * el `.tmp` huerfano (H-20: `tmp=1`). Se reintenta SOLO esos codigos, con
+ * backoff corto, y el temporal se borra en cada fallo; el destino no se toca
+ * hasta que el rename funciona, asi que nunca queda medio escrito.
+ */
 export const writeAtomic = async (filePath, contents) => {
   const temporary = `${filePath}.${crypto.randomBytes(4).toString("hex")}.tmp`;
-  await fs.promises.writeFile(temporary, contents, { encoding: "utf8", mode: 0o600 });
-  await fs.promises.rename(temporary, filePath);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await fs.promises.writeFile(temporary, contents, { encoding: "utf8", mode: 0o600 });
+      await fs.promises.rename(temporary, filePath);
+      return;
+    } catch (error) {
+      try {
+        // Limpieza del temporal: en cada fallo, reintente o no, no queda huerfano.
+        await fs.promises.rm(temporary, { force: true });
+      } catch {
+        // Otro proceso/saneado ya lo borro: el estado deseado es el mismo.
+      }
+      if (!TRANSIENT_WRITE_CODES.has(error.code) || attempt >= 5) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** (attempt - 1)));
+    }
+  }
 };
 
 export const readDirSafe = async (directory) => {

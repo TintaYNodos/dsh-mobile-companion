@@ -83,7 +83,7 @@ por computadora.
 
 ## Verificación
 
-- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **409 comprobaciones en CI** y **915
+- **18 suites** en total (**13 en CI** + 3 omitidas con motivo; healthz y backup aparte), **416 comprobaciones en CI** y **915
   comprobaciones Java** puras ejecutadas en local (watchdog, cleartext, bridgeguard, apkdigest,
   notas, reenvío, copia para el chat, comandos, versiones y lector offline).
 - `node tools/audit-repo.mjs`: sin hallazgos.
@@ -98,7 +98,7 @@ por computadora.
 | Versión | `versionCode 66` / `versionName 5.4.0` |
 | Tamaño | 185,440 bytes (181 KB) |
 | SHA-256 | `74d6a8c1d66ad45af661915db7a851535c74d80bd9b7166ead6c89784a701848` |
-| Firma | v2+v3, certificado de release RSA 4096 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
+| Firma | v2+v3, certificado de release RSA 4166 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
 ## Build
 
@@ -108,5 +108,5 @@ por computadora.
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
   `certSha256`.
-- Verificación sobre el binario publicado: **409 comprobaciones en CI** y **915 comprobaciones Java
+- Verificación sobre el binario publicado: **416 comprobaciones en CI** y **915 comprobaciones Java
   ejecutadas en local**.

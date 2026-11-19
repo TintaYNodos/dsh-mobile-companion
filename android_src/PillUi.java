@@ -73,8 +73,8 @@ class PillUi {
         a.pill.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
 
         a.pillDot = new View(a);
-        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(ThemePalette.dp(a, 10), ThemePalette.dp(a, 10));
-        dotParams.setMarginEnd(ThemePalette.dp(a, 7));
+        LinearLayout.LayoutParams dotParams = new LinearLayout.LayoutParams(ThemePalette.dp(a, 14), ThemePalette.dp(a, 14));
+        dotParams.setMarginEnd(0);
         a.pillDot.setLayoutParams(dotParams);
         a.pillDot.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         PillUi.paintDot(a, Color.parseColor("#F59E0B"));
@@ -105,7 +105,6 @@ class PillUi {
                         a.dragOffsetX = view.getX() - event.getRawX();
                         a.dragging = false;
                         a.ui.removeCallbacks(a.collapsePill);
-                        PillUi.expandPill(a);
                         return true;
 
                     case MotionEvent.ACTION_MOVE: {
@@ -164,22 +163,19 @@ class PillUi {
         a.pillDot.setBackground(drawable);
     }
 
+    /** La pildora es solo el punto de estado: sin texto, siempre redonda. El
+     * nombre sigue disponible para TalkBack por contentDescription. */
     static void setPillExpanded(MainActivity a, boolean expanded, boolean animate) {
         if (a.pill == null) return;
-
-        a.pillLabel.setVisibility(expanded ? View.VISIBLE : View.GONE);
-        a.pill.setPadding(expanded ? ThemePalette.dp(a, 12) : ThemePalette.dp(a, 14), ThemePalette.dp(a, 8), expanded ? ThemePalette.dp(a, 14) : ThemePalette.dp(a, 14), ThemePalette.dp(a, 8));
-        a.pill.setBackground(ThemePalette.rounded(a, ThemePalette.color(a, Color.parseColor("#161B22"), Color.parseColor("#FFFFFF")),
-                expanded ? ThemePalette.accentPrimary(a) : ThemePalette.outline(a),
-                expanded ? 14f : 999f));
+        a.pillLabel.setVisibility(View.GONE);
+        int pad = ThemePalette.dp(a, 12);
+        a.pill.setPadding(pad, pad, pad, pad);
+        a.pill.setBackground(ThemePalette.rounded(a,
+                ThemePalette.color(a, Color.parseColor("#161B22"), Color.parseColor("#FFFFFF")),
+                ThemePalette.outline(a), 999f));
         a.pill.animate().cancel();
-        a.pill.animate().alpha(expanded ? 1f : 0.94f).setDuration(animate ? 200 : 0).start();
-        a.pillLabel.setTextColor(ThemePalette.ink(a));
+        a.pill.animate().alpha(0.94f).setDuration(animate ? 200 : 0).start();
         PillUi.updatePillDescription(a);
-
-        if (expanded) {
-            a.prefs.edit().putBoolean(KEY_PILL_EXPANDED_ONCE, true).apply();
-        }
     }
 
     /**

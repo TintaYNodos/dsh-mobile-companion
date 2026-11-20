@@ -184,9 +184,12 @@ const RUNTIME_FILES = new Set([
   // de las notas del telefono): vive en el HOME del usuario, no en el repo.
   "notes.json", "org.json", "ids.json",
 ]);
+// Archivos retirados a proposito (5.4.0): la documentacion historica puede nombrarlos.
+const RETIRED_FILES = new Set(["AGENT_COMPAT.md", "docker-compose.yml", "Dockerfile", ".dockerignore"]);
 for (const m of allText.matchAll(/`([A-Za-z0-9_.\/-]+\.(?:mjs|java|json|md|html|css|js|yml|bat|vbs|sh|plist|svg|webmanifest))`/g)) {
   const name = m[1];
   if (name.includes("/") || RUNTIME_FILES.has(path.basename(name))) continue;
+  if (RETIRED_FILES.has(name)) continue;
   if (tracked.some((f) => path.basename(f) === name)) continue;
   F(`documentación menciona un archivo inexistente: ${name}`);
 }

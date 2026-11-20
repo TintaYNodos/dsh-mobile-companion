@@ -5,6 +5,12 @@ Android `versionCode` increments once per published build.
 
 ## 5.4.0 — `versionCode` 67 (versión estable final de la serie 5)
 
+- **Documentación de agentes unificada**: `AGENT_COMPAT.md` se fusionó en `AI_SETUP_PROMPT.md`
+  (matriz de compatibilidad, skill y recibo del informe) para que solo haya un documento canónico.
+
+- **Retirados los archivos Docker** (`Dockerfile`, `docker-compose.yml`, `.dockerignore`). El puente
+  necesita el loopback del host y el Harness local; la imagen nunca fue una vía soportada ni documentada.
+
 Cierre de la serie 5. La 5.4.0 consolida todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (documentadas más abajo) y el trabajo de producto de la línea 5.3 (comandos por perfil, dock
 compacto, lectura sin conexión, multi-PC). A partir de aquí la serie queda estable: solo correcciones
@@ -421,7 +427,7 @@ abrían dos vías de privilegio.
   recibo, y escribe `doctor-report.json` sin BOM para que `JSON.parse` funcione sin limpieza previa.
   Nuevo `tools/verify-receipt.mjs` (sin dependencias) que verifica el recibo y puede exigir el
   sha256 del APK y la huella del certificado de release.
-- **Matriz de compatibilidad de agentes**: [AGENT_COMPAT.md](AGENT_COMPAT.md) documenta, con estado
+- **Matriz de compatibilidad de agentes**: [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) documenta, con estado
   explícito (probado frente a solo documentado), qué agentes pueden instalar el companion, cómo
   reciben el contexto, qué pueden ejecutar y el texto mínimo de traspaso. Incluye el enlace de la
   skill en `.dsh/skills` o `.agents/skills` y el recibo como evidencia.

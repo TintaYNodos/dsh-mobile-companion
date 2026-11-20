@@ -48,7 +48,7 @@ documentado en las `notes` de la entrada). Es lo que permite instalar la actuali
 Durante el desarrollo y las pruebas no se toca; al publicar debe coincidir con el build que se sube.
 
 Después actualiza `README*.md` (versión y `versionCode`), `SECURITY.md` (versiones soportadas),
-`SUPPORT.md`, `OPERACION.md`, `AGENT_COMPAT.md`, `test/README.md`, `LICENSING.md`/`LICENSE` y
+`SUPPORT.md`, `OPERACION.md`, `AI_SETUP_PROMPT.md`, `test/README.md`, `LICENSING.md`/`LICENSE` y
 `CHANGELOG.md` (entrada nueva arriba, con una sección `### Breaking changes` si es MAJOR). El detalle
 del release va en `RELEASE_<version>.md`.
 

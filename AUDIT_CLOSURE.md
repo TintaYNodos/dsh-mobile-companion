@@ -1,5 +1,9 @@
 # Cierre de la auditoría externa — serie 5
 
+> **Documento histórico.** Instantánea de el cierre de la auditoría externa de la 5.1.10; no describe el estado
+> actual del proyecto. Para la postura vigente consulta [SECURITY.md](SECURITY.md) y
+> [SUPPORT.md](SUPPORT.md). Conserva valor como registro de lo que se revisó y cuándo.
+
 **Versión:** 5.1.10 FINAL · **Fecha:** 2026-11-16 · **Ámbito:** puente (`bridge.mjs`, `src/**`),
 suite de pruebas, documentación y skill de instalación.
 

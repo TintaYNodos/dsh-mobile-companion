@@ -1,5 +1,9 @@
 # Auditoría externa: tres prompts listos para pegar
 
+> **Documento histórico.** Instantánea de los encargos de auditoría externa de la serie 5 (5.1.7–5.2.10); no describe el estado
+> actual del proyecto. Para la postura vigente consulta [SECURITY.md](SECURITY.md) y
+> [SUPPORT.md](SUPPORT.md). Conserva valor como registro de lo que se revisó y cuándo.
+
 Esta página reúne tres encargos **autocontenidos** para pedir una revisión independiente en otro
 chat (otro modelo, otro agente o una persona): auditoría de seguridad, instalación desde cero en una
 máquina limpia y auditoría estática del APK. Cada bloque se pega tal cual; incluye el contexto, las

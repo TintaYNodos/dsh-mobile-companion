@@ -70,7 +70,7 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
       "commit": "61dc4f4",
       "apkSha256": "e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Version estable final de la serie 5 (versionCode 67). Detalle en CHANGELOG.md y RELEASE_5.4.0.md."
+      "notes": "Version estable final de la serie 5 (versionCode 67). Detalle en CHANGELOG.md y RELEASES.md."
     }
   ]
 }

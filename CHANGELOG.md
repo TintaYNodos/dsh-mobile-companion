@@ -904,10 +904,10 @@ cerrados y dos parciales sobre los 37 propuestos).
 
 Las notas completas de cada versión publicada viven en la raíz del repositorio:
 
-- [RELEASE_5.1.10.md](RELEASE_5.1.10.md)
-- [RELEASE_5.2.0.md](RELEASE_5.2.0.md)
-- [RELEASE_5.2.1.md](RELEASE_5.2.1.md) — parche de seguridad, solo puente
-- [RELEASE_5.2.8.md](RELEASE_5.2.8.md)
-- [RELEASE_5.2.9.md](RELEASE_5.2.9.md)
-- [RELEASE_5.2.10.md](RELEASE_5.2.10.md)
-- [RELEASE_5.4.0.md](RELEASE_5.4.0.md)
+- [RELEASES.md](RELEASES.md#5110)
+- [RELEASES.md](RELEASES.md#520)
+- [RELEASES.md](RELEASES.md#521) — parche de seguridad, solo puente
+- [RELEASES.md](RELEASES.md#528)
+- [RELEASES.md](RELEASES.md#529)
+- [RELEASES.md](RELEASES.md#5210)
+- [RELEASES.md](RELEASES.md#540)

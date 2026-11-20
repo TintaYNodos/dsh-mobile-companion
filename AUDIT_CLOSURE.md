@@ -125,17 +125,17 @@ Ejecutado entre el 2026-11-15 y el 2026-11-16 sobre el árbol de 5.1.10:
 El QA final de la serie 5 encontró diez defectos en la build 5.1.9. La versión final 5.1.10 los
 cierra todos; **D1, H1 y H2 justifican por sí solos el relanzamiento**: rompían la actualización
 desde la PC y abrían dos vías de privilegio. El detalle de la release está en
-[RELEASE_5.1.10.md](RELEASE_5.1.10.md) y el historial en [CHANGELOG.md](CHANGELOG.md).
+[RELEASES.md](RELEASES.md#5110) y el historial en [CHANGELOG.md](CHANGELOG.md).
 
 | Defecto | Severidad | Estado | Qué se corrigió | Evidencia |
 | --- | --- | --- | --- | --- |
-| D1 | ALTA | Cerrado | La actualización desde la PC fallaba con `NullPointerException` porque la ruta del búnker no tiene digest de GitHub; ahora usa como ancla el SHA-256 que publica el puente (`apkSha256`). | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| H1 | MEDIA | Cerrado | Con `DSH_ALLOW_PROXY_ACCESS=1`, una petición con cabeceras de proxy se trataba como loopback (podía autoaprobarse, abrir el panel y ver `pendingList`); ahora el flag solo permite pasar la guarda de red y nunca eleva privilegios. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| H2 | MEDIA | Cerrado | Un dispositivo `viewer` podía abrir el WebSocket; ahora se rechaza el upgrade de un viewer. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| H3 | BAJA | Cerrado | Un symlink o hardlink dentro de `synced_chats/` permitía leer archivos del host como conversación; ahora se rechazan los archivos no regulares y se comprueba la ruta real. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| H4 | BAJA | Cerrado | El panel aceptaba `Origin: null`; ahora lo rechaza como el resto de orígenes ajenos. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| H5 | BAJA | Cerrado | Un JSON malformado en `/sync` podía inyectar texto arbitrario en `bridge.log`; ahora se sanea (sin CR/LF ni caracteres de control, truncado). | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| D3 | BAJA | Cerrado | El kill switch borraba las cookies aunque la revocación no se hubiera confirmado; ahora solo cierra la sesión local si el puente confirma. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| D4 | BAJA | Cerrado | La biometría crítica llamaba a un hook JS inexistente; ahora usa el hook real del cliente. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| D5 | INFORMATIVA | Cerrado | `BootReceiver` ya no es `exported=true` (`BOOT_COMPLETED` es un broadcast protegido). | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
-| D6 | INFORMATIVA | Cerrado | El descubrimiento Android ya no acepta el marcador por subcadena; exige JSON con `service == "dsh-companion"`. | [RELEASE_5.1.10.md](RELEASE_5.1.10.md), [CHANGELOG.md](CHANGELOG.md) |
+| D1 | ALTA | Cerrado | La actualización desde la PC fallaba con `NullPointerException` porque la ruta del búnker no tiene digest de GitHub; ahora usa como ancla el SHA-256 que publica el puente (`apkSha256`). | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| H1 | MEDIA | Cerrado | Con `DSH_ALLOW_PROXY_ACCESS=1`, una petición con cabeceras de proxy se trataba como loopback (podía autoaprobarse, abrir el panel y ver `pendingList`); ahora el flag solo permite pasar la guarda de red y nunca eleva privilegios. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| H2 | MEDIA | Cerrado | Un dispositivo `viewer` podía abrir el WebSocket; ahora se rechaza el upgrade de un viewer. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| H3 | BAJA | Cerrado | Un symlink o hardlink dentro de `synced_chats/` permitía leer archivos del host como conversación; ahora se rechazan los archivos no regulares y se comprueba la ruta real. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| H4 | BAJA | Cerrado | El panel aceptaba `Origin: null`; ahora lo rechaza como el resto de orígenes ajenos. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| H5 | BAJA | Cerrado | Un JSON malformado en `/sync` podía inyectar texto arbitrario en `bridge.log`; ahora se sanea (sin CR/LF ni caracteres de control, truncado). | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| D3 | BAJA | Cerrado | El kill switch borraba las cookies aunque la revocación no se hubiera confirmado; ahora solo cierra la sesión local si el puente confirma. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| D4 | BAJA | Cerrado | La biometría crítica llamaba a un hook JS inexistente; ahora usa el hook real del cliente. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| D5 | INFORMATIVA | Cerrado | `BootReceiver` ya no es `exported=true` (`BOOT_COMPLETED` es un broadcast protegido). | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |
+| D6 | INFORMATIVA | Cerrado | El descubrimiento Android ya no acepta el marcador por subcadena; exige JSON con `service == "dsh-companion"`. | [RELEASES.md](RELEASES.md#5110), [CHANGELOG.md](CHANGELOG.md) |

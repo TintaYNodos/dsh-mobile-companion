@@ -1,0 +1,30 @@
+# robots.txt — DSH Mobile Companion
+# Se permite la lectura completa, incluida la de los rastreadores de IA.
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+Sitemap: https://tintaynodos.github.io/dsh-mobile-companion/sitemap.xml

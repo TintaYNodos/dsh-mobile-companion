@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSH Mobile Companion — DeepSeek Harness on Android over your private VPN</title>
+<meta name="description" content="Control DeepSeek Harness from Android inside your private network (ZeroTier or Tailscale). Quick commands, code keys, notes to your phone and signed updates. No cloud, no account, no dependencies.">
+<link rel="canonical" href="https://tintaynodos.github.io/dsh-mobile-companion/en/">
+<link rel="alternate" hreflang="es" href="https://tintaynodos.github.io/dsh-mobile-companion/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="DSH Mobile Companion — DeepSeek Harness on Android over your private VPN">
+<meta property="og:description" content="Control DeepSeek Harness from your phone inside your private network. No cloud, no account, no dependencies.">
+<meta property="og:image" content="https://tintaynodos.github.io/dsh-mobile-companion/images/social-preview.png">
+<meta property="og:url" content="https://tintaynodos.github.io/dsh-mobile-companion/en/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="../site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "DSH Mobile Companion",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Android 8.0+",
+      "softwareVersion": "5.4.0",
+      "datePublished": "2026-11-19",
+      "downloadUrl": "https://github.com/TintaYNodos/dsh-mobile-companion/releases/tag/v5.4.0",
+      "codeRepository": "https://github.com/TintaYNodos/dsh-mobile-companion",
+      "description": "Unofficial Android client that controls DeepSeek Harness from your phone inside a private network (ZeroTier or Tailscale). Local dependency-free bridge, quick commands, code keys, phone notes and signed updates.",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "author": {"@type": "Organization", "name": "Tinta y Nodos"}
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type": "Question", "name": "What is DSH Mobile Companion?",
+         "acceptedAnswer": {"@type": "Answer", "text": "An Android app plus a local bridge that connect your phone to DeepSeek Harness on your computer through your private network. The agent keeps running on your PC; nothing goes through a third-party server."}},
+        {"@type": "Question", "name": "Do I need an account or subscription?",
+         "acceptedAnswer": {"@type": "Answer", "text": "No. There are no accounts and no intermediate servers. The software is free under the BUSL-1.1 license."}},
+        {"@type": "Question", "name": "Is my computer exposed to the Internet?",
+         "acceptedAnswer": {"@type": "Answer", "text": "No. The bridge listens only on loopback and on your private VPN interface. No port forwarding and no Cloudflare."}},
+        {"@type": "Question", "name": "Does it work with the computer turned off?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Not for talking to the agent, because Harness runs on the PC. You can still write notes on the phone and send them when the computer is back."}},
+        {"@type": "Question", "name": "Which Android versions are supported?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Android 8.0 (API 26) or newer, with no background Google services and no location or storage permissions."}},
+        {"@type": "Question", "name": "Is it an official DeepSeek app?",
+         "acceptedAnswer": {"@type": "Answer", "text": "No. It is an independent client by Tinta y Nodos; you must install DeepSeek Harness on your computer."}},
+        {"@type": "Question", "name": "How do I install it?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Download the signed APK from GitHub Releases, join the phone to the same private VPN as the PC, open the app, add the PC address and approve the device once from the computer panel."}},
+        {"@type": "Question", "name": "Is it secure?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Traffic is HTTP inside your private VPN, encrypted by the tunnel. The APK is verified by SHA-256, pairing requires local approval, and there is a kill switch and access-key rotation."}},
+        {"@type": "Question", "name": "Is there an iOS or desktop version?",
+         "acceptedAnswer": {"@type": "Answer", "text": "Series 5 is Android only. Desktop and other clients are separate product lines, not available yet."}}
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<header><div class="wrap brand"><span class="logo">◈</span>DSH Mobile Companion
+<nav><a href="#faq">FAQ</a><a href="#install">Install</a><a href="../">Español</a><a href="https://github.com/TintaYNodos/dsh-mobile-companion">GitHub</a></nav></div></header>
+
+<main class="wrap">
+<div class="hero">
+<h1>DeepSeek Harness on your phone, inside your private network</h1>
+<p class="lead">DSH Mobile Companion is an Android app plus a local bridge that let you control the agent on your computer from your phone: no cloud, no account, nothing exposed to the Internet. The phone talks to your PC over ZeroTier or Tailscale while the agent keeps running where it belongs.</p>
+<div class="cta">
+<a class="btn primary" href="https://github.com/TintaYNodos/dsh-mobile-companion/releases/tag/v5.4.0">Download the APK (185 KB)</a>
+<a class="btn" href="https://github.com/TintaYNodos/dsh-mobile-companion#readme">Read the setup guide</a>
+</div>
+<p class="meta">Version 5.4.0 (versionCode 67) · Android 8.0+ · BUSL-1.1 license · release-signed APK</p>
+<img class="heroimg" src="../images/social-preview.png" alt="DSH Mobile Companion composer with quick commands and code keys">
+</div>
+
+<section>
+<h2>What it is and what it is not</h2>
+<p><strong>It is</strong> a remote control for DeepSeek Harness: open your PC chat from the phone, insert quick commands, show code keys, send notes and get turn notifications.</p>
+<p><strong>It is not</strong> an on-device AI model, a cloud service or an official DeepSeek client. It does not store your API key and it cannot work with the computer turned off.</p>
+<div class="note">All traffic goes from your phone to your computer over your private VPN. There is no Tinta y Nodos server in between.</div>
+</section>
+
+<section>
+<h2>How it works</h2>
+<ol>
+<li>You run the <strong>bridge</strong> on the computer: a dependency-free Node process that talks to Harness and serves the phone only on loopback and your VPN interface.</li>
+<li>The phone joins the same private network and opens the app.</li>
+<li>You approve the device once from the local computer panel; the app remembers the device cookie.</li>
+<li>From then on you control chat, commands and notes from the phone.</li>
+</ol>
+</section>
+
+<section>
+<h2>Features</h2>
+<div class="grid">
+<div class="card"><h3>Full chat</h3><p>The real Harness composer, adapted to phone screens and landscape typing.</p></div>
+<div class="card"><h3>Quick commands</h3><p>Catalog per profile (writing or code) with per-command switches in Settings.</p></div>
+<div class="card"><h3>Code keys</h3><p>Tab, Esc, braces, brackets, parentheses and symbols without switching keyboards.</p></div>
+<div class="card"><h3>Phone notes</h3><p>Write offline and send the note to the computer when it comes back.</p></div>
+<div class="card"><h3>No dependencies</h3><p>Node bridge without npm packages and an APK without AndroidX or Kotlin.</p></div>
+<div class="card"><h3>Verified updates</h3><p>The APK is checked by SHA-256 and installed with the same release certificate.</p></div>
+</div>
+</section>
+
+<section>
+<h2>Honest comparison</h2>
+<table>
+<tr><th>Option</th><th>Upside</th><th>Limit</th></tr>
+<tr><td>DSH Mobile Companion</td><td>Chat and commands on the phone, no cloud, inside your VPN</td><td>Android only, one active PC, needs VPN and bridge</td></tr>
+<tr><td>Harness in the phone browser</td><td>Zero install</td><td>No quick commands or code keys, awkward in landscape</td></tr>
+<tr><td>Remote desktop</td><td>You see the whole PC</td><td>Heavy, poor touch use and a larger attack surface</td></tr>
+</table>
+</section>
+
+<section id="install">
+<h2>Install</h2>
+<ol>
+<li>Download the APK from <a href="https://github.com/TintaYNodos/dsh-mobile-companion/releases/tag/v5.4.0">GitHub Releases</a> and install it.</li>
+<li>On the PC, start the bridge and the local panel. Note the address: <code>http://PRIVATE-IP:57420</code>.</li>
+<li>Join the phone to the same private VPN.</li>
+<li>Open the app, add the PC address and tap "Request access".</li>
+<li>Approve the device on the computer panel. The app signs in automatically.</li>
+</ol>
+<p class="meta">PC requirements: DeepSeek Harness running and Node.js 22.15 or newer. Bridge and APK must speak the same contract version.</p>
+</section>
+
+<section>
+<h2>Screenshots</h2>
+<div class="shots">
+<img src="../images/screens/01-dock-vertical-360x800.png" alt="Portrait command dock with Hide, File and Notes">
+<img src="../images/screens/02-dock-apaisado-teclado-800x360.png" alt="Compact landscape row with code keys">
+<img src="../images/screens/03-hoja-comandos-360x800.png" alt="Grouped more-commands sheet">
+</div>
+<p class="meta">Demo screenshots with fictional data; no real accounts or projects.</p>
+</section>
+
+<section id="faq">
+<h2>FAQ</h2>
+<details><summary>What is DSH Mobile Companion?</summary><p>An Android app plus a local bridge connecting your phone to DeepSeek Harness through your private network. Not a cloud client, and it never stores your API key.</p></details>
+<details><summary>Do I need an account or subscription?</summary><p>No accounts and no intermediate servers. The software is free under BUSL-1.1.</p></details>
+<details><summary>Is my computer exposed to the Internet?</summary><p>No. The bridge listens only on loopback and your private VPN interface, with no port forwarding.</p></details>
+<details><summary>Does it work with the computer turned off?</summary><p>Not for the agent. You can still write notes and send them later.</p></details>
+<details><summary>Which Android versions are supported?</summary><p>Android 8.0 (API 26) or newer, without background Google services.</p></details>
+<details><summary>Is it official?</summary><p>No: an independent client by Tinta y Nodos. It requires DeepSeek Harness on your PC.</p></details>
+<details><summary>Is it secure?</summary><p>HTTP inside your private VPN, encrypted by the tunnel; SHA-256 verified APK, local device approval, kill switch and key rotation.</p></details>
+<details><summary>Is there an iOS or desktop version?</summary><p>Series 5 is Android only; other clients are separate lines, not available yet.</p></details>
+<details><summary>Where do I report bugs or vulnerabilities?</summary><p>Bugs through GitHub Issues with the bug template; vulnerabilities privately per <a href="https://github.com/TintaYNodos/dsh-mobile-companion/blob/main/SECURITY.md">SECURITY.md</a>.</p></details>
+</section>
+</main>
+
+<footer><div class="wrap">
+DSH Mobile Companion · Tinta y Nodos · <a href="https://github.com/TintaYNodos/dsh-mobile-companion">GitHub</a> · <a href="https://github.com/TintaYNodos/dsh-mobile-companion/blob/main/LICENSE">BUSL-1.1 license</a> · <a href="../">Español</a>
+<p>DeepSeek Harness is a DeepSeek product. This app is an independent client and is not affiliated with or endorsed by DeepSeek.</p>
+</div></footer>
+</body>
+</html>

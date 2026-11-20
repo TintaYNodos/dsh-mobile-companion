@@ -1,6 +1,6 @@
-# Lista de verificación de la versión estable (desde el teléfono)
+# Lista de verificación de la versión actual (desde el teléfono)
 
-Esta lista sirve para comprobar la versión **estable** de DSH Mobile Companion **sin usar la
+Esta lista sirve para comprobar la **versión actual** de DSH Mobile Companion **sin usar la
 computadora**. Todo lo que aparece aquí se ve desde el teléfono en la red privada (ZeroTier,
 Tailscale u otra). No hace falta abrir el panel de la computadora ni tocar archivos.
 

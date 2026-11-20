@@ -25,13 +25,13 @@ Cambios de repositorio que **no** forman parte del APK publicado. La versión in
   Node/PowerShell/Harness, verificación de `/healthz`, `doctor.ps1` y recibo, log sin secretos y
   códigos de salida 0/1/2/3/4. Verificador propio en `test/verify_install_agent.ps1` (35/35).
 
-## 5.4.0 — `versionCode` 67 (versión estable final de la serie 5)
+## 5.4.0 — `versionCode` 67 (versión 5.4.0, cierre de la serie 5)
 
 
 
 Cierre de la serie 5. La 5.4.0 consolida todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (documentadas más abajo) y el trabajo de producto de la línea 5.3 (comandos por perfil, dock
-compacto, lectura sin conexión, multi-PC). A partir de aquí la serie queda estable: solo correcciones
+compacto, lectura sin conexión, multi-PC). A partir de aquí la serie queda cerrada: solo correcciones
 de seguridad y mantenimiento.
 
 ### Añadido — comandos y teclas configurables por perfil
@@ -126,7 +126,7 @@ de seguridad y mantenimiento.
   5.1.7. El APK 5.4.0 es `versionCode` 67 y el puente y el APK deben actualizarse juntos.
 - Sin dependencias npm nuevas (cero dependencias) y sin cambios en el formato de datos: las notas,
   los chats sincronizados y el registro de dispositivos se conservan.
-- La 5.4.0 es la versión estable de cierre de la serie 5; las publicaciones posteriores de la línea
+- La 5.4.0 es la versión actual de cierre de la serie 5; las publicaciones posteriores de la línea
   son solo de seguridad y mantenimiento. Una función nueva o una adaptación a un Harness
   incompatible saldría como línea nueva.
 
@@ -302,7 +302,7 @@ apagada, sin Internet y sin clave de API.
 - Cambio solo de puente: **el APK no cambia** (5.2.0 / versionCode 51) y se instala igual.
 - Serie 5.2 congelada: este es el parche de seguridad previsto por la política de la línea.
 
-## 5.2.0 — `versionCode` 51 (versión estable)
+## 5.2.0 — `versionCode` 51 (versión actual)
 
 Versión de **fortalecimiento**, no de producto: se mantienen todas las funciones, la configuración
 y el formato de datos de la 5.1.10. La 5.1.10 se puede actualizar a la 5.2.0 encima, sin
@@ -343,7 +343,7 @@ correcciones de seguridad.
   self-hosted o solo sobre ZeroTier/Tailscale, contraseña fuerte + 2FA, apagado cuando no se usa);
   RustDesk **no es parte del producto ni se empaqueta**.
 - **`SUPPORT.md`**: qué está soportado, qué no, y cómo pedir ayuda con evidencia verificable.
-- **`CHECKLIST-ESTABLE.md`**: lista de comprobación de la versión estable **desde el teléfono**.
+- **`CHECKLIST-VERIFICACION.md`**: lista de comprobación de la versión actual **desde el teléfono**.
 - **`AUDITORIA-EXTERNA.md`**: tres prompts listos para auditoría de seguridad, onboarding y APK.
 
 ### Añadido — registro de versiones y política

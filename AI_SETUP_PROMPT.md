@@ -57,7 +57,7 @@ Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/
 usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
 `mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
 
-La versión estable actual es la **5.4.0** (`versionCode` 67). El diagnóstico también deja un
+La versión actual es la **5.4.0** (`versionCode` 67). El diagnóstico también deja un
 **recibo verificable**: `doctor.ps1 -Report` escribe
 `doctor-report.json` sin BOM con `apkSha256`, `apkVersion`, `apkVersionCode`, la huella del
 certificado de release (`certSha256Release`) y un `receipt` sha256 sobre el JSON compacto sin el
@@ -194,7 +194,7 @@ Then give a final report in this exact shape:
   computer is on but Harness is down), and that backup.bat / restore.bat protect the device
   registry, the access key and the panel token.
 - Point the user to OPERACION.md for the runbook (approvals, restarts, logs, health, backups, APK
-  updates), CHECKLIST-ESTABLE.md for a check from the phone and SUPPORT.md for the support policy
+  updates), CHECKLIST-VERIFICACION.md for a check from the phone and SUPPORT.md for the support policy
   and the evidence to attach.
 - Remote desktop (for example RustDesk) is an optional recommendation for hands-on support only: it
   is not part of the product and is never bundled. If used, keep it on the private network or a
@@ -390,7 +390,7 @@ Después entrega el informe con esta forma exacta:
   que la computadora está encendida pero Harness está caído), y que backup.bat / restore.bat
   protegen el registro de dispositivos, la clave de acceso y el token del panel.
 - Indica OPERACION.md para el procedimiento (aprobaciones, reinicios, logs, salud, copias,
-  actualización del APK), CHECKLIST-ESTABLE.md para comprobarlo desde el teléfono y SUPPORT.md para
+  actualización del APK), CHECKLIST-VERIFICACION.md para comprobarlo desde el teléfono y SUPPORT.md para
   la política de soporte y la evidencia que hay que adjuntar.
 - El escritorio remoto (por ejemplo RustDesk) es una recomendación opcional solo para soporte
   guiado: no forma parte del producto y nunca se empaqueta. Si se usa, mantenlo en la red privada o
@@ -453,7 +453,7 @@ Tailscale instalado en el teléfono. Ese es el camino soportado y no expone nada
 - `install-agent.ps1` — instalación de extremo a extremo para agentes (`-Json` para evidencia, `-RegisterAutostart` para el arranque automático).
 - [OPERACION.md](OPERACION.md) — runbook for health, restarts, logs, backups and remote support;
   [SUPPORT.md](SUPPORT.md) — support policy and the evidence to attach;
-  [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) — the stable-release check from the phone.
+  [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md) — the release check from the phone.
 - [skills/mobile-companion-setup](skills/mobile-companion-setup/) — the same procedure as an
   installable DSH skill, with the failure-to-fix map in [doctor-fixes.json](doctor-fixes.json).
 - `SECURITY.md` — how to report a vulnerability.

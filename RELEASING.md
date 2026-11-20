@@ -70,7 +70,7 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
       "commit": "61dc4f4",
       "apkSha256": "e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Version estable final de la serie 5 (versionCode 67). Detalle en CHANGELOG.md y RELEASES.md."
+      "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 67). Detalle en CHANGELOG.md y RELEASES.md."
     }
   ]
 }
@@ -87,7 +87,7 @@ etiquetar. El registro nunca se publica con campos sin completar.
 | `releases[]` | array | Una entrada por versión publicada, en orden de `versionCode` ascendente. La nueva se añade al final. |
 | `version` | string | `MAJOR.MINOR.PATCH` de `src/config.mjs`. |
 | `versionCode` | número | `apkVersionCode` de `src/config.mjs` en el commit publicado. |
-| `channel` | string | `stable` para una versión estable; `prerelease` para una versión preliminar. |
+| `channel` | string | `stable` para una versión publicada; `prerelease` para una versión preliminar. |
 | `releasedAt` | string | Fecha de la publicación en GitHub, `AAAA-MM-DD`. |
 | `commit` | string | SHA completo del **commit de origen** con el que se compiló el APK (el commit de versión). El registro se añade en el commit siguiente, que es el que se etiqueta: un commit no puede contener su propio SHA. |
 | `apkSha256` | string | 64 hex en minúsculas: el SHA-256 que imprime `build-apk.ps1` y que sirve el puente. |

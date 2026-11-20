@@ -9,7 +9,7 @@ chat (otro modelo, otro agente o una persona): auditoría de seguridad, instalac
 máquina limpia y auditoría estática del APK. Cada bloque se pega tal cual; incluye el contexto, las
 reglas y los entregables, así que no hace falta explicar nada más.
 
-Repositorio público: <https://github.com/TintaYNodos/dsh-mobile-companion> · Versión estable:
+Repositorio público: <https://github.com/TintaYNodos/dsh-mobile-companion> · Versión actual:
 **5.2.9** (versionCode 53) · Licencia: Business Source License 1.1 (ver [LICENSE](LICENSE)).
 
 Antes de pegar:
@@ -28,7 +28,7 @@ Antes de pegar:
 ```text
 Eres un auditor de seguridad externo. Audita el proyecto DSH Mobile Companion, un puente local en
 Node.js (cero dependencias de npm) más un cliente Android WebView y páginas offline. Repositorio
-público: https://github.com/TintaYNodos/dsh-mobile-companion (rama main; la versión estable es la
+público: https://github.com/TintaYNodos/dsh-mobile-companion (rama main; la versión actual es la
 5.2.9, versionCode 53).
 
 CONTEXTO QUE DEBES VERIFICAR EN EL CÓDIGO, NO SUPONER
@@ -116,7 +116,7 @@ ENTREGABLES
 Eres un evaluador de onboarding. Tu objetivo es comprobar si una persona puede instalar y verificar
 DSH Mobile Companion en una máquina limpia siguiendo SOLO la documentación pública, y medir la
 fricción real. Repositorio público: https://github.com/TintaYNodos/dsh-mobile-companion (rama main;
-versión estable 5.2.9, versionCode 53).
+versión actual 5.2.9, versionCode 53).
 
 CONTEXTO
 - Producto: puente local en Node.js (cero dependencias) + cliente Android WebView + páginas offline.
@@ -125,7 +125,7 @@ CONTEXTO
 - La instalación oficial es Windows (scripts .bat/.ps1) y también hay arranque para macOS/Linux. El
   diagnóstico oficial es doctor.ps1 y el informe se verifica con tools/verify-receipt.mjs.
 - La documentación de referencia está en README.md, AI_SETUP_PROMPT.md, OPERACION.md,
-  CHECKLIST-ESTABLE.md, VPN_OPTIONS.md y SECURITY.md.
+  CHECKLIST-VERIFICACION.md, VPN_OPTIONS.md y SECURITY.md.
 - Licencia Business Source License 1.1.
 
 ENTORNO RECOMENDADO
@@ -171,7 +171,7 @@ ENTREGABLES
 
 ```text
 Eres un auditor estático de aplicaciones Android. Audita el APK publicado de DSH Mobile Companion
-(versión estable 5.2.9, versionCode 53), un cliente WebView ligero que se conecta a un puente local
+(versión actual 5.2.9, versionCode 53), un cliente WebView ligero que se conecta a un puente local
 dentro de una red privada. Repositorio público con el código fuente:
 https://github.com/TintaYNodos/dsh-mobile-companion (rama main).
 

@@ -36,5 +36,5 @@
 
 ## Optional
 
-- Setup checklist: https://github.com/TintaYNodos/dsh-mobile-companion/blob/main/CHECKLIST-ESTABLE.md
+- Setup checklist: https://github.com/TintaYNodos/dsh-mobile-companion/blob/main/CHECKLIST-VERIFICACION.md
 - Operation guide: https://github.com/TintaYNodos/dsh-mobile-companion/blob/main/OPERACION.md

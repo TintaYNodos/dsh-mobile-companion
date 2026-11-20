@@ -1,6 +1,6 @@
 # Política de soporte
 
-**Versión estable actual: 5.4.0** (puente y APK, versionCode 67). La línea estable recibe
+**Versión actual: 5.4.0** (puente y APK, versionCode 67). La línea 5 recibe
 correcciones de seguridad y versiones de mantenimiento de la serie 5. **La 5.3.7 y anteriores
 quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, actualiza a 5.4.0.
 
@@ -10,7 +10,7 @@ quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, 
 
 | Versión | Estado | Qué recibe |
 | --- | --- | --- |
-| 5.4.0 (estable, versionCode 67) | **Soportada** | Correcciones de seguridad y mantenimiento de la serie 5 |
+| 5.4.0 (actual, versionCode 67) | **Soportada** | Correcciones de seguridad y mantenimiento de la serie 5 |
 | 5.3.7 y anteriores de la serie 5 (incluidas 5.2.x) | Sin soporte | Nada; actualiza a la 5.4.0 |
 | 5.1.x y anteriores | Sin soporte | Nada; actualiza a la 5.4.0 |
 
@@ -46,7 +46,7 @@ soporte de herramientas de terceros. Lo que se intenta resolver:
 - Errores reproducibles del puente (`bridge.mjs`, `src/**`) y de la app Android de este repositorio.
 
 El procedimiento completo de operación está en [OPERACION.md](OPERACION.md) y la comprobación
-guiada desde el teléfono en [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md).
+guiada desde el teléfono en [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md).
 
 ## Qué no cubre
 
@@ -104,7 +104,7 @@ seguridad**, no al soporte general.
 ## Enlaces
 
 - [OPERACION.md](OPERACION.md): operación y soporte remoto paso a paso.
-- [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md): comprobación completa desde el teléfono.
+- [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md): comprobación completa desde el teléfono.
 - [SECURITY.md](SECURITY.md): reportar vulnerabilidades y verificar builds.
 - [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md): instalación guiada por un agente de IA.
 - [VPN_OPTIONS.md](VPN_OPTIONS.md): redes privadas compatibles.

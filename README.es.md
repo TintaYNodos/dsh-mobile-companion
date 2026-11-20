@@ -454,7 +454,7 @@ Este diseño está pensado para **uso personal**: un operador, sus dispositivos 
 
 ## Estabilidad
 
-**La 5.4.0 es la versión estable actual de la serie 5.** La rama `stable/5` conserva este árbol y solo recibe correcciones de seguridad y mantenimiento; la 5.3.x queda como línea anterior.
+**La 5.4.0 es la versión actual de la serie 5.** La rama `stable/5` conserva este árbol y solo recibe correcciones de seguridad y mantenimiento; la 5.3.x queda como línea anterior.
 
 ## Aviso de proyecto comunitario
 
@@ -472,7 +472,7 @@ Capturas de demostración con datos ficticios: no corresponden a una sesión rea
 
 ## Documentos del proyecto
 
-[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
+[SECURITY.md](SECURITY.md) · [AUDIT_CLOSURE.md](AUDIT_CLOSURE.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [DISPOSITIVOS.md](DISPOSITIVOS.md) · [RELEASING.md](RELEASING.md) · [OPERACION.md](OPERACION.md) · [SUPPORT.md](SUPPORT.md) · [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md) · [AUDITORIA-EXTERNA.md](AUDITORIA-EXTERNA.md) · [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) · [LICENSE](LICENSE)
 
 ## iPhone / iPad
 

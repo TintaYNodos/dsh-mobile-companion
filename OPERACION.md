@@ -6,7 +6,7 @@ otra): el teléfono abre `http://<IP-PRIVADA>:57420`. El panel de aprobación es
 `127.0.0.1:57421`** y el puente **nunca se expone a Internet**: no se abre un puerto en el router,
 no hay DNS público ni túnel público detrás.
 
-Documentos relacionados: [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) (verificación completa desde
+Documentos relacionados: [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md) (verificación completa desde
 el teléfono), [SUPPORT.md](SUPPORT.md) (política de soporte y evidencia), [SECURITY.md](SECURITY.md),
 [DISPOSITIVOS.md](DISPOSITIVOS.md) y [VPN_OPTIONS.md](VPN_OPTIONS.md) (redes privadas compatibles).
 
@@ -245,7 +245,7 @@ hace falta escritorio remoto.
 
 ## 10. Documentos de referencia
 
-- [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md): lista de comprobación completa desde el teléfono.
+- [CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md): lista de comprobación completa desde el teléfono.
 - [SUPPORT.md](SUPPORT.md): política de soporte y qué evidencia enviar.
 - [SECURITY.md](SECURITY.md): cómo reportar una vulnerabilidad y huella del certificado.
 - [DISPOSITIVOS.md](DISPOSITIVOS.md): flujo del panel, roles y revocación.

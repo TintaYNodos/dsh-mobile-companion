@@ -127,11 +127,11 @@ if (fs.existsSync("package.json") && fs.existsSync("src/config.mjs") && fs.exist
   I(`versión coherente: ${version} / versionCode ${manifestCode}`);
   // La checklist se usa desde el telefono para verificar el build: su ejemplo
   // JSON no puede pedir un versionCode distinto al real.
-  const checklistPath = path.join(process.cwd(), "CHECKLIST-ESTABLE.md");
+  const checklistPath = path.join(process.cwd(), "CHECKLIST-VERIFICACION.md");
   if (fs.existsSync(checklistPath)) {
     const checklistText = fs.readFileSync(checklistPath, "utf8");
     for (const match of checklistText.matchAll(/"apkVersionCode":\s*(\d+)/g)) {
-      if (match[1] !== apkCode) F(`CHECKLIST-ESTABLE.md pide apkVersionCode ${match[1]} (config: ${apkCode})`);
+      if (match[1] !== apkCode) F(`CHECKLIST-VERIFICACION.md pide apkVersionCode ${match[1]} (config: ${apkCode})`);
     }
   }
 

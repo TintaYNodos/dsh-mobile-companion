@@ -10,7 +10,7 @@ Versiones: [5.4.0](#540) · [5.2.10](#5210) · [5.2.9](#529) · [5.2.8](#528) ·
 
 ## 5.4.0
 
-**DSH Mobile Companion 5.4.0 (`versionCode` 67) — versión estable final de la serie 5**
+**DSH Mobile Companion 5.4.0 (`versionCode` 67) — versión 5.4.0, cierre de la serie 5**
 
 Cierre de la serie 5. La 5.4.0 recoge todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (integridad de las notas, acceso, QR y operación) y el trabajo de producto de la línea 5.3:
@@ -277,7 +277,7 @@ límite de esta versión es un dato de la nota: se ve, se ordena y se filtra, pe
 
 La política de soporte de la línea sigue en [SUPPORT.md](SUPPORT.md): correcciones de seguridad y
 mantenimiento de la serie 5.2, sin promesas de funciones. La comprobación desde el teléfono está en
-[CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md), y el detalle de seguridad de las notas en
+[CHECKLIST-VERIFICACION.md](CHECKLIST-VERIFICACION.md), y el detalle de seguridad de las notas en
 [SECURITY.md](SECURITY.md).
 
 ### Verificación
@@ -395,7 +395,7 @@ desinstalar.
 
 **DSH Mobile Companion 5.2.1 — parche de seguridad (solo puente)**
 
-Versión estable de la serie 5.2. **El APK no cambia**: sigue siendo 5.2.0 (`versionCode` 51),
+Versión actual de la serie 5.2. **El APK no cambia**: sigue siendo 5.2.0 (`versionCode` 51),
 con el mismo SHA-256 y la misma firma; se instala encima sin desinstalar.
 
 ### Qué corrige
@@ -427,9 +427,9 @@ Serie 5.2 congelada: a partir de aquí solo correcciones de seguridad.
 
 ## 5.2.0
 
-**DSH Mobile Companion 5.2.0 (versionCode 51) — versión estable**
+**DSH Mobile Companion 5.2.0 (versionCode 51) — versión actual**
 
-Esta es la **versión estable** de la serie 5. Congela la línea: a partir de aquí solo se publican
+Esta es la **versión actual** de la serie 5. Congela la línea: a partir de aquí solo se publican
 **correcciones de seguridad**, no funciones nuevas. No hay cambios de configuración, formato de
 datos ni API: la 5.1.10 se actualiza a la 5.2.0 encima, sin desinstalar (la firma no cambió desde la
 5.1.7).
@@ -474,8 +474,8 @@ afectada** con un aviso en `bridge.log`; el estado se expone como `contract` en
   Incluye la recomendación de **RustDesk** como soporte remoto opcional (servidor self-hosted o solo
   sobre ZeroTier/Tailscale, contraseña fuerte + 2FA, apagado cuando no se usa); **no es parte del
   producto ni se empaqueta**.
-- `SUPPORT.md` fija la política: 5.2.0 estable y solo correcciones de seguridad; 5.1.x anterior.
-- `CHECKLIST-ESTABLE.md`: comprobación de la versión estable **desde el teléfono**.
+- `SUPPORT.md` fija la política: 5.2.0 publicada y solo correcciones de seguridad; 5.1.x anterior.
+- `CHECKLIST-VERIFICACION.md`: comprobación de la versión actual **desde el teléfono**.
 - `AUDITORIA-EXTERNA.md`: tres prompts listos para auditoría de seguridad, onboarding y APK.
 - `RELEASES.json`: registro legible por máquina de cada build publicado (versión, `versionCode`,
   commit de origen, SHA-256, huella del certificado y fecha).
@@ -527,10 +527,10 @@ desinstala una vez; desde la 5.1.7 se instala encima sin problema.
 
 ### Política de esta línea
 
-- **La 5.2.0 es la versión estable.** Solo un fallo de seguridad crítico produciría una 5.2.1.
+- **La 5.2.0 es la versión actual.** Solo un fallo de seguridad crítico produciría una 5.2.1.
 - La rama `stable/5` conserva exactamente este árbol.
 - El compromiso de mantenimiento a largo plazo se mantiene en un documento interno, fuera de este
-  repositorio; aquí no se promete nada más allá de "estable, solo correcciones de seguridad".
+  repositorio; aquí no se promete nada más allá de "publicada, solo correcciones de seguridad".
 
 ### Cómo usarla
 

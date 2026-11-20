@@ -414,6 +414,7 @@ Tailscale instalado en el teléfono. Ese es el camino soportado y no expone nada
 ## After the setup
 
 - `doctor.ps1` — the diagnostic above; run it whenever something stops working.
+- `install-agent.ps1` — instalación de extremo a extremo para agentes (`-Json` para evidencia, `-RegisterAutostart` para el arranque automático).
 - [OPERACION.md](OPERACION.md) — runbook for health, restarts, logs, backups and remote support;
   [SUPPORT.md](SUPPORT.md) — support policy and the evidence to attach;
   [CHECKLIST-ESTABLE.md](CHECKLIST-ESTABLE.md) — the stable-release check from the phone.

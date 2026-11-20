@@ -893,3 +893,15 @@ cerrados y dos parciales sobre los 37 propuestos).
 
 - First public release: bridge, touch layer, APK, seven READMEs, installers for Windows, macOS and
   Linux, Docker files.
+
+## Notas de release por versión
+
+Las notas completas de cada versión publicada viven en la raíz del repositorio:
+
+- [RELEASE_5.1.10.md](RELEASE_5.1.10.md)
+- [RELEASE_5.2.0.md](RELEASE_5.2.0.md)
+- [RELEASE_5.2.1.md](RELEASE_5.2.1.md) — parche de seguridad, solo puente
+- [RELEASE_5.2.8.md](RELEASE_5.2.8.md)
+- [RELEASE_5.2.9.md](RELEASE_5.2.9.md)
+- [RELEASE_5.2.10.md](RELEASE_5.2.10.md)
+- [RELEASE_5.4.0.md](RELEASE_5.4.0.md)

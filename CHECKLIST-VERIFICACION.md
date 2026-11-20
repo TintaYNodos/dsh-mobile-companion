@@ -11,7 +11,7 @@ Tailscale u otra). No hace falta abrir el panel de la computadora ni tocar archi
 
 1. Abre la app del túnel privado en el teléfono y confirma que está conectada.
 2. En el navegador del teléfono, entra a `http://<IP-PRIVADA>:57420/dsh-companion/status`.
-   Debe responder un texto JSON con `"version": "5.4.0"` y `"apkVersionCode": 67`.
+   Debe responder un texto JSON con `"version": "5.4.0"` y `"apkVersionCode": 68`.
    La IP privada es la que te dio el túnel; no la inventes.
 3. Guarda esa URL en favoritos: es tu comprobación rápida si algo falla.
 

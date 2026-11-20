@@ -67,7 +67,7 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
       "versionCode": 68,
       "channel": "stable",
       "releasedAt": "2026-11-19",
-      "commit": "f30e676b9548fa1375a965f4a51cd699bd682494",
+      "commit": "0abe47f78dbdec1a87bf277500689e41da616867",
       "apkSha256": "7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 68). Detalle en CHANGELOG.md y RELEASES.md."

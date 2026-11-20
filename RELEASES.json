@@ -34,32 +34,35 @@
     {
       "version": "5.2.8",
       "versionCode": 52,
-      "channel": "stable",
+      "channel": "internal",
       "releasedAt": "2026-11-16",
       "commit": "e7349f3ec14b3e2216cb05c7bcabd77412896336",
       "apkSha256": "6592adaa6579c4320d23cb96e46ac71cc3a54776e637d8c47736bc79f20fbddd",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Retira el modo satelite y agrega Notas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PC. El telefono ya no guarda la clave de API ni habla con api.deepseek.com."
+      "notes": "Retira el modo satelite y agrega Notas completas (perfiles escritor/programador, tipos, proyecto, personaje/modulo, etiquetas, estado, prioridad, filtros y chat destino) con envio a la PC. El telefono ya no guarda la clave de API ni habla con api.deepseek.com.",
+      "note": "Build interno de la serie 5.2: no tuvo release publico en GitHub."
     },
     {
       "version": "5.2.9",
       "versionCode": 53,
-      "channel": "stable",
+      "channel": "internal",
       "releasedAt": "2026-11-16",
       "commit": "f0feab884f0503b0d82f1a9a88026019596473e5",
       "apkSha256": "06e0af8f9727a76d6588deaa983b11bcb1688e4e90eac38af4ccd22e4a1bb83d",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Notas profesionales por area: 7 perfiles, fechas limite, privacidad (cifrado local, FLAG_SECURE, Solo en el telefono), envio idempotente y bandeja en el panel, accesibilidad. Sin chat destino."
+      "notes": "Notas profesionales por area: 7 perfiles, fechas limite, privacidad (cifrado local, FLAG_SECURE, Solo en el telefono), envio idempotente y bandeja en el panel, accesibilidad. Sin chat destino.",
+      "note": "Build interno de la serie 5.2: no tuvo release publico en GitHub."
     },
     {
       "version": "5.2.10",
       "versionCode": 54,
-      "channel": "stable",
+      "channel": "internal",
       "releasedAt": "2026-11-17",
       "commit": "e0bcaf506dd949da975c7ab419bf5a552316dab1",
       "apkSha256": "c476f212131de48e90855d7ada97ec543cb72d70523304ae86dae5d215a17eee",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. Detalle en CHANGELOG.md y RELEASE_5.2.10.md."
+      "notes": "Solo correcciones tras la auditoria de 5.2.9: escritura atomica e indice antes del contenido en notas, poda serializada, kill switch honesto, rechazo por solicitud, /healthz con frontera de origen, QR sin truncar, un solo envio en Android, comparador de versiones, queries de QR, cookie preservada al limpiar cache, cierre ordenado por bandera y suite aislada. Detalle en CHANGELOG.md y RELEASE_5.2.10.md.",
+      "note": "Build interno de la serie 5.2: no tuvo release publico en GitHub."
     },
     {
       "version": "5.4.0",

@@ -3,13 +3,25 @@
 All notable changes to DSH Mobile Companion. The project follows `MAJOR.MINOR.PATCH` and the
 Android `versionCode` increments once per published build.
 
-## 5.4.0 — `versionCode` 67 (versión estable final de la serie 5)
+## Sin publicar (rama `main`)
 
-- **Documentación de agentes unificada**: `AGENT_COMPAT.md` se fusionó en `AI_SETUP_PROMPT.md`
-  (matriz de compatibilidad, skill y recibo del informe) para que solo haya un documento canónico.
+Cambios de repositorio que **no** forman parte del APK publicado. La versión instalable sigue siendo la
+5.4.0 / `versionCode` 67.
 
 - **Retirados los archivos Docker** (`Dockerfile`, `docker-compose.yml`, `.dockerignore`). El puente
   necesita el loopback del host y el Harness local; la imagen nunca fue una vía soportada ni documentada.
+- **Documentación de agentes unificada**: `AGENT_COMPAT.md` se fusionó en `AI_SETUP_PROMPT.md`
+  (matriz de compatibilidad, skill y recibo del informe) para que solo haya un documento canónico.
+- **Consolidado el historial de versiones** en [RELEASES.md](RELEASES.md): las siete notas
+  `RELEASE_*.md` pasan a un solo documento con anclas por versión; el detalle técnico sigue aquí.
+- **`install-agent.ps1` reescrito como vía oficial de instalación para agentes**: contrato JSON
+  versionado (1.0.0), `-DryRun`, `-SkipClone`, `-RegisterAutostart`, `-Port` y `-Force`; preflight de
+  Node/PowerShell/Harness, verificación de `/healthz`, `doctor.ps1` y recibo, log sin secretos y
+  códigos de salida 0/1/2/3/4. Verificador propio en `test/verify_install_agent.ps1` (35/35).
+
+## 5.4.0 — `versionCode` 67 (versión estable final de la serie 5)
+
+
 
 Cierre de la serie 5. La 5.4.0 consolida todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (documentadas más abajo) y el trabajo de producto de la línea 5.3 (comandos por perfil, dock

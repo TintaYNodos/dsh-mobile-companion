@@ -11,6 +11,30 @@ missing (especially the private tunnel), and tell the user their exact phone URL
 Current stable version: **5.4.0** (`versionCode` 67); the notes features described below (area
 profiles, due date, local-only notes, encrypted `notes.json`) belong to this release.
 
+## Official agent install path (`install-agent.ps1`)
+
+On Windows, agents should run the installer instead of improvising the steps:
+
+```powershell
+# Plan only: validates parameters, runs preflight, writes nothing.
+powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -DryRun -Json
+
+# Real install (idempotent): clone/update, start the bridge, verify, write receipt.
+powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -Json
+
+# Variants
+powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -Json -SkipClone
+powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -Json -RegisterAutostart
+powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -Json -Port 57422 -Force
+```
+
+- Default install directory: `%LOCALAPPDATA%\DSH-Companion` (override with `-Dir`, absolute path only).
+- With `-Json`, stdout is **one JSON object**: `{ok, version:"1.0.0", steps[], checks[], exitCode}`
+  plus details such as `installDir`, `repoCommit`, `bridgeStarted`, `doctorOk`, `receipt` and `logFile`.
+- Exit codes: `0` ok, `1` preflight, `2` install, `3` verification, `4` invalid parameters.
+- It never prints secrets; the log lives in `%TEMP%\dsh-companion-install-*.log`.
+- Its own verifier (no writes, no bridge changes): `powershell -File test/verify_install_agent.ps1`.
+
 Copy everything inside the block into the assistant's chat. A Spanish version follows after it.
 
 ## Agent-installable skill (DeepSeek Harness)
@@ -239,6 +263,15 @@ esta computadora y conectado al teléfono del usuario por una red privada, y dem
 
 Eres CRÍTICO, no optimista. Si falta algo, te detienes, lo explicas en lenguaje sencillo y das
 los pasos exactos para arreglarlo. Nunca declares éxito sin pruebas.
+
+### Vía oficial para agentes: `install-agent.ps1`
+
+En Windows, el agente debe ejecutar el instalador en vez de improvisar los pasos. `-DryRun -Json`
+valida y muestra el plan sin escribir nada; `-Json` instala de forma idempotente, arranca el puente,
+verifica `/healthz`, `doctor.ps1` y el recibo, y devuelve **un único objeto JSON** por stdout.
+Códigos de salida: `0` correcto, `1` preflight, `2` instalación, `3` verificación, `4` parámetros.
+Directorio por defecto `%LOCALAPPDATA%\DSH-Companion`; nunca imprime secretos. Su verificador es
+`test/verify_install_agent.ps1` (35 comprobaciones, sin escrituras).
 
 ## Paso 0 — Diagnóstico primero (obligatorio)
 

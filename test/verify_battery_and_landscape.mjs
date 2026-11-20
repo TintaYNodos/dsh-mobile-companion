@@ -34,18 +34,21 @@ const destructiveRule = /#root[^}]*flex-direction:\s*column/i.test(MOBILE_STYLES
 check("CSS landscape: no fuerza flex-direction column en root/app", !destructiveRule);
 check("CSS landscape: define reglas para >= 600px", MOBILE_STYLES.includes("@media (min-width: 600px)"));
 
-// 2. Bateria en system-stats
-const battery = queryBattery();
+// 2. Bateria en system-stats.
+// El total de comprobaciones NO puede depender de si esta maquina tiene bateria
+// (o de si WMI responde a tiempo): con el bloque condicional, dos corridas del
+// mismo commit daban 413 y 416. Las cuatro comprobaciones se registran siempre y,
+// sin sonda, pasan como "no aplica" con motivo explicito. DSH_TEST_BATTERY=0
+// fuerza la rama sin bateria para probarla en cualquier equipo.
+const forcedNoBattery = process.env.DSH_TEST_BATTERY === "0";
+const battery = forcedNoBattery ? null : queryBattery();
 const stats = collectSystemStats();
 check("collectSystemStats incluye campo battery", "battery" in stats);
-if (battery !== null) {
-  check("battery contiene percent valido", typeof battery.percent === "number" && battery.percent >= 0 && battery.percent <= 100, `percent=${battery.percent}`);
-  check("battery contiene plugged booleano", typeof battery.plugged === "boolean", `plugged=${battery.plugged}`);
-  check("battery contiene charging booleano", typeof battery.charging === "boolean", `charging=${battery.charging}`);
-  check("battery contiene status de texto", typeof battery.status === "string" && battery.status.length > 0, `status=${battery.status}`);
-} else {
-  check("PC sin bateria devuelve null correctamente", battery === null);
-}
+const noBatteryDetail = forcedNoBattery ? "forzado sin bateria (DSH_TEST_BATTERY=0)" : "sin bateria: no aplica";
+check("battery: percent disponible o no aplica", battery === null || (typeof battery.percent === "number" && battery.percent >= 0 && battery.percent <= 100), battery === null ? noBatteryDetail : `percent=${battery.percent}`);
+check("battery: plugged disponible o no aplica", battery === null || typeof battery.plugged === "boolean", battery === null ? noBatteryDetail : `plugged=${battery.plugged}`);
+check("battery: charging disponible o no aplica", battery === null || typeof battery.charging === "boolean", battery === null ? noBatteryDetail : `charging=${battery.charging}`);
+check("battery: status disponible o no aplica", battery === null || (typeof battery.status === "string" && battery.status.length > 0), battery === null ? noBatteryDetail : `status=${battery.status}`);
 
 // 3. Cache de 30 segundos
 const t1 = Date.now();

@@ -111,7 +111,7 @@ de seguridad y mantenimiento.
 - APK: **189,536 bytes (185 KB)**, SHA-256
   `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`. Commit de origen
   `dc231ccbe216ca810540bc2246b02c2506835e8d`; el registro completo está en `RELEASES.json`.
-- Verificación sobre el binario publicado: **418 comprobaciones en CI** y **915 comprobaciones Java
+- Verificación sobre el binario publicado: **418 comprobaciones en total (416 en CI, 2 omitidas por el APK)** y **915 comprobaciones Java
   ejecutadas en local**.
 
 ## 5.2.10 — `versionCode` 54

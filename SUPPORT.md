@@ -4,6 +4,8 @@
 correcciones de seguridad y versiones de mantenimiento de la serie 5. **La 5.3.7 y anteriores
 quedan como versiones anteriores** y ya no reciben cambios: si sigues en ellas, actualiza a 5.4.0.
 
+**Ventana de soporte:** la línea 5 se mantiene hasta **30 días después de publicar la 6.0**; a partir de ahí solo se soporta la 6.x. Un fallo de seguridad que afecte a 5.4.0 se publica como 5.4.x desde la rama congelada stable/5.
+
 ## Estado de las versiones
 
 | Versión | Estado | Qué recibe |

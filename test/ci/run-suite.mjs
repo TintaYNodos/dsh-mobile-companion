@@ -20,12 +20,13 @@
  * con su motivo: no se finge que corren.
  */
 import crypto from "node:crypto";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { REPO_ROOT, pingPanel, startBridge } from "./start-bridge.mjs";
+import { queryBattery } from "../../src/system-stats.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const TEST_DIR = path.resolve(here, "..");
@@ -248,6 +249,15 @@ const main = async () => {
   console.log("\n[ci] === Resumen ===");
   console.log(`[ci] Suites: ${suites.pass} PASS, ${suites.fail} FAIL, ${SKIPPED.length} SKIP`);
   console.log(`[ci] Comprobaciones: ${totals.pass} PASS, ${totals.fail} FAIL, ${totals.skip} SKIP`);
+  // El total solo sirve como metrica si se sabe en que entorno se midio: commit,
+  // Node, sistema operativo, si la sonda de bateria respondio y si esta el APK.
+  // Con esto, cualquier desviacion futura es senal real y no ruido de la maquina.
+  let commit = "?";
+  try { commit = execFileSync("git", ["rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT, encoding: "utf8" }).trim(); } catch {}
+  let batteryProbe = "no";
+  try { batteryProbe = queryBattery() === null ? "no" : "si"; } catch {}
+  const hasApk = fs.existsSync(path.join(REPO_ROOT, "DSH-Companion.apk"));
+  console.log(`[ci] Entorno: commit=${commit} node=${process.version} os=${process.platform}-${process.arch} battery=${batteryProbe} apk=${hasApk ? "si" : "no"}`);
   for (const item of SKIPPED) console.log(`[ci] SKIP ${item.file}: ${item.reason}`);
 
   if (failed.length) {

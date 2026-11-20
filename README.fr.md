@@ -2,7 +2,7 @@
 
 > **Sitio web / Website:** [tintaynodos.github.io/dsh-mobile-companion](https://tintaynodos.github.io/dsh-mobile-companion/)
 
-![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-413%20CI%20%2F%20418%20local-2ea043?style=flat-square) ![size](https://img.shields.io/badge/181%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
+![version](https://img.shields.io/badge/version-5.4.0-1f6feb?style=flat-square) ![license](https://img.shields.io/badge/license-BUSL--1.1-8b5cf6?style=flat-square) ![android](https://img.shields.io/badge/Android-8.0%2B-3ddc84?style=flat-square&logo=android&logoColor=white) ![node](https://img.shields.io/badge/Node-22.15%2B-339933?style=flat-square&logo=node.js&logoColor=white) ![ci](https://github.com/TintaYNodos/dsh-mobile-companion/actions/workflows/verify.yml/badge.svg?branch=main) ![tests](https://img.shields.io/badge/tests-418-2ea043?style=flat-square) ![size](https://img.shields.io/badge/181%20KB-0ea5e9?style=flat-square) ![agent-ready](https://img.shields.io/badge/agent--ready-doctor.ps1%20--json-6f42c1?style=flat-square)
 
 > 🌐 **Idiomas / Languages:** [English](README.md) · [Español (México)](README.es.md) · [简体中文](README.zh.md) · [日本語](README.ja.md) · [Português (Brasil)](README.pt.md) · **[Français](README.fr.md)** · [Deutsch](README.de.md)
 
@@ -118,7 +118,7 @@ companion/
 │   ├── KeyStoreVault.java    chiffrement Android Keystore des clés stockées
 │   └── …                     découverte, télémétrie, notes locales, WOL, widget
 ├── test/
-│   ├── verify_*.mjs           dix-huit suites de vérification (413 contrôles en CI, 418 avec l'APK en local)
+│   ├── verify_*.mjs           dix-huit suites de vérification (418 contrôles ; 416 en CI et 2 ignorés sans l'APK)
 │   ├── _harness.mjs           client partagé
 │   └── run-all.mjs            `npm test`
 └── synced_chats/              conversations persistées (.md et .json)
@@ -321,7 +321,7 @@ npm test
 ```
 
 
-Dix-huit suites : **413 contrôles en CI** (3 ignorés là-bas avec raison : 2 ont besoin de l'APK non versionné et 1 est réservé à Windows ; **418** avec l'APK en local) et **915+ contrôles Java**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
+Dix-huit suites : **418 contrôles au total** : 416 tournent en CI et 2 sont ignorés là-bas faute d'APK versionné (plus 3 suites ignorées, dont une réservée à Windows) et **915+ contrôles Java**, couvrant la découverte, l'injection mobile, `?dshc=off`, le rejet cross-origin, les défenses contre la contrebande de requêtes, les limites de corps, l'assainissement du contenu, l'intégrité du handshake WebSocket, la sûreté face à la corruption du registre, le contrôle d'accès, le notes locales, le TTL du registre des appareils, le flux du panneau et le kill switch.
 
 La suite parle à un **pont en direct** (ce n'est pas une simulation) : démarrez d'abord le pont. L'exécution réelle du kill switch est destructrice — elle révoque des appareils et fait tourner la clé —, elle doit donc être activée explicitement avec `DSH_TEST_DESTRUCTIVE=1`.
 

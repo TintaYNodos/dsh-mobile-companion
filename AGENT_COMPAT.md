@@ -122,7 +122,7 @@ node tools/verify-receipt.mjs doctor-report.json `
 
 El SHA-256 de la 5.4.0 (`74d6a8c1…a701848`) se toma del campo `apkSha256` de `RELEASES.json` una
 vez compilada la build; no se inventa ni se copia de una versión anterior. La verificación de esa
-build dio 418 comprobaciones en local con el APK presente y 413 en CI (allí 3 se omiten con motivo:
+build da 418 comprobaciones en total: 416 se ejecutan en CI y 2 se omiten allí por el APK no versionado (además, 3 suites omitidas con motivo:
 2 por el APK gitignored y 1 por ser exclusiva de Windows), más 915 comprobaciones Java ejecutadas en
 local.
 

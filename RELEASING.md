@@ -190,3 +190,10 @@ node tools/audit-repo.mjs
 
 La auditoría se ejecuta sobre los archivos versionados del clon, así que si pasa, lo publicado
 está sano. Después descarga el APK del release y compara su SHA-256 con el que imprimió el build.
+
+## Rama congelada stable/5
+
+`stable/5` queda **congelada en el commit del tag `v5.4.0`** (versionCode 67). No recibe
+cambios de `main`. Un fallo de seguridad que afecte a 5.4.0 se prepara desde esa rama como **5.4.x**,
+se etiqueta y se publica con su propia verificación; `main` continúa hacia la 6.0. El tag `v5.4.0`
+no se mueve: marca el commit liberado.

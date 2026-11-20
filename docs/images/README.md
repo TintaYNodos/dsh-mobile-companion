@@ -36,3 +36,11 @@ Las seis capturas están incrustadas en la sección de capturas de los siete REA
 - `social-preview.png`: composición con Pillow (fondo `#0D1117`, tipografía del sistema).
 
 Las imágenes se mantienen sin dependencias externas y por debajo de 250 KB cada una.
+
+## launch/
+
+Piezas de una sola imagen para anuncios en redes. No están incrustadas en los README.
+
+- `reddit-launch-1200x675.png`: tarjeta 16:9 para Reddit. Encabezado «cliente no oficial», título,
+  tres aclaraciones (no oficial, requiere Harness en tu PC y VPN, BUSL-1.1 source-available), el
+  enlace al repositorio y dos capturas de demostración con datos ficticios.

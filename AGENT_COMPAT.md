@@ -145,7 +145,7 @@ ese caso se comportan como un agente con shell y aplican las advertencias de la 
 | --- | --- |
 | `apkSha256` | SHA-256 del APK que el puente sirve de verdad, calculado en vivo desde `/dsh-companion/status` |
 | `apkVersion` | Versión del APK anunciada por el puente (`5.4.0` en la release actual) |
-| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`66` en la release actual) |
+| `apkVersionCode` | `versionCode` de Android anunciado por el puente (`67` en la release actual) |
 | `certSha256Release` | Huella documental del certificado del keystore de release (la de README y SECURITY.md) |
 | `receipt` | `algorithm` (`sha256`), `canonical` (`json-compact-sin-receipt`) y `sha256` del informe |
 

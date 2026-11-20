@@ -4,7 +4,7 @@ Esta lista sirve para comprobar la versión **estable** de DSH Mobile Companion 
 computadora**. Todo lo que aparece aquí se ve desde el teléfono en la red privada (ZeroTier,
 Tailscale u otra). No hace falta abrir el panel de la computadora ni tocar archivos.
 
-> Versión que compruebas: **5.4.0** (versionCode **66**).
+> Versión que compruebas: **5.4.0** (versionCode **67**).
 > Si el teléfono muestra otra versión, para: no estás probando la build publicada.
 
 ## Antes de empezar (una sola vez)

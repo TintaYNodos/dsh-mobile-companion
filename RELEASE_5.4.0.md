@@ -105,7 +105,7 @@ por computadora.
 
 - APK firmado con el keystore de release: **189,536 bytes (185 KB)**, SHA-256
   `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`.
-- Commit de origen: `dc231ccbe216ca810540bc2246b02c2506835e8d` (el sello del registro se anota en
+- Commit de origen: `61dc4f4` (el sello del registro se anota en
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y
   `certSha256`.

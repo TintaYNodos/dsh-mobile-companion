@@ -5,6 +5,12 @@ Android `versionCode` increments once per published build.
 
 ## Sin publicar (rama `main`)
 
+- **`doctor.ps1` deja de publicar un `apkSha256` vacío**: si el APK no está en la copia del repo (no se
+  versiona), el informe lo declara con `apkSha256: null` y `apkAnchorMissing: true`, y la salida
+  humana explica que el ancla es el SHA del release publicado. El recibo sigue siendo válido.
+- **PowerShell 7 es opcional**: la base soportada es Windows PowerShell 5.1 (probada); `pwsh` 7 solo
+  se usa si está instalado. No se instala como requisito.
+
 Cambios de repositorio que **no** forman parte del APK publicado. La versión instalable sigue siendo la
 5.4.0 / `versionCode` 67.
 

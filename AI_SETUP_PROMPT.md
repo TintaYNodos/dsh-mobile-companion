@@ -34,6 +34,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File install-agent.ps1 -Json -Por
 - Exit codes: `0` ok, `1` preflight, `2` install, `3` verification, `4` invalid parameters.
 - It never prints secrets; the log lives in `%TEMP%\dsh-companion-install-*.log`.
 - Its own verifier (no writes, no bridge changes): `powershell -File test/verify_install_agent.ps1`.
+- **PowerShell 7 is optional.** Windows PowerShell 5.1 is the supported baseline and is what gets
+  tested; `pwsh` 7 is not required and the verifier covers it when present.
 
 Copy everything inside the block into the assistant's chat. A Spanish version follows after it.
 
@@ -271,7 +273,8 @@ valida y muestra el plan sin escribir nada; `-Json` instala de forma idempotente
 verifica `/healthz`, `doctor.ps1` y el recibo, y devuelve **un único objeto JSON** por stdout.
 Códigos de salida: `0` correcto, `1` preflight, `2` instalación, `3` verificación, `4` parámetros.
 Directorio por defecto `%LOCALAPPDATA%\DSH-Companion`; nunca imprime secretos. Su verificador es
-`test/verify_install_agent.ps1` (35 comprobaciones, sin escrituras).
+`test/verify_install_agent.ps1` (35 comprobaciones, sin escrituras). **PowerShell 7 es opcional**:
+la base soportada es Windows PowerShell 5.1, que es la que se prueba.
 
 ## Paso 0 — Diagnóstico primero (obligatorio)
 

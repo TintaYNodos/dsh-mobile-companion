@@ -2053,7 +2053,7 @@ try {
         }
         $benignReceipt = ($apkMissing -and $doctorApkVersion -ne "" -and $doctorApkSha -eq "")
         if ($benignReceipt) {
-            [void](Add-Check "receipt" $false ("no verificable: el APK no esta en esta copia del repo (no se versiona) y el informe publica apkVersion sin apkSha256"))
+            [void](Add-Check "receipt" $false ("sin APK local (no se versiona): no hay ancla SHA-256 que comparar; usa el SHA del release publicado y la huella del certificado"))
             Add-Step "receipt" "warning" ([string]$receiptResult.detail + " (limitacion conocida: el APK no esta en la copia del repo)")
             Add-Warning ("El recibo no se pudo verificar porque esta copia del repo no incluye DSH-Companion.apk (no se versiona): " + [string]$receiptResult.detail)
         } else {

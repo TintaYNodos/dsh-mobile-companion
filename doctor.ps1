@@ -375,7 +375,8 @@ $doctorReport = [ordered]@{
     # GitHub): salen de /dsh-companion/status, la misma respuesta que ya se consulta.
     apkVersion    = $(if ($response) { [string]$response.apkVersion } else { "" })
     apkVersionCode= $(if ($response) { [int]$response.apkVersionCode } else { 0 })
-    apkSha256     = $(if ($response) { [string]$response.apkSha256 } else { "" })
+    apkSha256     = $(if ($response -and -not [string]::IsNullOrWhiteSpace([string]$response.apkSha256)) { [string]$response.apkSha256 } else { $null })
+apkAnchorMissing = $(if ($response) { [bool]$response.apkAnchorMissing } else { $true })
     certSha256Release = $certSha256Release
     phoneUrl      = $(if ($privateIp) { "http://${privateIp}:${portBridge}" } else { "" })
     tunnel        = $(if ($privateIp) { $ifaceName } else { "" })
@@ -417,6 +418,10 @@ if ($fallos -eq 0) {
     Out "http://${privateIp}:${portBridge}" Cyan
     Write-Host "  APK:                         " -NoNewline
     Out "https://github.com/TintaYNodos/dsh-mobile-companion/releases" Cyan
+if ($response -and [string]::IsNullOrWhiteSpace([string]$response.apkSha256)) {
+  Write-Host "  Ancla SHA-256 del APK:       " -NoNewline
+  Out "sin APK local (no versionado); usa el SHA del release publicado" Yellow
+}
     Out ""
     Out "  Pasos:" White
     Write-Host "   1. Instala el APK (o abre la direccion en el navegador del telefono)."

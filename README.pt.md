@@ -14,7 +14,7 @@ O aplicativo móvel não reimplementa a interface: ele renderiza a própria Web 
 
 Edição endurecida por Ismael Muñoz Reyes para Tinta y Nodos.
 
-Versão atual: **5.4.0** (ponte e APK, `versionCode` 67).
+Versão atual: **5.4.0** (ponte e APK, `versionCode` 68).
 
 **Novidades da 5.4.0:**
 
@@ -280,7 +280,7 @@ A chave de acesso manual continua disponível como contingência para acesso por
 
 **Aplicativo nativo (Android)**
 
-- `DSH-Companion.apk` — versão **5.4.0**, `versionCode` 67, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — versão **5.4.0**, `versionCode` 68, `minSdk` 26, `targetSdk` 35.
 - Sem AndroidX e sem Kotlin: bytecode Java puro; o APK da 5.4.0 tem 185 KB (189,536 bytes).
 - **Texto claro bloqueado fora da rede privada**: o `CleartextPolicy` rejeita qualquer requisição que não seja HTTPS ou que não aponte para o bunker configurado ou para um endereço privado/loopback, e a configuração de segurança de rede proíbe texto claro para os serviços públicos com os quais o app fala (GitHub, para verificar atualizações). Isso é aplicado acima da WebView, porque a configuração de segurança de rede do Android não consegue expressar "somente faixas de IP privadas".
 - Acesso a arquivos locais desativado, conteúdo misto bloqueado, pop-ups e depuração remota desativados.

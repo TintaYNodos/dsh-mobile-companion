@@ -6,7 +6,7 @@
       "versionCode": 50,
       "channel": "stable",
       "releasedAt": "2026-11-16",
-      "commit": "788aee02842731b11d51dc5610fa15a05b062371",
+      "commit": "f30e676b9548fa1375a965f4a51cd699bd682494",
       "apkSha256": "c5f9e8f76e4003075bf51c7992f0091d21292ceb520a5b65494e78f8bdd5c8f6",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
       "notes": "Versión final de la serie 5 (versionCode 50): cierra las diez correcciones del QA final sobre 5.1.9 (D1, H1, H2, H3, H4, H5, D3, D4, D5, D6). Detalle en CHANGELOG.md y RELEASES.md."
@@ -66,13 +66,13 @@
     },
     {
       "version": "5.4.0",
-      "versionCode": 67,
+      "versionCode": 68,
       "channel": "stable",
       "releasedAt": "2026-11-19",
-      "commit": "61dc4f4",
-      "apkSha256": "e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc",
+      "commit": "6fbdb58148621a072c94e14f9f21cd3f30298e3a",
+      "apkSha256": "7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 67): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con INDICE.md, reenvio corregido, Copiar para el chat, ancla del APK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PC con kill switch solo en la PC activa."
+      "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 68): comandos y teclas por perfil, compositor con tope y dock compacto de 44 dp, copia offline del chat desactivada por defecto, pantalla de sin conexion, QR sin callejon, Hub desplazable con cierre por arrastre, notas con INDICE.md, reenvio corregido, Copiar para el chat, ancla del APK desde la raiz, rate limit de notas, /status no bloqueante, codificacion endurecida y multi-PC con kill switch solo en la PC activa."
     }
   ]
 }

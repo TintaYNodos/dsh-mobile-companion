@@ -64,13 +64,13 @@ No lo genera ningún script: la entrada se añade a mano al publicar.
   "releases": [
     {
       "version": "5.4.0",
-      "versionCode": 67,
+      "versionCode": 68,
       "channel": "stable",
       "releasedAt": "2026-11-19",
-      "commit": "61dc4f4",
-      "apkSha256": "e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc",
+      "commit": "f30e676b9548fa1375a965f4a51cd699bd682494",
+      "apkSha256": "7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e",
       "certSha256": "4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23",
-      "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 67). Detalle en CHANGELOG.md y RELEASES.md."
+      "notes": "Versión 5.4.0, cierre de la serie 5 (versionCode 68). Detalle en CHANGELOG.md y RELEASES.md."
     }
   ]
 }
@@ -193,7 +193,7 @@ está sano. Después descarga el APK del release y compara su SHA-256 con el que
 
 ## Rama congelada stable/5
 
-`stable/5` queda **congelada en el commit del tag `v5.4.0`** (versionCode 67). No recibe
+`stable/5` queda **congelada en el commit del tag `v5.4.0`** (versionCode 68). No recibe
 cambios de `main`. Un fallo de seguridad que afecte a 5.4.0 se prepara desde esa rama como **5.4.x**,
 se etiqueta y se publica con su propia verificación; `main` continúa hacia la 6.0. El tag `v5.4.0`
 no se mueve: marca el commit liberado.

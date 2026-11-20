@@ -14,7 +14,7 @@ L'application mobile ne réimplémente pas l'interface : elle affiche la propre 
 
 Édition durcie par Ismael Muñoz Reyes pour Tinta y Nodos.
 
-Version actuelle : **5.4.0** (pont et APK, `versionCode` 67).
+Version actuelle : **5.4.0** (pont et APK, `versionCode` 68).
 
 **Nouveautés de la 5.4.0 :**
 
@@ -280,7 +280,7 @@ La clé d'accès manuelle reste disponible comme solution de repli pour l'accès
 
 **Application native (Android)**
 
-- `DSH-Companion.apk` — version **5.4.0**, `versionCode` 67, `minSdk` 26, `targetSdk` 35.
+- `DSH-Companion.apk` — version **5.4.0**, `versionCode` 68, `minSdk` 26, `targetSdk` 35.
 - Ni AndroidX ni Kotlin : bytecode Java pur ; l'APK 5.4.0 pèse 185 KB (189,536 octets).
 - **Cleartext bloqué hors du réseau privé** : `CleartextPolicy` rejette toute requête qui n'est pas en HTTPS ou qui ne pointe pas vers le bunker configuré ou une adresse privée/loopback, et la configuration de sécurité réseau interdit le cleartext vers les services publics avec lesquels l'application communique (GitHub, pour les mises à jour). Cela est appliqué au-dessus de la WebView, car la configuration de sécurité réseau d'Android ne peut pas exprimer « plages d'IP privées uniquement ».
 - Accès aux fichiers locaux désactivé, contenu mixte bloqué, popups et débogage distant désactivés.

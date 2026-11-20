@@ -10,7 +10,7 @@ Versiones: [5.4.0](#540) · [5.2.10](#5210) · [5.2.9](#529) · [5.2.8](#528) ·
 
 ## 5.4.0
 
-**DSH Mobile Companion 5.4.0 (`versionCode` 67) — versión 5.4.0, cierre de la serie 5**
+**DSH Mobile Companion 5.4.0 (`versionCode` 68) — versión 5.4.0, cierre de la serie 5**
 
 Cierre de la serie 5. La 5.4.0 recoge todo lo publicado desde la 5.2.9: las correcciones de la
 5.2.10 (integridad de las notas, acceso, QR y operación) y el trabajo de producto de la línea 5.3:
@@ -83,7 +83,7 @@ por computadora.
 
 ### Cómo se instala
 
-1. Instala el APK **5.4.0** (`versionCode` 67) **encima de la 5.3.7** (`versionCode` 65): no hace
+1. Instala el APK **5.4.0** (`versionCode` 68) **encima de la 5.3.7** (`versionCode` 65): no hace
    falta desinstalar ni volver a emparejar.
 2. Actualiza el puente y reinícialo (`stop.bat` + `start.bat`, o deja que el autoarranque lo
    levante). Puente y APK deben hablar el mismo contrato.
@@ -108,15 +108,15 @@ por computadora.
 
 | Dato | Valor |
 | --- | --- |
-| Versión | `versionCode 67` / `versionName 5.4.0` |
+| Versión | `versionCode 68` / `versionName 5.4.0` |
 | Tamaño | 189,536 bytes (185 KB) |
-| SHA-256 | `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc` |
+| SHA-256 | `7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e` |
 | Firma | v2+v3, certificado de release RSA 4186 (sin cambios desde 5.1.7: se instala encima de 5.3.7) |
 
 ### Build
 
 - APK firmado con el keystore de release: **189,536 bytes (185 KB)**, SHA-256
-  `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`.
+  `7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e`.
 - Commit de origen: `61dc4f4` (el sello del registro se anota en
   el commit siguiente, que es el que se etiqueta).
 - Registro completo en `RELEASES.json`: versión, `versionCode`, canal, fecha, commit, `apkSha256` y

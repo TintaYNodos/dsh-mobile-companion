@@ -12,7 +12,7 @@ Android `versionCode` increments once per published build.
   se usa si está instalado. No se instala como requisito.
 
 Cambios de repositorio que **no** forman parte del APK publicado. La versión instalable sigue siendo la
-5.4.0 / `versionCode` 67.
+5.4.0 / `versionCode` 68.
 
 - **Retirados los archivos Docker** (`Dockerfile`, `docker-compose.yml`, `.dockerignore`). El puente
   necesita el loopback del host y el Harness local; la imagen nunca fue una vía soportada ni documentada.
@@ -25,7 +25,7 @@ Cambios de repositorio que **no** forman parte del APK publicado. La versión in
   Node/PowerShell/Harness, verificación de `/healthz`, `doctor.ps1` y recibo, log sin secretos y
   códigos de salida 0/1/2/3/4. Verificador propio en `test/verify_install_agent.ps1` (35/35).
 
-## 5.4.0 — `versionCode` 67 (versión 5.4.0, cierre de la serie 5)
+## 5.4.0 — `versionCode` 68 (versión 5.4.0, cierre de la serie 5)
 
 
 
@@ -123,7 +123,7 @@ de seguridad y mantenimiento.
 ### Compatibilidad
 
 - Se instala **encima de la 5.3.7** (`versionCode` 65) sin desinstalar: la firma no cambia desde la
-  5.1.7. El APK 5.4.0 es `versionCode` 67 y el puente y el APK deben actualizarse juntos.
+  5.1.7. El APK 5.4.0 es `versionCode` 68 y el puente y el APK deben actualizarse juntos.
 - Sin dependencias npm nuevas (cero dependencias) y sin cambios en el formato de datos: las notas,
   los chats sincronizados y el registro de dispositivos se conservan.
 - La 5.4.0 es la versión actual de cierre de la serie 5; las publicaciones posteriores de la línea
@@ -133,7 +133,7 @@ de seguridad y mantenimiento.
 ### Notas de la build
 
 - APK: **189,536 bytes (185 KB)**, SHA-256
-  `e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc`. Commit de origen
+  `7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e`. Commit de origen
   `dc231ccbe216ca810540bc2246b02c2506835e8d`; el registro completo está en `RELEASES.json`.
 - Verificación sobre el binario publicado: **418 comprobaciones en total (416 en CI, 2 omitidas por el APK)** y **915 comprobaciones Java
   ejecutadas en local**.

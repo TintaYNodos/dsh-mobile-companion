@@ -1,6 +1,6 @@
 # Pruebas del puente y del cliente
 
-Documento de la versión bajo prueba: **5.4.0** (`versionCode` 67). El contrato de notas que
+Documento de la versión bajo prueba: **5.4.0** (`versionCode` 68). El contrato de notas que
 describen estas suites (nota de solo título, idempotencia por `id`, bandeja `inbox.jsonl`, índice
 legible `synced_chats/notes/INDICE.md`, límite de peticiones por cliente y reparación de
 codificación) es el de esta release.

@@ -60,7 +60,7 @@ class SystemCards {
         top.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView label = new TextView(a);
-        label.setText("TELEMETRÍA PC 1" + (uptime.isEmpty() ? "" : " · " + uptime));
+        label.setText("TELEMETRÍA " + PcRegistryStore.activeLabel(a) + (uptime.isEmpty() ? "" : " · " + uptime));
         label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
         label.setLetterSpacing(0.06f);
         label.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);

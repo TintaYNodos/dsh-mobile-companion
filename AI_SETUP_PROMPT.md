@@ -8,7 +8,7 @@ It is deliberately strict: the assistant must run a real diagnostic, stop and ex
 missing (especially the private tunnel), and tell the user their exact phone URL. A silent
 "done" is a failure.
 
-Current stable version: **5.4.0** (`versionCode` 67); the notes features described below (area
+Current stable version: **5.4.0** (`versionCode` 68); the notes features described below (area
 profiles, due date, local-only notes, encrypted `notes.json`) belong to this release.
 
 ## Official agent install path (`install-agent.ps1`)
@@ -57,7 +57,7 @@ Para que DSH la descubra, instálala en una raíz de skills del proyecto (`.dsh/
 usuario (`~/.dsh/skills/`) y abre una sesión nueva. La skill aparece como
 `mobile-companion-setup`; el prompt de abajo sigue siendo útil como guía legible.
 
-La versión actual es la **5.4.0** (`versionCode` 67). El diagnóstico también deja un
+La versión actual es la **5.4.0** (`versionCode` 68). El diagnóstico también deja un
 **recibo verificable**: `doctor.ps1 -Report` escribe
 `doctor-report.json` sin BOM con `apkSha256`, `apkVersion`, `apkVersionCode`, la huella del
 certificado de release (`certSha256Release`) y un `receipt` sha256 sobre el JSON compacto sin el
@@ -583,7 +583,7 @@ node tools/verify-receipt.mjs doctor-report.json
 
 # 3. Opcional: exigir el APK publicado y la huella del certificado de release
 node tools/verify-receipt.mjs doctor-report.json `
-  --expect-apk-sha256 e13c5ba7415e97d64c66ac759449022af37ca6f64d66303c98101452371873dc `
+  --expect-apk-sha256 7f0e6922033a04c4d8da55037a99c4e4821e7b5b5633d17697f5a456ac74760e `
   --expect-cert 4F:E1:AD:C0:45:71:AF:2B:89:1B:E4:6B:1B:3C:86:39:65:F6:73:A6:B7:25:87:61:47:96:91:7F:49:63:65:23
 ```
 

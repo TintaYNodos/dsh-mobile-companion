@@ -14,7 +14,7 @@
 
 由 Ismael Muñoz Reyes 为 Tinta y Nodos 打造的加固版本。
 
-当前版本：**5.4.0**（桥接与 APK，`versionCode` 67）。
+当前版本：**5.4.0**（桥接与 APK，`versionCode` 68）。
 
 **5.4.0 新增内容：**
 
@@ -277,7 +277,7 @@ git clone https://github.com/TintaYNodos/dsh-mobile-companion.git
 
 **原生应用（Android）**
 
-- `DSH-Companion.apk` — 版本 **5.4.0**、`versionCode` 67、`minSdk` 26、`targetSdk` 35。
+- `DSH-Companion.apk` — 版本 **5.4.0**、`versionCode` 68、`minSdk` 26、`targetSdk` 35。
 - 不使用 AndroidX，也不使用 Kotlin：纯 Java 字节码；5.4.0 的 APK 为 185 KB（189,536 字节）。
 - **阻止私有网络之外的明文流量**：`CleartextPolicy` 会拒绝任何不是 HTTPS、也未指向已配置堡垒节点或私有/回环地址的请求；网络安全配置也禁止向应用通信的公共服务（GitHub、用于检查更新）使用明文。该策略在 WebView 之上强制执行，因为 Android 的网络安全配置无法表达“仅私有 IP 段”。
 - 禁用本地文件访问，阻止混合内容，禁用弹窗和远程调试。
